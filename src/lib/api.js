@@ -68,7 +68,7 @@ export function getImage(input) {
       // route insecure absolute images via proxy
       try {
         const u = new URL(url)
-        return `/api/proxy${u.pathname}${u.search}`
+        return `/api/proxy-edge${u.pathname}${u.search}`
       } catch {
         return url
       }
