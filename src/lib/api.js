@@ -63,7 +63,18 @@ export const api = {
 export function getImage(input) {
   const url = input || ''
   if (!url) return ''
-  if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('data:')) return url
+  if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('data:')) {
+    if (typeof window !== 'undefined' && window.location?.protocol === 'https:' && url.startsWith('http://')) {
+      // route insecure absolute images via proxy
+      try {
+        const u = new URL(url)
+        return `/api/proxy${u.pathname}${u.search}`
+      } catch {
+        return url
+      }
+    }
+    return url
+  }
   if (url.startsWith('//')) return `https:${url}`
   if (url.startsWith('/')) return `${BASE_URL}${url}`
   return url
