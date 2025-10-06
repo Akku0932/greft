@@ -10,6 +10,7 @@ export default function Info() {
   const [error, setError] = useState(null)
   const [chapters, setChapters] = useState([])
   const [page, setPage] = useState(0)
+  const [showMeta, setShowMeta] = useState(false)
 
   useEffect(() => {
     let mounted = true
@@ -103,7 +104,15 @@ export default function Info() {
       <section className="max-w-[95vw] mx-auto px-4 sm:px-6 -mt-10 md:-mt-20 lg:-mt-24 relative">
         <div className="grid grid-cols-1 lg:grid-cols-[minmax(360px,520px)_1fr] gap-6 lg:gap-8 items-start">
           <div className="rounded-2xl border border-stone-200 dark:border-gray-700/60 bg-white/60 dark:bg-gray-900/60 shadow-soft dark:shadow-soft-dark p-6 md:p-8">
-            {(() => {
+            <button
+              onClick={()=>setShowMeta(v=>!v)}
+              aria-expanded={showMeta}
+              className="w-full flex items-center justify-between gap-3 rounded-xl border border-stone-200 dark:border-gray-700 bg-white/70 dark:bg-gray-800/60 px-4 py-3 text-left"
+            >
+              <span className="text-base font-semibold text-stone-900 dark:text-white">Metadata</span>
+              <svg className={`h-5 w-5 text-stone-500 dark:text-gray-400 transition-transform ${showMeta ? 'rotate-180' : ''}`} viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fillRule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.24a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z" clipRule="evenodd"/></svg>
+            </button>
+            {showMeta && (() => {
               const other = data?.otherInfo || {}
               const boolText = (val) => {
                 const s = String(val ?? '').toLowerCase()
@@ -162,8 +171,7 @@ export default function Info() {
                   ))}
                 </div>
               </>
-            )
-            })()}
+             )})()}
           </div>
           <div className="rounded-2xl border border-stone-200 dark:border-gray-700 bg-white/60 dark:bg-gray-900/60 p-3 md:p-4">
             <ChaptersInline seriesId={parseIdTitle(id, titleId).id} titleId={parseIdTitle(id, titleId).titleId} />

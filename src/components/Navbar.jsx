@@ -97,7 +97,7 @@ export default function Navbar() {
       <div className="max-w-[120rem] mx-auto px-4 sm:px-6 py-3 sm:py-5 grid grid-cols-[auto_1fr_auto] items-center gap-4 sm:gap-8">
         {/* Left: Logo */}
         <div className="justify-self-start">
-          <Link to="/" className="flex items-center gap-3 font-semibold text-lg sm:text-xl tracking-tight text-stone-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-stone-400 dark:focus:ring-gray-600 rounded-md">
+          <Link to="/home" className="flex items-center gap-3 font-semibold text-lg sm:text-xl tracking-tight text-stone-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-stone-400 dark:focus:ring-gray-600 rounded-md">
             <img src="/logo.png" alt="Greft" className="h-9 w-9 sm:h-12 sm:w-12 rounded" />
             <span className="hidden xs:inline">Greft</span>
           </Link>

@@ -175,13 +175,13 @@ export default function Read() {
                     <img src={getImage(pickImage(seriesInfo) || seriesInfo?.img)} alt="series" className="h-full w-full object-cover" />
                   )}
                 </div>
-                <div className="text-base md:text-lg font-semibold text-stone-900 dark:text-white truncate max-w-[50vw] md:max-w-[56vw] group-hover:opacity-90">
+                <div className="hidden sm:block text-base md:text-lg font-semibold text-stone-900 dark:text-white truncate max-w-[50vw] md:max-w-[56vw] group-hover:opacity-90">
                   {seriesInfo?.title || titleId || 'Series'}
                 </div>
               </Link>
               <div className="ml-2">
                 <select
-                  className="w-40 md:w-48 rounded-lg border border-stone-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-stone-800 dark:text-gray-200 px-3 py-2"
+                  className="w-36 sm:w-40 md:w-48 rounded-lg border border-stone-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-stone-800 dark:text-gray-200 px-3 py-2"
                   value={currentIndex >= 0 ? String(currentIndex) : ''}
                   onChange={(e) => {
                     const idx = Number(e.target.value)
@@ -207,7 +207,7 @@ export default function Read() {
 
       <section className="relative">
         <div className="absolute inset-0 -z-10 bg-gradient-to-b from-black/30 via-black/70 to-black/95" />
-        <div className={`${widthLevels[widthLevel]} mx-auto px-2 sm:px-4 py-6`}>
+        <div className={`mx-auto px-2 sm:px-4 py-6 ${'max-w-none'} sm:${widthLevels[widthLevel]}`}>
           {loading && <div className="text-stone-700 dark:text-gray-300">Loading…</div>}
           {error && <div className="text-red-600 dark:text-red-400">{String(error)}</div>}
           <div className="space-y-2">
@@ -218,8 +218,8 @@ export default function Read() {
             ))}
           </div>
         </div>
-        {/* Floating width toolbar */}
-        <div className="fixed left-3 bottom-3 z-30">
+        {/* Floating width toolbar (hidden on mobile) */}
+        <div className="hidden sm:block fixed left-3 bottom-3 z-30">
           <div className="inline-flex items-center gap-2 rounded-xl border border-stone-300 dark:border-gray-700 bg-white/90 dark:bg-gray-900/90 backdrop-blur px-2 py-1.5 shadow-sm">
             <button onClick={narrow} className="px-2.5 py-1 rounded-md border border-stone-200 dark:border-gray-700 text-stone-700 dark:text-gray-300">- Width</button>
             <div className="px-1.5 text-xs text-stone-700 dark:text-gray-300 w-24 text-center">{widthLevels[widthLevel].replace('max-w-','')}</div>

@@ -141,9 +141,9 @@ export default function PopularSlider({ items }) {
         <div className="relative overflow-hidden rounded-2xl ring-1 ring-white/10 dark:ring-gray-700/30 min-h-[440px] md:min-h-[560px]"
              onMouseEnter={() => setIsHover(true)} onMouseLeave={() => setIsHover(false)}>
           {bg && (
-            <>
-              <img src={bg} alt="bg" className="absolute inset-0 w-full h-full object-cover scale-105" />
-              <div className="absolute inset-0 backdrop-blur-[1px] md:backdrop-blur-md" />
+          <>
+              <img src={bg} alt="bg" className="absolute inset-0 w-full h-full object-cover md:scale-105" />
+              <div className="absolute inset-0 backdrop-blur-none md:backdrop-blur-md" />
               {/* Mobile lighter, desktop stronger gradients */}
               <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-black/40 to-black/80 md:from-black/30 md:via-black/60 md:to-black/95" />
               <div className="absolute inset-0 bg-gradient-to-r from-black/5 via-transparent to-black/5 md:from-black/15 md:via-transparent md:to-black/15" />
