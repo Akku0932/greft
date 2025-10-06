@@ -1,6 +1,6 @@
 // Use Vercel edge function proxy in production to avoid mixed content
 const BASE_URL = typeof window !== 'undefined' && window.location?.protocol === 'https:'
-  ? '/api/proxy'
+  ? '/api/proxy-edge'
   : 'http://ger.visionhost.cloud:2056';
 
 async function request(path, options = {}) {
