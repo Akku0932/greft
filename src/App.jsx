@@ -28,9 +28,34 @@ export default function App() {
           </div>
         </main>
         <Footer />
+        {/* Scroll to top button */}
+        <ScrollToTopButton />
       </div>
     </ThemeProvider>
   )
 }
 
+import { useEffect, useState } from 'react'
+function ScrollToTopButton() {
+  const [visible, setVisible] = useState(false)
+  useEffect(() => {
+    function onScroll() {
+      setVisible((window.scrollY || 0) > 300)
+    }
+    onScroll()
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => window.removeEventListener('scroll', onScroll)
+  }, [])
+  if (!visible) return null
+  return (
+    <button
+      onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+      className="fixed right-4 bottom-4 z-50 h-12 w-12 rounded-full bg-stone-900 text-white dark:bg-gray-700 shadow-lg hover:opacity-90 flex items-center justify-center"
+      aria-label="Scroll to top"
+      title="Back to top"
+    >
+      <svg className="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 19V5"/><path d="M5 12l7-7 7 7"/></svg>
+    </button>
+  )
+}
 

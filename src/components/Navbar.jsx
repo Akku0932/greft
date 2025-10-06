@@ -1,10 +1,11 @@
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { useEffect, useRef, useState } from 'react'
 import { useTheme } from '../contexts/ThemeContext.jsx'
 import { api, extractItems, getImage, pickImage, parseIdTitle, sanitizeTitleId } from '../lib/api.js'
 
 export default function Navbar() {
   const navigate = useNavigate()
+  const location = useLocation()
   const { theme, toggleTheme } = useTheme()
   const [term, setTerm] = useState('')
   const [open, setOpen] = useState(false)
@@ -15,6 +16,8 @@ export default function Navbar() {
   const timerRef = useRef(null)
   const [menuOpen, setMenuOpen] = useState(false)
   const [expanded, setExpanded] = useState(false)
+  const [showBar, setShowBar] = useState(true)
+  const lastYRef = useRef(0)
 
   useEffect(() => {
     if (expanded) {
@@ -24,6 +27,24 @@ export default function Navbar() {
     }
     return () => document.body.classList.remove('overflow-hidden')
   }, [expanded])
+
+  // Hide navbar on scroll down, show on scroll up
+  useEffect(() => {
+    const isRead = String(location.pathname || '').startsWith('/read')
+    if (isRead) {
+      setShowBar(false)
+      return
+    }
+    function onScroll() {
+      const y = window.scrollY || 0
+      const goingUp = y < lastYRef.current
+      const nearTop = y < 16
+      setShowBar(goingUp || nearTop)
+      lastYRef.current = y
+    }
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => window.removeEventListener('scroll', onScroll)
+  }, [location.pathname])
 
   function onSubmit(e) {
     e.preventDefault()
@@ -93,7 +114,7 @@ export default function Navbar() {
 
   return (
     <>
-    <header className="sticky top-0 z-40 bg-white/80 dark:bg-black/70 backdrop-blur-xl border-b border-stone-200 dark:border-gray-800 transition-colors duration-300">
+    <header className={`sticky top-0 z-40 bg-white/80 dark:bg-black/70 backdrop-blur-xl border-b border-stone-200 dark:border-gray-800 transition-all duration-200 ${String(location.pathname || '').startsWith('/read') ? 'hidden' : (showBar ? 'translate-y-0' : '-translate-y-full')}`}>
       <div className="max-w-[120rem] mx-auto px-4 sm:px-6 py-3 sm:py-5 grid grid-cols-[auto_1fr_auto] items-center gap-4 sm:gap-8">
         {/* Left: Logo */}
         <div className="justify-self-start">

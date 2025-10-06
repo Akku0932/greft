@@ -16,6 +16,8 @@ export default function Read() {
   // Width control (convert zoom to widening the whole container)
   const widthLevels = ['max-w-3xl','max-w-4xl','max-w-5xl','max-w-6xl','max-w-7xl']
   const [widthLevel, setWidthLevel] = useState(3)
+  const [showBar, setShowBar] = useState(true)
+  const [lastY, setLastY] = useState(0)
 
   const seriesId = useMemo(() => {
     if (seriesParam) return seriesParam
@@ -138,6 +140,19 @@ export default function Read() {
     return () => window.removeEventListener('keydown', onKey)
   }, [])
 
+  // Show navbar on scroll up, hide on scroll down
+  useEffect(() => {
+    function onScroll() {
+      const y = window.scrollY || 0
+      const goingUp = y < lastY
+      const nearTop = y < 16
+      setShowBar(goingUp || nearTop)
+      setLastY(y)
+    }
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => window.removeEventListener('scroll', onScroll)
+  }, [lastY])
+
   // Persist recent read progress in localStorage
   useEffect(() => {
     if (!seriesId || currentIndex < 0) return
@@ -164,10 +179,13 @@ export default function Read() {
 
   return (
     <div className="min-h-screen">
-      <div className="sticky top-0 z-20 backdrop-blur supports-[backdrop-filter]:bg-white/60 dark:supports-[backdrop-filter]:bg-gray-900/60 bg-white/80 dark:bg-gray-900/80">
+      <div className={`sticky top-0 z-20 backdrop-blur supports-[backdrop-filter]:bg-white/60 dark:supports-[backdrop-filter]:bg-gray-900/60 bg-white/80 dark:bg-gray-900/80 transition-transform duration-200 ${showBar ? 'translate-y-0' : '-translate-y-full'}`}>
         <div className="max-w-[95vw] mx-auto px-4 sm:px-6 py-3">
           <div className="flex items-center justify-between">
-            <div className="opacity-0 select-none">spacer</div>
+            <Link to="/home" className="flex items-center gap-2 group">
+              <img src="/logo.png" alt="Greft" className="h-10 w-10 sm:h-12 sm:w-12 rounded" />
+              <span className="hidden sm:inline text-stone-900 dark:text-white font-semibold group-hover:opacity-90">Greft</span>
+            </Link>
             <div className="flex-1 flex items-center justify-center gap-4">
               <Link to={infoHref} className="flex items-center gap-3 group">
                 <div className="h-12 w-12 md:h-14 md:w-14 rounded-full overflow-hidden ring-1 ring-stone-300 dark:ring-gray-700 bg-stone-100 dark:bg-gray-800">
@@ -207,13 +225,13 @@ export default function Read() {
 
       <section className="relative">
         <div className="absolute inset-0 -z-10 bg-gradient-to-b from-black/30 via-black/70 to-black/95" />
-        <div className={`mx-auto px-2 sm:px-4 py-6 ${'max-w-none'} sm:${widthLevels[widthLevel]}`}>
+        <div className={`${widthLevels[widthLevel]} mx-auto w-full px-0 sm:px-4 py-6 max-w-none`}>
           {loading && <div className="text-stone-700 dark:text-gray-300">Loading…</div>}
           {error && <div className="text-red-600 dark:text-red-400">{String(error)}</div>}
-          <div className="space-y-2">
+          <div className="space-y-0">
             {pages?.map((src, i) => (
-              <div key={i} className="w-full overflow-hidden rounded-lg bg-stone-100 dark:bg-gray-800">
-                <img src={getImage(src)} alt={`page-${i + 1}`} className="w-full" />
+              <div key={i} className="w-full overflow-hidden rounded-none sm:rounded-lg bg-transparent sm:bg-stone-100 dark:sm:bg-gray-800">
+                <img src={getImage(src)} alt={`page-${i + 1}`} className="w-full block" />
               </div>
             ))}
           </div>
