@@ -94,17 +94,17 @@ export default function Navbar() {
   return (
     <>
     <header className="sticky top-0 z-40 bg-white/80 dark:bg-black/70 backdrop-blur-xl border-b border-stone-200 dark:border-gray-800 transition-colors duration-300">
-      <div className="max-w-[120rem] mx-auto px-6 py-5 grid grid-cols-[1fr_auto_1fr] items-center gap-8">
+      <div className="max-w-[120rem] mx-auto px-4 sm:px-6 py-3 sm:py-5 grid grid-cols-[auto_1fr_auto] items-center gap-4 sm:gap-8">
         {/* Left: Logo */}
         <div className="justify-self-start">
-          <Link to="/" className="flex items-center gap-3 font-semibold text-xl tracking-tight text-stone-900 dark:text-white">
-            <img src="/logo.png" alt="Greft" className="h-12 w-12 rounded" />
-            <span>Greft</span>
+          <Link to="/" className="flex items-center gap-3 font-semibold text-lg sm:text-xl tracking-tight text-stone-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-stone-400 dark:focus:ring-gray-600 rounded-md">
+            <img src="/logo.png" alt="Greft" className="h-9 w-9 sm:h-12 sm:w-12 rounded" />
+            <span className="hidden xs:inline">Greft</span>
           </Link>
         </div>
 
-        {/* Center: Compact search */}
-        <div className="justify-self-center w-full flex items-center justify-center">
+        {/* Center: Compact search (hidden on small; use icon on right) */}
+        <div className="justify-self-center w-full hidden sm:flex items-center justify-center">
           <div className="relative w-[520px] max-w-full" ref={boxRef}>
             <form onSubmit={onSubmit} className="flex">
               <input
@@ -141,15 +141,17 @@ export default function Navbar() {
         </div>
 
         {/* Right: Links + menu */}
-        <div className="justify-self-end flex items-center gap-5 text-sm text-stone-700 dark:text-gray-300">
-          <Link to="/home#categories" className="hover:text-stone-900 dark:hover:text-white">Categories</Link>
-          <Link to="/search" className="hover:text-stone-900 dark:hover:text-white">Search</Link>
-          <Link to="/home#my-list" className="hover:text-stone-900 dark:hover:text-white">My List</Link>
+        <div className="justify-self-end flex items-center gap-2 sm:gap-5 text-sm text-stone-700 dark:text-gray-300">
+          <div className="hidden md:flex items-center gap-5">
+            <Link to="/home#categories" className="hover:text-stone-900 dark:hover:text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-stone-400 dark:focus:ring-gray-600 rounded-md px-1">Categories</Link>
+            <Link to="/search" className="hover:text-stone-900 dark:hover:text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-stone-400 dark:focus:ring-gray-600 rounded-md px-1">Search</Link>
+            <Link to="/home#my-list" className="hover:text-stone-900 dark:hover:text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-stone-400 dark:focus:ring-gray-600 rounded-md px-1">My List</Link>
+          </div>
           
           {/* Theme Toggle */}
           <button
             onClick={toggleTheme}
-            className="h-9 w-9 rounded-full bg-stone-900 dark:bg-gray-700 text-white dark:text-gray-200 flex items-center justify-center hover:bg-stone-800 dark:hover:bg-gray-600 transition-colors"
+            className="h-9 w-9 rounded-full bg-stone-900 dark:bg-gray-700 text-white dark:text-gray-200 flex items-center justify-center hover:bg-stone-800 dark:hover:bg-gray-600 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-stone-400 dark:focus:ring-gray-600"
             title={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
             aria-label="Toggle theme"
           >
@@ -164,14 +166,24 @@ export default function Navbar() {
             )}
           </button>
           
+          {/* Mobile search trigger */}
+          <button
+            onClick={()=>{ setExpanded(true); setOpen(false) }}
+            className="sm:hidden h-9 w-9 rounded-full bg-stone-900 dark:bg-gray-700 text-white dark:text-gray-200 flex items-center justify-center hover:bg-stone-800 dark:hover:bg-gray-600 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-stone-400 dark:focus:ring-gray-600"
+            aria-label="Open search"
+            title="Search"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-5 w-5"><path d="M10 4a6 6 0 104.472 10.03l4.249 4.249a1 1 0 001.415-1.415l-4.249-4.249A6 6 0 0010 4zm-4 6a4 4 0 118 0 4 4 0 01-8 0z"/></svg>
+          </button>
+
           <div className="relative">
-            <button onClick={()=>setMenuOpen((v)=>!v)} className="h-9 w-9 rounded-full bg-stone-900 dark:bg-gray-700 text-white dark:text-gray-200 flex items-center justify-center hover:bg-stone-800 dark:hover:bg-gray-600 transition-colors">≡</button>
+            <button onClick={()=>setMenuOpen((v)=>!v)} className="h-9 w-9 rounded-full bg-stone-900 dark:bg-gray-700 text-white dark:text-gray-200 flex items-center justify-center hover:bg-stone-800 dark:hover:bg-gray-600 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-stone-400 dark:focus:ring-gray-600" aria-haspopup="menu" aria-expanded={menuOpen} aria-label="Open menu">≡</button>
             {menuOpen && (
-              <div className="absolute right-0 mt-2 w-56 rounded-lg border border-stone-200 dark:border-gray-600 bg-white dark:bg-gray-800 shadow-soft overflow-hidden">
-                <Link to="/login" className="block px-4 py-2 hover:bg-stone-50 dark:hover:bg-gray-700 text-stone-900 dark:text-white">Register / Login</Link>
-                <button className="w-full text-left px-4 py-2 hover:bg-stone-50 dark:hover:bg-gray-700 text-stone-900 dark:text-white">Language</button>
-                <button className="w-full text-left px-4 py-2 hover:bg-stone-50 dark:hover:bg-gray-700 text-stone-900 dark:text-white">Settings</button>
-                <button className="w-full text-left px-4 py-2 hover:bg-stone-50 dark:hover:bg-gray-700 text-stone-900 dark:text-white">FAQ</button>
+              <div className="absolute right-0 mt-2 w-56 rounded-lg border border-stone-200 dark:border-gray-600 bg-white dark:bg-gray-800 shadow-soft overflow-hidden" role="menu">
+                <Link to="/login" className="block px-4 py-2 hover:bg-stone-50 dark:hover:bg-gray-700 text-stone-900 dark:text-white" role="menuitem">Register / Login</Link>
+                <button className="w-full text-left px-4 py-2 hover:bg-stone-50 dark:hover:bg-gray-700 text-stone-900 dark:text-white" role="menuitem">Language</button>
+                <button className="w-full text-left px-4 py-2 hover:bg-stone-50 dark:hover:bg-gray-700 text-stone-900 dark:text-white" role="menuitem">Settings</button>
+                <button className="w-full text-left px-4 py-2 hover:bg-stone-50 dark:hover:bg-gray-700 text-stone-900 dark:text-white" role="menuitem">FAQ</button>
               </div>
             )}
           </div>
@@ -181,9 +193,9 @@ export default function Navbar() {
      </header>
 
      {/* Expanded search overlay outside header to blur entire app */}
-     {expanded && (
-       <div className="fixed inset-0 z-[9999] bg-black/50 backdrop-blur-lg" onClick={()=>{setExpanded(false); setOpen(false); setResults([]); setTerm('')}}>
-         <div className="max-w-3xl mx-auto mt-24 px-4" onClick={(e)=>e.stopPropagation()}>
+    {expanded && (
+      <div className="fixed inset-0 z-[9999] bg-black/50 backdrop-blur-lg" onClick={()=>{setExpanded(false); setOpen(false); setResults([]); setTerm('')}}>
+        <div className="max-w-3xl mx-auto mt-16 sm:mt-24 px-3 sm:px-4" onClick={(e)=>e.stopPropagation()}>
            <div className="rounded-xl border border-stone-300 dark:border-gray-600 bg-white dark:bg-gray-800 shadow-soft">
              <input
                autoFocus
@@ -191,14 +203,14 @@ export default function Navbar() {
                onChange={(e)=>setTerm(e.target.value)}
                onKeyDown={(e)=>{onKeyDown(e); if(e.key==='Escape'){ setExpanded(false); setOpen(false); setResults([]); setTerm('') }}}
                placeholder="Search comics, authors, tags..."
-               className="w-full px-5 py-4 rounded-t-xl focus:outline-none bg-transparent text-stone-900 dark:text-white placeholder-stone-500 dark:placeholder-gray-400"
+              className="w-full px-4 sm:px-5 py-3 sm:py-4 rounded-t-xl focus:outline-none bg-transparent text-stone-900 dark:text-white placeholder-stone-500 dark:placeholder-gray-400"
              />
-             <div className="max-h-[60vh] overflow-y-auto">
+            <div className="max-h-[60vh] overflow-y-auto">
               {searchLoading && (
                 <div className="px-5 py-4 text-stone-500 dark:text-gray-400 text-sm">Searching…</div>
               )}
               {!searchLoading && results.length === 0 && (
-                <div className="px-5 py-4 text-stone-500 dark:text-gray-400 text-sm">Start typing to search…</div>
+                <div className="px-4 sm:px-5 py-4 text-stone-500 dark:text-gray-400 text-sm">Start typing to search…</div>
               )}
                {results.map((item, idx) => {
                  const cover = getImage(pickImage(item))
@@ -208,9 +220,9 @@ export default function Navbar() {
                      key={(item.id || item.seriesId || item.slug || title) + 'modal' + idx}
                      onMouseDown={(e)=>e.preventDefault()}
                      onClick={() => { gotoInfoFromItem(item); setExpanded(false); setResults([]) }}
-                     className={`w-full text-left flex items-center gap-4 px-5 py-3 border-t border-stone-100 dark:border-gray-700 first:border-t-0 hover:bg-stone-50 dark:hover:bg-gray-700 ${idx===activeIdx ? 'bg-stone-50 dark:bg-gray-700' : ''}`}
+                    className={`w-full text-left flex items-center gap-3 sm:gap-4 px-4 sm:px-5 py-3 border-t border-stone-100 dark:border-gray-700 first:border-t-0 hover:bg-stone-50 dark:hover:bg-gray-700 ${idx===activeIdx ? 'bg-stone-50 dark:bg-gray-700' : ''}`}
                    >
-                     {cover ? <img src={cover} alt="" className="h-12 w-9 object-cover rounded" /> : <div className="h-12 w-9 bg-stone-200 dark:bg-gray-600 rounded" />}
+                    {cover ? <img src={cover} alt="" className="h-12 w-9 object-cover rounded" /> : <div className="h-12 w-9 bg-stone-200 dark:bg-gray-600 rounded" />}
                      <span className="truncate text-stone-900 dark:text-white">{title}</span>
                    </button>
                  )

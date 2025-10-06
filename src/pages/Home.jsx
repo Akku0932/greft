@@ -171,10 +171,79 @@ export default function Home() {
   return (
     <div>
       <PopularSlider items={popular} />
-      <div className="max-w-none w-full mx-auto px-4 sm:px-6 grid grid-cols-1 lg:grid-cols-[1fr_520px] gap-10">
+      <div className="max-w-none w-full mx-auto grid grid-cols-1 lg:grid-cols-[1fr_520px] gap-10">
         <div>
-          {!!recentReads.length && (
-            <section className="mb-10">
+          {/* Move sections above Latest Updates on mobile: Recent Reads first, then Popular and Recommendations */}
+          <div className="lg:hidden space-y-8 pt-6">
+            {!!recentReads.length && (
+              <section className="mb-2">
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <h2 className="text-xl font-bold text-stone-900 dark:text-white">Recent Reads</h2>
+                    <p className="text-sm text-stone-600 dark:text-gray-400 mt-1">Jump back into what you were reading</p>
+                  </div>
+                </div>
+                <div className="overflow-x-auto no-scrollbar -mx-4 px-4">
+                  <div className="flex gap-3 snap-x snap-mandatory touch-pan-x">
+                    {recentReads.map((it, i) => (
+                      <div key={(it.seriesId || i) + 'recent-m'} className="snap-start shrink-0 w-36">
+                        <RecentReadCard item={it} index={i} />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </section>
+            )}
+            <div className="rounded-xl border border-stone-200 dark:border-gray-700/60 bg-white/60 dark:bg-gray-900/60 p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-xl font-bold text-stone-900 dark:text-white">Recent Popular</h3>
+                <div className="inline-flex rounded-lg border border-stone-300 dark:border-gray-600 overflow-hidden text-sm">
+                  {['weekly','monthly','alltime'].map((r) => (
+                    <button 
+                      key={r} 
+                      onClick={() => setHotRange(r)} 
+                      className={`px-3 py-2 transition-colors duration-200 ${
+                        hotRange===r 
+                          ? 'bg-stone-900 dark:bg-gray-700 text-white' 
+                          : 'bg-white dark:bg-gray-800 text-stone-700 dark:text-gray-300 hover:bg-stone-50 dark:hover:bg-gray-700'
+                      }`}
+                    >
+                      {r[0].toUpperCase()+r.slice(1)}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="space-y-4">
+                {hotLoading ? Array.from({ length: 4 }).map((_, i) => (
+                  <div key={i} className="animate-pulse h-24 rounded-xl bg-stone-200 dark:bg-gray-800" />
+                )) : hotItems.slice(0, 6).map((it, i) => (
+                  <RecItem key={(it.id || it.seriesId || i) + 'hotm'} item={it.info ? { ...it, title: it.info?.title, img: it.info?.img, imgs: it.info?.imgs } : it} index={i} />
+                ))}
+              </div>
+            </div>
+            <div className="rounded-xl border border-stone-200 dark:border-gray-700/60 bg-white/60 dark:bg-gray-900/60 p-6">
+              <h3 className="text-xl font-bold text-stone-900 dark:text-white mb-4">Recommendations</h3>
+              <div className="space-y-4">
+                {loading ? Array.from({ length: 4 }).map((_, i) => (
+                  <div key={i} className="animate-pulse h-24 rounded-xl bg-stone-200 dark:bg-gray-800" />
+                )) : rec.slice(0, recShown).map((item, idx) => (
+                  <RecItem key={(item.id || item.seriesId || item.slug || item.title) + 'm' + idx} item={item} index={idx} />
+                ))}
+              </div>
+              {!loading && recShown < rec.length && (
+                <div className="mt-4">
+                  <button 
+                    onClick={() => setRecShown((n)=>Math.min(n+4, rec.length))} 
+                    className="w-full px-4 py-3 text-sm font-medium rounded-xl border border-stone-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-stone-700 dark:text-gray-300 hover:bg-stone-50 dark:hover:bg-gray-700 transition-colors duration-200"
+                  >
+                    Load more recommendations
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+      {!!recentReads.length && (
+        <section className="mb-10 hidden lg:block">
               <div className="flex items-center justify-between mb-6">
                 <div>
                   <h2 className="text-2xl font-bold text-stone-900 dark:text-white">Recent Reads</h2>
@@ -198,7 +267,7 @@ export default function Home() {
             lastElementRef={lastElementRef}
           />
         </div>
-        <aside className="pt-8 lg:pt-16 justify-self-end w-full">
+        <aside className="pt-8 lg:pt-16 justify-self-end w-full hidden lg:block">
           <div className="mb-8 rounded-xl border border-stone-200 dark:border-gray-700/60 bg-white/60 dark:bg-gray-900/60 p-6">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-xl font-bold text-stone-900 dark:text-white">Recent Popular</h3>
