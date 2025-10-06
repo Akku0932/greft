@@ -23,6 +23,41 @@ export default function PopularSlider({ items }) {
     ['#10B981', '#FBCFE8'],
   ]
   const navigate = useNavigate()
+  const shownIdsRef = useRef(new Set())
+
+  function getItemId(it) {
+    return String(it?.seriesId || it?.id || it?.slug || it?.urlId || '')
+  }
+
+  function cryptoShuffle(array) {
+    const a = array.slice(0)
+    for (let i = a.length - 1; i > 0; i--) {
+      const randArray = new Uint32Array(1)
+      window.crypto && window.crypto.getRandomValues ? window.crypto.getRandomValues(randArray) : (randArray[0] = Math.floor(Math.random() * 0xffffffff))
+      const j = randArray[0] % (i + 1)
+      ;[a[i], a[j]] = [a[j], a[i]]
+    }
+    return a
+  }
+
+  function sampleUnique(itemsArr, count) {
+    const all = Array.isArray(itemsArr) ? itemsArr.slice(0) : []
+    // Prefer items not shown recently
+    const unseen = all.filter((it) => !shownIdsRef.current.has(getItemId(it)))
+    const pool = (unseen.length >= count ? unseen : all)
+    const shuffled = cryptoShuffle(pool)
+    const pick = shuffled.filter((it, idx, arr) => arr.findIndex((x) => getItemId(x) === getItemId(it)) === idx).slice(0, count)
+    // Track as shown
+    pick.forEach((it) => {
+      const id = getItemId(it)
+      if (id) shownIdsRef.current.add(id)
+    })
+    // If we've shown most of the catalog, reset the memory to allow fresh cycles
+    if (shownIdsRef.current.size > Math.max(10, Math.floor((all.length || 0) * 0.8))) {
+      shownIdsRef.current = new Set(pick.map(getItemId))
+    }
+    return pick
+  }
 
   // preload: accept pre-attached info from Home; fallback to existing extra
   useEffect(() => {
@@ -39,9 +74,8 @@ export default function PopularSlider({ items }) {
   // initialize local list and reset active when items change
   useEffect(() => {
     if (Array.isArray(items) && items.length) {
-      // Shuffle a fresh 10 from the full pool
-      const shuffled = items.slice(0).sort(() => Math.random() - 0.5).slice(0, 10)
-      setList(shuffled)
+      const sample = sampleUnique(items, 10)
+      setList(sample)
       setActive(0)
     }
   }, [items])
@@ -69,13 +103,13 @@ export default function PopularSlider({ items }) {
     return () => { cancelled = true }
   }, [list])
 
-  function shuffle(arr) { return arr.slice(0).sort(() => Math.random() - 0.5) }
+  function shuffle(arr) { return cryptoShuffle(arr) }
 
   function nextSlide() {
     if (!list || list.length === 0) return
     if (active + 1 >= list.length) {
-      // Reshuffle a new set of 10 from the full items pool
-      const reshuffled = items && items.length ? items.slice(0).sort(() => Math.random() - 0.5).slice(0, 10) : shuffle(list)
+      // Get a fresh unique sample of 10 from the full items pool
+      const reshuffled = items && items.length ? sampleUnique(items, 10) : shuffle(list)
       setList(reshuffled)
       setActive(0)
     } else {
