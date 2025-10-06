@@ -1,4 +1,7 @@
-const BASE_URL = 'http://ger.visionhost.cloud:2056';
+// Use Vercel edge function proxy in production to avoid mixed content
+const BASE_URL = typeof window !== 'undefined' && window.location?.protocol === 'https:'
+  ? '/api/proxy'
+  : 'http://ger.visionhost.cloud:2056';
 
 async function request(path, options = {}) {
   const url = `${BASE_URL}${path}`;
