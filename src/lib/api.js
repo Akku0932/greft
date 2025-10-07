@@ -126,8 +126,18 @@ export const api = {
   newRelease: () => requestMapped('/new-release', {}, 'mf'),
   search: async (q) => {
     const query = encodeURIComponent(q)
-    // Only MF search
-    const mf = await requestMapped(`/category/filter?keyword=${query}`, { timeoutMs: 5000 }, 'mf')
+    // Only MF search with resilient timeout/retry and graceful fallback
+    let mf
+    try {
+      mf = await requestMapped(`/category/filter?keyword=${query}`, { timeoutMs: 5000 }, 'mf')
+    } catch (e) {
+      // Retry once with longer timeout if aborted/failed
+      try {
+        mf = await requestMapped(`/category/filter?keyword=${query}`, { timeoutMs: 9000 }, 'mf')
+      } catch (_) {
+        return { items: [] }
+      }
+    }
     const arr = Array.isArray(mf?.data) ? mf.data : (Array.isArray(mf?.items) ? mf.items : [])
     const mapped = arr.map(item => ({
       id: item.id,
