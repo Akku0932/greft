@@ -54,9 +54,16 @@ export default async function handler(req) {
     upstreamPath = upstreamPath.replace(/^mf\//, '');
   }
 
+  // Build passthrough query string excluding control params
+  const passthrough = new URLSearchParams(url.searchParams)
+  passthrough.delete('src')
+  passthrough.delete('p')
+  passthrough.delete('url')
+  const qs = passthrough.toString()
+
   const targetUrl = upstreamPath
-    ? `${originBase}/${upstreamPath}${url.search ? url.search : ''}`
-    : originBase + (url.search || '');
+    ? `${originBase}/${upstreamPath}${qs ? `?${qs}` : ''}`
+    : originBase + (qs ? `?${qs}` : '');
 
   try {
     const response = await fetch(targetUrl, {
