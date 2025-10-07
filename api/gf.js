@@ -14,7 +14,7 @@ async function handler(req, res) {
     res.setHeader('content-type', 'application/json')
     return res.send(JSON.stringify({ error: 'Missing required query param p' }))
   }
-  const originBase = 'http://ger.visionhost.cloud:2056'
+  const originBase = 'https://ger.visionhost.cloud:2056'
   const targetUrl = `${originBase}/${upstreamPath}`
 
   if (req.method === 'OPTIONS') {
