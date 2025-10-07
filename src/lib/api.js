@@ -40,13 +40,13 @@ async function request(path, options = {}, source) {
     response = await fetchWithTimeout(url, {
       headers: { 'Accept': 'application/json' },
       ...options,
-    }, 12000)
+    }, options.timeoutMs || 12000)
   } catch (_) {
     // One retry with shorter timeout
     response = await fetchWithTimeout(url, {
       headers: { 'Accept': 'application/json' },
       ...options,
-    }, 8000)
+    }, Math.min(8000, (options.timeoutMs ? Math.max(2000, Math.floor(options.timeoutMs / 2)) : 8000)))
   }
   if (!response.ok) {
     const text = await response.text();
@@ -133,11 +133,12 @@ export const api = {
       `/search?keyword=${query}`,
     ]
     // Run GF and MF searches in parallel to cut latency
+    // Run with aggressive timeouts to keep UX snappy
     const settled = await Promise.allSettled([
       // GF variants (parallel)
-      ...gfPaths.map(p => requestMapped(p, {}, source)),
-      // MF search
-      requestMapped(`/category/filter?keyword=${query}`, {}, 'mf')
+      ...gfPaths.map(p => requestMapped(p, { timeoutMs: 7000 }, source)),
+      // MF search via edge proxy
+      requestMapped(`/category/filter?keyword=${query}`, { timeoutMs: 7000 }, 'mf')
     ])
     const results = []
     for (const s of settled) {
