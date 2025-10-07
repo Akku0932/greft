@@ -6,9 +6,9 @@ const BASE_URL = typeof window !== 'undefined' && window.location?.protocol === 
   : PLAIN_BASE;
 
 function getBaseFor(source) {
-  // For Mangafire, always use direct HTTPS origin
+  // For Mangafire, always use edge proxy in production to avoid CORS
   if (source === 'mf') {
-    return 'https://mangafire-xi.vercel.app'
+    return EDGE_BASE
   }
   return BASE_URL
 }
@@ -252,7 +252,7 @@ export const api = {
       // Fetch from all MF types with pagination
       const mfTypes = ['updated-manga', 'updated-manhwa', 'updated-manhua']
       const mfPromises = mfTypes.map(type => 
-        fetch(`https://mangafire-xi.vercel.app/recently-updated/${type}?page=${encodeURIComponent(page)}`)
+        fetch(`${EDGE_BASE}/mf/recently-updated/${type}?page=${encodeURIComponent(page)}`)
           .then(r => r.json())
           .catch(() => [])
       )
@@ -312,7 +312,7 @@ export const api = {
       // Use top-trending for MF hot updates
       const results = await Promise.allSettled([
         api.hotUpdates().catch(() => ({ items: [] })),
-        fetch('https://mangafire-xi.vercel.app/top-trending')
+        fetch(`${EDGE_BASE}/mf/top-trending`)
           .then(res => res.json())
           .catch(() => [])
       ])
