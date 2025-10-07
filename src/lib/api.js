@@ -124,49 +124,34 @@ export const api = {
   // Unified "new release" that hides the MF source detail from UI
   // Calls MF new-release endpoint directly
   newRelease: () => requestMapped('/new-release', {}, 'mf'),
-  search: async (q) => {
+  search: async (q, source) => {
     const query = encodeURIComponent(q)
-    // Run MF and GF in parallel; MF has retry to reduce AbortError impact
     const gfPaths = [
-      `/search?keyword=${query}`,
       `/search?q=${query}`,
+      `/search/${query}`,
+      `/search?query=${query}`,
+      `/search?keyword=${query}`,
     ]
-
-    const gfPromise = Promise.allSettled(gfPaths.map(p => requestMapped(p, { timeoutMs: 4500 })))
-
-    async function mfFetch() {
-      try {
-        return await requestMapped(`/category/filter?keyword=${query}`, { timeoutMs: 5000 }, 'mf')
-      } catch (_) {
-        try {
-          return await requestMapped(`/category/filter?keyword=${query}`, { timeoutMs: 9000 }, 'mf')
-        } catch {
-          return null
-        }
-      }
-    }
-
-    const [gfSettled, mf] = await Promise.all([gfPromise, mfFetch()])
-
+    // Run GF and MF searches in parallel to cut latency
+    // Run with aggressive timeouts to keep UX snappy
+    const settled = await Promise.allSettled([
+      // GF variants (parallel)
+      ...gfPaths.map(p => requestMapped(p, { timeoutMs: 7000 }, source)),
+      // MF search via edge proxy
+      requestMapped(`/category/filter?keyword=${query}`, { timeoutMs: 7000 }, 'mf')
+    ])
     const results = []
-    // Normalize GF
-    for (const s of gfSettled) {
-      if (s.status !== 'fulfilled') continue
-      for (const v of s.value) {
-        if (v.status === 'fulfilled' && v.value) results.push(v.value)
-      }
-    }
-    // Normalize MF
-    if (mf) {
-      if (Array.isArray(mf.data) || Array.isArray(mf.items)) {
-        const arr = Array.isArray(mf.data) ? mf.data : mf.items
+    for (const s of settled) {
+      if (s.status !== 'fulfilled' || !s.value) continue
+      // MF payload shape normalization
+      if (s.value && (Array.isArray(s.value.data) || Array.isArray(s.value.items))) {
+        const arr = Array.isArray(s.value.data) ? s.value.data : s.value.items
         const mapped = arr.map(item => ({ id: item.id, seriesId: item.id, title: item.name, name: item.name, img: item.img, _source: 'mf' }))
         results.push(mapped)
       } else {
-        results.push(mf)
+        results.push(s.value)
       }
     }
-
     // Merge arrays/items into one unique list
     const all = results.flatMap(r => extractItems(r))
     const seen = new Set()
@@ -178,7 +163,7 @@ export const api = {
       seen.add(key)
       merged.push({ ...it, _normTitle: normTitle })
     }
-    // Prefer MF when duplicate titles exist (per earlier behavior)
+    // Deduplicate by normalized title, prefer MF entries if duplicates exist
     const byTitle = new Map()
     for (const it of merged) {
       const t = it._normTitle
@@ -191,7 +176,7 @@ export const api = {
       }
     }
     const deduped = Array.from(byTitle.values())
-    // Simple scoring to surface strong matches
+    // Position/quality scoring - put strongest matches first
     const qNorm = String(q || '').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim()
     const qTokens = qNorm.split(' ').filter(Boolean)
     const startsWith = (title, tokens) => title.startsWith(tokens.join(' '))
@@ -211,12 +196,20 @@ export const api = {
       let s = 0
       if (startsWith(title, qTokens)) s += 800
       if (containsInOrder(title, qTokens)) s += 300
+      // token coverage
       for (const t of qTokens) if (title.includes(t)) s += 50
+      // shorter titles that start with query get a small boost
       if (startsWith(title, qTokens)) s += Math.max(0, 100 - title.length)
       return s
     }
-    deduped.sort((a, b) => scoreItem(b) - scoreItem(a))
-    return { items: deduped.slice(0, 40).map(({ _normTitle, ...rest }) => rest) }
+    deduped.sort((a, b) => {
+      const sa = scoreItem(a)
+      const sb = scoreItem(b)
+      if (sb !== sa) return sb - sa
+      // fallback: keep existing order
+      return 0
+    })
+    return { items: deduped.map(({ _normTitle, ...rest }) => rest) }
   },
   info: (id, titleId, source) => {
     const { id: baseId, titleId: safeTitle } = parseIdTitle(id, titleId)

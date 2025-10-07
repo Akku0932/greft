@@ -126,7 +126,7 @@ export default function Info() {
       <section className="relative">
         {bg && <img src={bg} alt="bg" className="absolute inset-0 w-full h-[320px] md:h-[480px] object-cover" />}
         <div className="absolute inset-0 h-[320px] md:h-[480px] backdrop-blur-sm md:backdrop-blur" />
-        <div className="absolute inset-0 h-[320px] md:h-[480px] bg-gradient-to-b from-white/10 via-white/40 to-white/80 dark:from-black/20 dark:via-black/60 dark:to-black/95" />
+        <div className="absolute inset-0 h-[320px] md:h-[480px] bg-gradient-to-b from-black/20 via-black/60 to-black/95" />
         <div className="absolute inset-0 h-[320px] md:h-[480px] bg-[radial-gradient(ellipse_at_center,rgba(0,0,0,0)_55%,rgba(0,0,0,0.45)_100%)]" />
         <div className="absolute inset-0 h-[320px] md:h-[480px] bg-gradient-to-r from-black/10 via-transparent to-black/10" />
         <div className="relative max-w-[95vw] mx-auto px-4 sm:px-6 pt-8 md:pt-10 pb-24 md:pb-40">
@@ -134,10 +134,10 @@ export default function Info() {
             <div className="relative rounded-2xl overflow-hidden ring-1 ring-white/15 dark:ring-gray-700/40 shadow-soft dark:shadow-soft-dark bg-white/5 dark:bg-gray-800/20">
               {cover && <img src={cover} alt={mappedData.title} className="w-full h-[300px] object-cover md:h-[360px]" />}
             </div>
-            <div className="text-stone-900 dark:text-white">
+            <div className="text-white">
               <h1 className="text-2xl sm:text-3xl md:text-5xl font-extrabold leading-tight">{mappedData.title}</h1>
               {source === 'mf' && mappedData.otherName && (
-                <p className="mt-2 text-stone-800/80 dark:text-white/80 text-sm md:text-base italic">{mappedData.otherName}</p>
+                <p className="mt-2 text-white/80 text-sm md:text-base italic">{mappedData.otherName}</p>
               )}
               {!!authors.length && (
                 <div className="mt-2 flex flex-wrap gap-2">
@@ -151,7 +151,7 @@ export default function Info() {
                   <span key={t} className="px-2 py-0.5 rounded-full text-[10px] sm:text-xs bg-white/15">{t}</span>
                 ))}
               </div>
-              <p className="mt-3 md:mt-4 max-w-2xl md:max-w-3xl text-stone-900/90 dark:text-white/90 text-sm md:text-base leading-relaxed line-clamp-none">{mappedData.description || data.summary}</p>
+              <p className="mt-3 md:mt-4 max-w-2xl md:max-w-3xl text-white/90 text-sm md:text-base leading-relaxed line-clamp-none">{mappedData.description || data.summary}</p>
               <div className="mt-5 md:mt-6 flex flex-wrap gap-2 md:gap-3">
                 <button onClick={onReadFirst} className="px-4 md:px-5 py-2.5 md:py-3 rounded-lg bg-white/15 hover:bg-white/25 text-white border border-white/20 transition-colors">Read First</button>
                 {/* Save button - only enabled when logged in */}
@@ -175,7 +175,7 @@ export default function Info() {
         </div>
       </section>
 
-      <section className="max-w-[95vw] mx-auto px-4 sm:px-6 mt-6 md:mt-10 lg:mt-12 relative">
+      <section className="max-w-[95vw] mx-auto px-4 sm:px-6 -mt-10 md:-mt-20 lg:-mt-24 relative">
         <div className="grid grid-cols-1 lg:grid-cols-[minmax(360px,520px)_1fr] gap-6 lg:gap-8 items-start">
           <div className="rounded-2xl border border-stone-200 dark:border-gray-700/60 bg-white/60 dark:bg-gray-900/60 shadow-soft dark:shadow-soft-dark p-6 md:p-8">
             <button
