@@ -7,7 +7,7 @@ export default async function handler(req) {
   if (!upstreamPath) {
     return new Response(JSON.stringify({ error: 'Missing required query param p' }), { status: 400, headers: { 'content-type': 'application/json' } })
   }
-  const originBase = 'https://ger.visionhost.cloud:2056'
+  const originBase = 'ger.visionhost.cloud:2056'
   const targetUrl = `${originBase}/${upstreamPath}`
 
   try {
