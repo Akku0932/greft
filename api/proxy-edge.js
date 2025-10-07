@@ -1,9 +1,9 @@
 export const config = {
-  runtime: 'edge',
+  runtime: 'nodejs',
 };
 
-export default async function handler(req) {
-  const url = new URL(req.url);
+export default async function handler(req, res) {
+  const url = new URL(req.url || '/', 'http://local');
   const targetPath = url.pathname.replace(/^\/api\/proxy-edge\/?/, '');
   const imageUrl = url.searchParams.get('url');
   const src = url.searchParams.get('src'); // e.g., 'mf'
@@ -11,30 +11,27 @@ export default async function handler(req) {
 
   // CORS preflight support
   if (req.method === 'OPTIONS') {
-    return new Response(null, {
-      status: 204,
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'GET, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-      },
-    });
+    res.status(204)
+    res.setHeader('Access-Control-Allow-Origin', '*')
+    res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS')
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization')
+    return res.end()
   }
 
   // Image proxy: /api/proxy-edge?url=http://...
   if (imageUrl) {
     try {
-      const response = await fetch(imageUrl);
-      const headers = new Headers(response.headers);
-      headers.set('Access-Control-Allow-Origin', '*');
-      headers.set('Access-Control-Allow-Methods', 'GET, OPTIONS');
-      return new Response(response.body, {
-        status: response.status,
-        statusText: response.statusText,
-        headers,
-      });
+      const response = await fetch(imageUrl)
+      const arrayBuffer = await response.arrayBuffer()
+      res.status(response.status)
+      res.setHeader('Access-Control-Allow-Origin', '*')
+      res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS')
+      const ct = response.headers.get('content-type') || 'application/octet-stream'
+      res.setHeader('Content-Type', ct)
+      return res.send(Buffer.from(arrayBuffer))
     } catch (error) {
-      return new Response(`Image proxy error: ${error.message}`, { status: 500 });
+      res.status(500)
+      return res.send(`Image proxy error: ${error.message}`)
     }
   }
 
@@ -69,28 +66,22 @@ export default async function handler(req) {
     const response = await fetch(targetUrl, {
       method: req.method,
       headers: {
-        // Forward safe headers only
-        'accept': 'application/json, text/plain, */*',
+        accept: 'application/json, text/plain, */*',
         'user-agent': 'greft-proxy/1.0',
       },
-      body: req.method === 'GET' || req.method === 'HEAD' ? undefined : req.body,
-    });
+      // Node API routes expose body via req; we won't forward bodies for GET/HEAD
+    })
 
-    const headers = new Headers(response.headers);
-    headers.set('Access-Control-Allow-Origin', '*');
-    headers.set('Access-Control-Allow-Methods', 'GET, OPTIONS');
-    // Normalize missing content-type for JSON endpoints
-    if (!headers.has('content-type')) {
-      headers.set('content-type', 'application/json');
-    }
-
-    return new Response(response.body, {
-      status: response.status,
-      statusText: response.statusText,
-      headers,
-    });
+    const textBody = await response.text()
+    res.status(response.status)
+    res.setHeader('Access-Control-Allow-Origin', '*')
+    res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS')
+    const ct = response.headers.get('content-type') || 'application/json'
+    res.setHeader('Content-Type', ct)
+    return res.send(textBody)
   } catch (error) {
-    return new Response(`Proxy error: ${error.message}`, { status: 500 });
+    res.status(500)
+    return res.send(`Proxy error: ${error.message}`)
   }
 }
 
