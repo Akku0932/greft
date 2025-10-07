@@ -128,10 +128,8 @@ export const api = {
     const query = encodeURIComponent(q)
     // Run MF and GF in parallel; MF has retry to reduce AbortError impact
     const gfPaths = [
-      `/search?q=${query}`,
-      `/search/${query}`,
-      `/search?query=${query}`,
       `/search?keyword=${query}`,
+      `/search?q=${query}`,
     ]
 
     const gfPromise = Promise.allSettled(gfPaths.map(p => requestMapped(p, { timeoutMs: 4500 })))
