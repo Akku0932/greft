@@ -1,6 +1,6 @@
 // Use Vercel edge function proxy in production to avoid mixed content
-const EDGE_BASE = '/api/proxy-edge'
-const PLAIN_BASE = 'http://ger.visionhost.cloud:2056'
+const EDGE_BASE = '/api/gf'
+const PLAIN_BASE = '/api/gf'
 const IS_BROWSER = typeof window !== 'undefined'
 const IS_HTTPS = IS_BROWSER && window.location?.protocol === 'https:'
 const HOST = IS_BROWSER ? (window.location?.host || '') : ''
@@ -33,7 +33,7 @@ function withSource(path, source) {
     // Dedicated edge function expects ?p=encodedPath
     return `?p=${encodeURIComponent(path)}`
   }
-  return path
+  return `?p=${encodeURIComponent(path)}`
 }
 
 async function request(path, options = {}, source) {
