@@ -126,28 +126,99 @@ export const api = {
   newRelease: () => requestMapped('/new-release', {}, 'mf'),
   search: async (q) => {
     const query = encodeURIComponent(q)
-    // Only MF search with resilient timeout/retry and graceful fallback
-    let mf
-    try {
-      mf = await requestMapped(`/category/filter?keyword=${query}`, { timeoutMs: 5000 }, 'mf')
-    } catch (e) {
-      // Retry once with longer timeout if aborted/failed
+    // Run MF and GF in parallel; MF has retry to reduce AbortError impact
+    const gfPaths = [
+      `/search?q=${query}`,
+      `/search/${query}`,
+      `/search?query=${query}`,
+      `/search?keyword=${query}`,
+    ]
+
+    const gfPromise = Promise.allSettled(gfPaths.map(p => requestMapped(p, { timeoutMs: 4500 })))
+
+    async function mfFetch() {
       try {
-        mf = await requestMapped(`/category/filter?keyword=${query}`, { timeoutMs: 9000 }, 'mf')
+        return await requestMapped(`/category/filter?keyword=${query}`, { timeoutMs: 5000 }, 'mf')
       } catch (_) {
-        return { items: [] }
+        try {
+          return await requestMapped(`/category/filter?keyword=${query}`, { timeoutMs: 9000 }, 'mf')
+        } catch {
+          return null
+        }
       }
     }
-    const arr = Array.isArray(mf?.data) ? mf.data : (Array.isArray(mf?.items) ? mf.items : [])
-    const mapped = arr.map(item => ({
-      id: item.id,
-      seriesId: item.id,
-      title: item.name,
-      name: item.name,
-      img: item.img,
-      _source: 'mf'
-    }))
-    return { items: mapped }
+
+    const [gfSettled, mf] = await Promise.all([gfPromise, mfFetch()])
+
+    const results = []
+    // Normalize GF
+    for (const s of gfSettled) {
+      if (s.status !== 'fulfilled') continue
+      for (const v of s.value) {
+        if (v.status === 'fulfilled' && v.value) results.push(v.value)
+      }
+    }
+    // Normalize MF
+    if (mf) {
+      if (Array.isArray(mf.data) || Array.isArray(mf.items)) {
+        const arr = Array.isArray(mf.data) ? mf.data : mf.items
+        const mapped = arr.map(item => ({ id: item.id, seriesId: item.id, title: item.name, name: item.name, img: item.img, _source: 'mf' }))
+        results.push(mapped)
+      } else {
+        results.push(mf)
+      }
+    }
+
+    // Merge arrays/items into one unique list
+    const all = results.flatMap(r => extractItems(r))
+    const seen = new Set()
+    const merged = []
+    for (const it of all) {
+      const normTitle = String((it.title || it.name || '')).toLowerCase().replace(/[^a-z0-9]+/g,' ').trim()
+      const key = it.seriesId || it.id || it._id || it.slug || normTitle
+      if (!key || seen.has(key)) continue
+      seen.add(key)
+      merged.push({ ...it, _normTitle: normTitle })
+    }
+    // Prefer MF when duplicate titles exist (per earlier behavior)
+    const byTitle = new Map()
+    for (const it of merged) {
+      const t = it._normTitle
+      if (!t) continue
+      const cur = byTitle.get(t)
+      if (!cur) byTitle.set(t, it)
+      else {
+        const pick = (it._source === 'mf') ? it : (cur._source === 'mf' ? cur : it)
+        byTitle.set(t, pick)
+      }
+    }
+    const deduped = Array.from(byTitle.values())
+    // Simple scoring to surface strong matches
+    const qNorm = String(q || '').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim()
+    const qTokens = qNorm.split(' ').filter(Boolean)
+    const startsWith = (title, tokens) => title.startsWith(tokens.join(' '))
+    const containsInOrder = (title, tokens) => {
+      let idx = 0
+      for (const t of tokens) {
+        const found = title.indexOf(t, idx)
+        if (found === -1) return false
+        idx = found + t.length
+      }
+      return true
+    }
+    const scoreItem = (it) => {
+      const title = it._normTitle || ''
+      if (!qNorm) return 0
+      if (title === qNorm) return 1000
+      let s = 0
+      if (startsWith(title, qTokens)) s += 800
+      if (containsInOrder(title, qTokens)) s += 300
+      for (const t of qTokens) if (title.includes(t)) s += 50
+      if (startsWith(title, qTokens)) s += Math.max(0, 100 - title.length)
+      return s
+    }
+    deduped.sort((a, b) => scoreItem(b) - scoreItem(a))
+    return { items: deduped.slice(0, 40).map(({ _normTitle, ...rest }) => rest) }
   },
   info: (id, titleId, source) => {
     const { id: baseId, titleId: safeTitle } = parseIdTitle(id, titleId)
