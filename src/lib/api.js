@@ -5,6 +5,16 @@ const BASE_URL = typeof window !== 'undefined' && window.location?.protocol === 
   ? EDGE_BASE
   : PLAIN_BASE;
 
+async function fetchWithTimeout(url, options = {}, timeoutMs = 12000) {
+  const controller = new AbortController()
+  const id = setTimeout(() => controller.abort(), timeoutMs)
+  try {
+    return await fetch(url, { ...options, signal: controller.signal })
+  } finally {
+    clearTimeout(id)
+  }
+}
+
 function getBaseFor(source) {
   // For Mangafire, always use edge proxy in production to avoid CORS
   if (source === 'mf') {
@@ -25,10 +35,19 @@ async function request(path, options = {}, source) {
   const base = getBaseFor(source)
   const suffix = withSource(path, source)
   const url = suffix.startsWith('?') ? `${base}${suffix}` : `${base}${suffix}`;
-  const response = await fetch(url, {
-    headers: { 'Accept': 'application/json' },
-    ...options,
-  });
+  let response
+  try {
+    response = await fetchWithTimeout(url, {
+      headers: { 'Accept': 'application/json' },
+      ...options,
+    }, 12000)
+  } catch (_) {
+    // One retry with shorter timeout
+    response = await fetchWithTimeout(url, {
+      headers: { 'Accept': 'application/json' },
+      ...options,
+    }, 8000)
+  }
   if (!response.ok) {
     const text = await response.text();
     throw new Error(`Request failed ${response.status}: ${text}`);
@@ -257,20 +276,29 @@ export const api = {
         return Number.isNaN(parsed) ? 0 : parsed
       }
 
-      // Fetch from all MF types with pagination
-      const mfTypes = ['updated-manga', 'updated-manhwa', 'updated-manhua']
-      const mfPromises = mfTypes.map(type => 
-        requestMapped(`/recently-updated/${type}?page=${encodeURIComponent(page)}`, {}, 'mf')
-          .then(r => Array.isArray(r) ? r : (Array.isArray(r.items) ? r.items : []))
-          .catch(() => [])
-      )
+      // Fetch MF types SEQUENTIALLY to avoid upstream rate limits/timeouts
+      const mfTypes = ['updated-manhwa', 'updated-manga', 'updated-manhua']
+      const mfResults = []
+      for (const type of mfTypes) {
+        try {
+          const r = await requestMapped(`/recently-updated/${type}?page=${encodeURIComponent(page)}`, {}, 'mf')
+          const arr = Array.isArray(r) ? r : (Array.isArray(r.items) ? r.items : [])
+          mfResults.push({ status: 'fulfilled', value: arr })
+        } catch (_) {
+          mfResults.push({ status: 'rejected', reason: 'mf fetch failed' })
+        }
+      }
 
-      const [gfRes, ...mfResults] = await Promise.allSettled([
-        api.latestUpdates(page).catch(() => ({ items: [] })),
-        ...mfPromises
-      ])
+      // Fetch GF latest through our proxy as well (already handled by requestMapped base)
+      let gfRes
+      try {
+        const raw = await api.latestUpdates(page)
+        gfRes = { status: 'fulfilled', value: raw }
+      } catch (e) {
+        gfRes = { status: 'rejected', reason: e }
+      }
 
-      const gfItems = gfRes.status === 'fulfilled' ? extractItems(gfRes.value).map(it => ({
+      const gfItems = gfRes && gfRes.status === 'fulfilled' ? extractItems(gfRes.value).map(it => ({
         ...it,
         _source: 'greft',
         uploadTime: toTimestamp(it.updatedAt || it.time || it.date || it.updated || it.lastUpdate)
