@@ -175,7 +175,7 @@ export default function Info() {
         </div>
       </section>
 
-      <section className="max-w-[95vw] mx-auto px-4 sm:px-6 -mt-10 md:-mt-20 lg:-mt-24 relative">
+      <section className="max-w-[95vw] mx-auto px-4 sm:px-6 mt-6 md:mt-10 lg:mt-12 relative">
         <div className="grid grid-cols-1 lg:grid-cols-[minmax(360px,520px)_1fr] gap-6 lg:gap-8 items-start">
           <div className="rounded-2xl border border-stone-200 dark:border-gray-700/60 bg-white/60 dark:bg-gray-900/60 shadow-soft dark:shadow-soft-dark p-6 md:p-8">
             <button

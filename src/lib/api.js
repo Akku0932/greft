@@ -136,9 +136,9 @@ export const api = {
     // Run with aggressive timeouts to keep UX snappy
     const settled = await Promise.allSettled([
       // GF variants (parallel)
-      ...gfPaths.map(p => requestMapped(p, { timeoutMs: 7000 }, source)),
+      ...gfPaths.map(p => requestMapped(p, { timeoutMs: 4000 }, source)),
       // MF search via edge proxy
-      requestMapped(`/category/filter?keyword=${query}`, { timeoutMs: 7000 }, 'mf')
+      requestMapped(`/category/filter?keyword=${query}`, { timeoutMs: 4000 }, 'mf')
     ])
     const results = []
     for (const s of settled) {
@@ -209,7 +209,8 @@ export const api = {
       // fallback: keep existing order
       return 0
     })
-    return { items: deduped.map(({ _normTitle, ...rest }) => rest) }
+    const limited = deduped.slice(0, 40)
+    return { items: limited.map(({ _normTitle, ...rest }) => rest) }
   },
   info: (id, titleId, source) => {
     const { id: baseId, titleId: safeTitle } = parseIdTitle(id, titleId)
