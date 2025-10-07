@@ -19,10 +19,8 @@ async function fetchWithTimeout(url, options = {}, timeoutMs = 12000) {
 
 function getBaseFor(source) {
   if (source === 'mf') {
-    // In local dev, route through Vite dev proxy at /api/mf
-    if (IS_LOCAL) return '/api/mf'
-    // In production (HTTPS), use edge proxy to avoid CORS
-    return EDGE_BASE
+    // Always use dedicated MF edge function in all environments
+    return '/api/mf'
   }
   return BASE_URL
 }
@@ -32,9 +30,8 @@ function withSource(path, source) {
   // Prefix only when using the edge proxy base
   const base = getBaseFor(source)
   if (source === 'mf') {
-    if (base === EDGE_BASE) return `?src=mf&p=${encodeURIComponent(path)}`
-    // base === '/api/mf' in dev: return the original path (leading slash)
-    return path.startsWith('/') ? path : `/${path}`
+    // Dedicated edge function expects ?p=encodedPath
+    return `?p=${encodeURIComponent(path)}`
   }
   return path
 }
