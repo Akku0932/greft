@@ -124,93 +124,20 @@ export const api = {
   // Unified "new release" that hides the MF source detail from UI
   // Calls MF new-release endpoint directly
   newRelease: () => requestMapped('/new-release', {}, 'mf'),
-  search: async (q, source) => {
+  search: async (q) => {
     const query = encodeURIComponent(q)
-    const gfPaths = [
-      `/search?q=${query}`,
-      `/search/${query}`,
-      `/search?query=${query}`,
-      `/search?keyword=${query}`,
-    ]
-    // Run GF and MF searches in parallel to cut latency
-    // Run with aggressive timeouts to keep UX snappy
-    const settled = await Promise.allSettled([
-      // GF variants (parallel)
-      ...gfPaths.map(p => requestMapped(p, { timeoutMs: 4000 }, source)),
-      // MF search via edge proxy
-      requestMapped(`/category/filter?keyword=${query}`, { timeoutMs: 4000 }, 'mf')
-    ])
-    const results = []
-    for (const s of settled) {
-      if (s.status !== 'fulfilled' || !s.value) continue
-      // MF payload shape normalization
-      if (s.value && (Array.isArray(s.value.data) || Array.isArray(s.value.items))) {
-        const arr = Array.isArray(s.value.data) ? s.value.data : s.value.items
-        const mapped = arr.map(item => ({ id: item.id, seriesId: item.id, title: item.name, name: item.name, img: item.img, _source: 'mf' }))
-        results.push(mapped)
-      } else {
-        results.push(s.value)
-      }
-    }
-    // Merge arrays/items into one unique list
-    const all = results.flatMap(r => extractItems(r))
-    const seen = new Set()
-    const merged = []
-    for (const it of all) {
-      const normTitle = String((it.title || it.name || '')).toLowerCase().replace(/[^a-z0-9]+/g,' ').trim()
-      const key = it.seriesId || it.id || it._id || it.slug || normTitle
-      if (!key || seen.has(key)) continue
-      seen.add(key)
-      merged.push({ ...it, _normTitle: normTitle })
-    }
-    // Deduplicate by normalized title, prefer MF entries if duplicates exist
-    const byTitle = new Map()
-    for (const it of merged) {
-      const t = it._normTitle
-      if (!t) continue
-      const cur = byTitle.get(t)
-      if (!cur) byTitle.set(t, it)
-      else {
-        const pick = (it._source === 'mf') ? it : (cur._source === 'mf' ? cur : it)
-        byTitle.set(t, pick)
-      }
-    }
-    const deduped = Array.from(byTitle.values())
-    // Position/quality scoring - put strongest matches first
-    const qNorm = String(q || '').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim()
-    const qTokens = qNorm.split(' ').filter(Boolean)
-    const startsWith = (title, tokens) => title.startsWith(tokens.join(' '))
-    const containsInOrder = (title, tokens) => {
-      let idx = 0
-      for (const t of tokens) {
-        const found = title.indexOf(t, idx)
-        if (found === -1) return false
-        idx = found + t.length
-      }
-      return true
-    }
-    const scoreItem = (it) => {
-      const title = it._normTitle || ''
-      if (!qNorm) return 0
-      if (title === qNorm) return 1000
-      let s = 0
-      if (startsWith(title, qTokens)) s += 800
-      if (containsInOrder(title, qTokens)) s += 300
-      // token coverage
-      for (const t of qTokens) if (title.includes(t)) s += 50
-      // shorter titles that start with query get a small boost
-      if (startsWith(title, qTokens)) s += Math.max(0, 100 - title.length)
-      return s
-    }
-    deduped.sort((a, b) => {
-      const sa = scoreItem(a)
-      const sb = scoreItem(b)
-      if (sb !== sa) return sb - sa
-      // fallback: keep existing order
-      return 0
-    })
-    const limited = deduped.slice(0, 40)
-    return { items: limited.map(({ _normTitle, ...rest }) => rest) }
+    // Only MF search
+    const mf = await requestMapped(`/category/filter?keyword=${query}`, { timeoutMs: 5000 }, 'mf')
+    const arr = Array.isArray(mf?.data) ? mf.data : (Array.isArray(mf?.items) ? mf.items : [])
+    const mapped = arr.map(item => ({
+      id: item.id,
+      seriesId: item.id,
+      title: item.name,
+      name: item.name,
+      img: item.img,
+      _source: 'mf'
+    }))
+    return { items: mapped }
   },
   info: (id, titleId, source) => {
     const { id: baseId, titleId: safeTitle } = parseIdTitle(id, titleId)
