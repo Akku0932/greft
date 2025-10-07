@@ -32,6 +32,13 @@ async function request(path, options = {}, source) {
     const text = await response.text();
     throw new Error(`Request failed ${response.status}: ${text}`);
   }
+  const ct = response.headers.get('content-type') || ''
+  if (!ct.includes('application/json')) {
+    const text = await response.text()
+    try { return JSON.parse(text) } catch {
+      throw new Error(`Invalid JSON from ${url}: ${text.slice(0, 200)}`)
+    }
+  }
   return response.json();
 }
 

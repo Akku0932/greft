@@ -7,6 +7,18 @@ export default async function handler(req) {
   const targetPath = url.pathname.replace(/^\/api\/proxy-edge\/?/, '');
   const imageUrl = url.searchParams.get('url');
 
+  // CORS preflight support
+  if (req.method === 'OPTIONS') {
+    return new Response(null, {
+      status: 204,
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+      },
+    });
+  }
+
   // Image proxy: /api/proxy-edge?url=http://...
   if (imageUrl) {
     try {
@@ -47,6 +59,7 @@ export default async function handler(req) {
       headers: {
         // Forward safe headers only
         'accept': 'application/json, text/plain, */*',
+        'user-agent': 'greft-proxy/1.0',
       },
       body: req.method === 'GET' || req.method === 'HEAD' ? undefined : req.body,
     });
@@ -54,6 +67,10 @@ export default async function handler(req) {
     const headers = new Headers(response.headers);
     headers.set('Access-Control-Allow-Origin', '*');
     headers.set('Access-Control-Allow-Methods', 'GET, OPTIONS');
+    // Normalize missing content-type for JSON endpoints
+    if (!headers.has('content-type')) {
+      headers.set('content-type', 'application/json');
+    }
 
     return new Response(response.body, {
       status: response.status,
