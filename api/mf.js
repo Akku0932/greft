@@ -8,6 +8,8 @@ export default async function handler(req) {
   const targetUrl = `${originBase}/${upstreamPath}`
 
   try {
+    const controller = new AbortController()
+    const t = setTimeout(() => controller.abort(), 10000)
     const upstream = await fetch(targetUrl, {
       headers: {
         accept: 'application/json, text/plain, */*',
@@ -18,7 +20,9 @@ export default async function handler(req) {
         pragma: 'no-cache',
         'cache-control': 'no-cache',
       },
+      signal: controller.signal,
     })
+    clearTimeout(t)
     const body = await upstream.arrayBuffer()
     const headers = new Headers(upstream.headers)
     headers.set('Access-Control-Allow-Origin', '*')
@@ -26,7 +30,7 @@ export default async function handler(req) {
     if (!headers.has('content-type')) headers.set('content-type', 'application/json')
     return new Response(body, { status: upstream.status, headers })
   } catch (e) {
-    return new Response(JSON.stringify({ error: 'MF edge proxy failed', detail: String(e) }), { status: 502, headers: { 'content-type': 'application/json' } })
+    return new Response(JSON.stringify({ error: 'MF edge proxy failed', detail: String(e), targetUrl }), { status: 502, headers: { 'content-type': 'application/json' } })
   }
 }
 
