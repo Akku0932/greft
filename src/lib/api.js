@@ -332,19 +332,41 @@ export const api = {
         }
       }
 
-      // Merge, de-duplicate by normalized title. IMPORTANT: Prefer keeping GF entries if both exist
+      // Merge and de-duplicate by normalized title, prefer GF when duplicates exist; otherwise pick newer uploadTime
       const byTitle = new Map()
       const consider = (arr) => {
         for (const it of arr) {
           const key = normalizeTitleKey(it.title || it.name)
           if (!key) continue
-          if (!byTitle.has(key)) {
+          const current = byTitle.get(key)
+          if (!current) {
             byTitle.set(key, it)
+            continue
           }
+          // Prefer GF if either is GF
+          if ((current._source === 'greft') && (it._source !== 'greft')) {
+            // keep GF
+            continue
+          }
+          if ((it._source === 'greft') && (current._source !== 'greft')) {
+            byTitle.set(key, it)
+            continue
+          }
+          // Otherwise prefer newer uploadTime, then higher chapterNumber
+          const curTime = current.uploadTime || 0
+          const newTime = it.uploadTime || 0
+          if (newTime > curTime) {
+            byTitle.set(key, it)
+            continue
+          }
+          const curChap = current.chapterNumber || 0
+          const newChap = it.chapterNumber || 0
+          if (newChap > curChap) byTitle.set(key, it)
         }
       }
-      consider(gfItems)
+      // Consider MF then GF so that GF can override where present
       consider(allMFItems)
+      consider(gfItems)
 
       return Array.from(byTitle.values()).sort((a, b) => (b.uploadTime || 0) - (a.uploadTime || 0))
     },
@@ -391,19 +413,36 @@ export const api = {
         .replace(/\s+/g, ' ')
         .trim()
 
+      const parseChapterNumber = (it) => {
+        return it.chapterNumber || 0
+      }
+
       const byTitle = new Map()
       const consider = (arr) => {
         for (const it of arr) {
           const title = it.title || it.name || (it.info && (it.info.title || it.info.name)) || ''
           const key = normalizeTitleKey(title)
           if (!key) continue
-          if (!byTitle.has(key)) byTitle.set(key, it)
+          const score = parseChapterNumber(it)
+          const current = byTitle.get(key)
+          if (!current) {
+            byTitle.set(key, { item: it, score })
+            continue
+          }
+          // Prefer GF when duplicates exist
+          if ((current.item._source === 'greft') && (it._source !== 'greft')) continue
+          if ((it._source === 'greft') && (current.item._source !== 'greft')) {
+            byTitle.set(key, { item: it, score })
+            continue
+          }
+          if (score > current.score) byTitle.set(key, { item: it, score })
         }
       }
-      // Prefer GF (left) then fill gaps with MF (right)
-      consider(left)
+      // Consider MF first, then GF to allow GF overrides
       consider(right)
-      return Array.from(byTitle.values())
+      consider(left)
+
+      return Array.from(byTitle.values()).map(v => v.item)
     },
   }
 };
