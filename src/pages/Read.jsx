@@ -1,6 +1,8 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { api, getImage, parseIdTitle, sanitizeTitleId, pickImage } from '../lib/api.js'
+import { upsertProgress } from '../lib/progressApi'
+import { upsertRecentRead } from '../lib/recentReadsApi'
 
 export default function Read() {
   const { id } = useParams()
@@ -14,10 +16,30 @@ export default function Read() {
   const [chapters, setChapters] = useState([])
   const [seriesInfo, setSeriesInfo] = useState(null)
   // Width control (convert zoom to widening the whole container)
-  const widthLevels = ['max-w-3xl','max-w-4xl','max-w-5xl','max-w-6xl','max-w-7xl']
-  const [widthLevel, setWidthLevel] = useState(3)
+  const widthLevels = ['max-w-3xl','max-w-[56rem]','max-w-4xl','max-w-5xl','max-w-6xl','max-w-7xl']
+  const [widthLevel, setWidthLevel] = useState(1) // Default to custom medium width (56rem)
+  
+  // Get the current width class with explicit Tailwind classes
+  const getWidthClass = () => {
+    const baseClasses = "w-full md:w-auto mx-auto px-0 sm:px-4 py-6"
+    switch(widthLevel) {
+      case 0: return `${baseClasses} md:max-w-3xl`
+      case 1: return `${baseClasses} md:max-w-[56rem]`
+      case 2: return `${baseClasses} md:max-w-4xl`
+      case 3: return `${baseClasses} md:max-w-5xl`
+      case 4: return `${baseClasses} md:max-w-6xl`
+      case 5: return `${baseClasses} md:max-w-7xl`
+      default: return `${baseClasses} md:max-w-[56rem]`
+    }
+  }
   const [showBar, setShowBar] = useState(true)
   const [lastY, setLastY] = useState(0)
+  const [buttonClicked, setButtonClicked] = useState(false)
+  const [menuOpen, setMenuOpen] = useState(false)
+  const [isFullscreen, setIsFullscreen] = useState(() => !!(document.fullscreenElement))
+  const menuRef = useRef(null)
+  const navLockRef = useRef(false)
+  const [transitioning, setTransitioning] = useState(false)
 
   const seriesId = useMemo(() => {
     if (seriesParam) return seriesParam
@@ -29,23 +51,38 @@ export default function Read() {
 
   const titleId = useMemo(() => sanitizeTitleId(titleParam || ''), [titleParam])
 
+  // Determine source based on series ID format
+  const isMF = seriesId && seriesId.includes('.') && !seriesId.includes('/')
+  const source = isMF ? 'mf' : 'gf'
+  
+  // For MF, the id is the chapter ID directly (e.g., "5284492")
+  // For GF, the id might be a path or just the chapter ID
+
   useEffect(() => {
     let mounted = true
     async function run() {
       try {
-        const res = await api.read(id)
+        // For MF, the id is the chapter ID directly (e.g., "5284492")
+        // For GF, it might be a path that needs processing
+        const chapterId = source === 'mf' ? id : decodeURIComponent(id)
+        
+        const res = await api.read(chapterId, source)
         if (!mounted) return
         const imgs = Array.isArray(res) ? res : (res.pages || res.images || res.items || [])
-        setPages(imgs.map(getImage))
+        setPages(imgs.map(img => {
+          // Handle MF format: {img: "url"} or GF format: "url"
+          const url = typeof img === 'string' ? img : (img?.img || img?.src || img)
+          return getImage(url)
+        }))
       } catch (e) {
         if (mounted) setError(e)
       } finally {
-        if (mounted) setLoading(false)
+        if (mounted) { setLoading(false); setTransitioning(false) }
       }
     }
     run()
     return () => { mounted = false }
-  }, [id])
+  }, [id, source])
 
   useEffect(() => {
     if (!seriesId) return
@@ -58,7 +95,7 @@ export default function Read() {
         const parsed = JSON.parse(cached)
         if (Array.isArray(parsed) && mounted) setChapters(parsed)
       } catch {}
-      const res = await api.chapters(seriesId)
+      const res = await api.chapters(seriesId, source)
         if (!mounted) return
         const list = Array.isArray(res) ? res : (res.items || [])
       setChapters(list)
@@ -80,7 +117,7 @@ export default function Read() {
         const parsed = JSON.parse(cached)
         if (parsed && mounted) setSeriesInfo(parsed)
       } catch {}
-      const info = await api.info(seriesId, titleId)
+      const info = await api.info(seriesId, titleId, source)
       if (mounted) {
         setSeriesInfo(info)
         try { localStorage.setItem(`series-info:${seriesId}:${titleId}`, JSON.stringify(info)) } catch {}
@@ -92,53 +129,127 @@ export default function Read() {
 
   // Normalize to oldest -> newest for intuitive navigation (Prev = older, Next = newer)
   const orderedChapterIds = useMemo(() => {
-    const ids = chapters.map((ch) => ch.id || ch.slug || ch.urlId || ch.href || ch.url || ch.cid || ch.chapterId).map((v) => String(v))
-    // Most APIs return latest first; we show oldest->newest for correct next/prev semantics
-    return ids.slice(0).reverse()
-  }, [chapters])
+    if (source === 'mf') {
+      // For MF, chapters have numeric IDs that should be used directly
+      const ids = chapters.map((ch) => String(ch.id || ch.dataNumber || ch.chapterId)).filter(Boolean)
+      // MF returns chapters in reverse order (latest first), so reverse for oldest->newest
+      return ids.slice(0).reverse()
+    } else {
+      // For GF, use existing logic
+      const ids = chapters.map((ch) => ch.id || ch.slug || ch.urlId || ch.href || ch.url || ch.cid || ch.chapterId).map((v) => String(v))
+      return ids.slice(0).reverse()
+    }
+  }, [chapters, source])
+
+  // Labels straight from API (no auto numbering)
+  const chapterLabels = useMemo(() => {
+    const pickLabel = (ch) => {
+      const raw = ch?.chap ?? ch?.chapter ?? (ch?.chapVol && ch?.chapVol?.chap) ?? ch?.no ?? ch?.number ?? ch?.title ?? ch?.name
+      if (raw == null) return null
+      return String(raw).trim()
+    }
+    // Build id->label map using original API order
+    const map = new Map()
+    chapters.forEach((ch) => {
+      const id = String(ch.id || ch.dataNumber || ch.chapterId || ch.slug || ch.urlId || ch.href || ch.url || ch.cid || '')
+      if (!id) return
+      const label = pickLabel(ch)
+      if (!map.has(id)) map.set(id, label)
+    })
+    return orderedChapterIds.map((cid, idx) => map.get(String(cid)) || `Chapter ${idx + 1}`)
+  }, [chapters, orderedChapterIds])
 
   const currentIndex = useMemo(() => {
     const raw = String(id || '')
-    const byExact = orderedChapterIds.findIndex((x) => x === raw)
-    if (byExact !== -1) return byExact
-    // try last segment match
-    const seg = raw.split('/').pop()
-    return orderedChapterIds.findIndex((x) => String(x).split('/').pop() === seg)
-  }, [id, orderedChapterIds])
+    
+    if (source === 'mf') {
+      // For MF, the id is the chapter ID directly (e.g., "5284492")
+      return orderedChapterIds.findIndex((x) => x === raw)
+    } else {
+      // For GF, use existing logic
+      const decodedRaw = decodeURIComponent(raw)
+      const byExact = orderedChapterIds.findIndex((x) => x === raw || x === decodedRaw)
+      if (byExact !== -1) return byExact
+      
+      const seg = raw.split('/').pop()
+      return orderedChapterIds.findIndex((x) => String(x).split('/').pop() === seg)
+    }
+  }, [id, orderedChapterIds, source])
 
   const prevId = currentIndex > 0 ? orderedChapterIds[currentIndex - 1] : null
   const nextId = currentIndex !== -1 && currentIndex + 1 < orderedChapterIds.length ? orderedChapterIds[currentIndex + 1] : null
   const isLast = !nextId
 
-  function goPrev() {
-    if (prevId) {
-      navigate(`/read/${encodeURIComponent(prevId)}${seriesId ? `?series=${encodeURIComponent(seriesId)}&title=${encodeURIComponent(titleId)}` : ''}`)
-      window.scrollTo({ top: 0, behavior: 'smooth' })
-    }
-  }
-  function goNext() {
-    if (nextId) {
-      navigate(`/read/${encodeURIComponent(nextId)}${seriesId ? `?series=${encodeURIComponent(seriesId)}&title=${encodeURIComponent(titleId)}` : ''}`)
-      window.scrollTo({ top: 0, behavior: 'smooth' })
-    }
-  }
+  const goPrev = useCallback(() => {
+    if (!prevId) return
+    setTransitioning(true)
+    setLoading(true)
+    setPages([])
+    const url = source === 'mf' 
+      ? `/read/chapter/${prevId}${seriesId ? `?series=${encodeURIComponent(seriesId)}&title=${encodeURIComponent(titleId)}` : ''}`
+      : `/read/${encodeURIComponent(prevId)}${seriesId ? `?series=${encodeURIComponent(seriesId)}&title=${encodeURIComponent(titleId)}` : ''}`
+    navigate(url)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }, [prevId, source, seriesId, titleId, navigate])
+  const goNext = useCallback(() => {
+    if (!nextId) return
+    setTransitioning(true)
+    setLoading(true)
+    setPages([])
+    const url = source === 'mf' 
+      ? `/read/chapter/${nextId}${seriesId ? `?series=${encodeURIComponent(seriesId)}&title=${encodeURIComponent(titleId)}` : ''}`
+      : `/read/${encodeURIComponent(nextId)}${seriesId ? `?series=${encodeURIComponent(seriesId)}&title=${encodeURIComponent(titleId)}` : ''}`
+    navigate(url)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }, [nextId, source, seriesId, titleId, navigate])
 
   const infoHref = seriesId && titleId ? `/info/${encodeURIComponent(seriesId)}/${encodeURIComponent(titleId)}` : '/home'
 
-  function widen() { setWidthLevel((i) => Math.min(widthLevels.length - 1, i + 1)) }
-  function narrow() { setWidthLevel((i) => Math.max(0, i - 1)) }
-  function widthReset() { setWidthLevel(0) }
+  function widen() { 
+    setButtonClicked(true)
+    setWidthLevel((i) => Math.min(widthLevels.length - 1, i + 1))
+    setTimeout(() => setButtonClicked(false), 100)
+  }
+  function narrow() { 
+    setButtonClicked(true)
+    setWidthLevel((i) => Math.max(0, i - 1))
+    setTimeout(() => setButtonClicked(false), 100)
+  }
+  function widthReset() { 
+    setButtonClicked(true)
+    setWidthLevel(1) // Reset to our custom medium width
+    setTimeout(() => setButtonClicked(false), 100)
+  }
 
   useEffect(() => {
     function onKey(e) {
-      if (e.ctrlKey || e.metaKey) return
+      if (e.ctrlKey || e.metaKey || buttonClicked) return
       if (e.key === '+') widen()
       if (e.key === '-') narrow()
       if (e.key.toLowerCase() === '0') widthReset()
+      // Chapter navigation with arrow keys (ignore when typing in inputs/textareas)
+      const active = document.activeElement
+      const tag = active && active.tagName ? active.tagName.toLowerCase() : ''
+      const isTyping = tag === 'input' || tag === 'textarea' || (active && active.isContentEditable)
+      if (isTyping) return
+      if (e.key === 'ArrowRight') {
+        e.preventDefault()
+        if (e.repeat || navLockRef.current) return
+        navLockRef.current = true
+        goNext()
+        setTimeout(() => { navLockRef.current = false }, 500)
+      }
+      if (e.key === 'ArrowLeft') {
+        e.preventDefault()
+        if (e.repeat || navLockRef.current) return
+        navLockRef.current = true
+        goPrev()
+        setTimeout(() => { navLockRef.current = false }, 500)
+      }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [])
+  }, [buttonClicked, goNext, goPrev])
 
   // Show navbar on scroll up, hide on scroll down
   useEffect(() => {
@@ -153,7 +264,47 @@ export default function Read() {
     return () => window.removeEventListener('scroll', onScroll)
   }, [lastY])
 
-  // Persist recent read progress in localStorage
+  // Fullscreen state sync
+  useEffect(() => {
+    function onFsChange() { setIsFullscreen(!!document.fullscreenElement) }
+    document.addEventListener('fullscreenchange', onFsChange)
+    return () => document.removeEventListener('fullscreenchange', onFsChange)
+  }, [])
+
+  // Close three-dot menu when clicking outside
+  useEffect(() => {
+    function onDocClick(e) {
+      if (!menuOpen) return
+      const el = menuRef.current
+      if (el && !el.contains(e.target)) {
+        setMenuOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', onDocClick)
+    document.addEventListener('touchstart', onDocClick)
+    return () => {
+      document.removeEventListener('mousedown', onDocClick)
+      document.removeEventListener('touchstart', onDocClick)
+    }
+  }, [menuOpen])
+
+  function scrollToTop() {
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+  async function toggleFullscreen() {
+    try {
+      if (!document.fullscreenElement) {
+        await document.documentElement.requestFullscreen()
+      } else {
+        await document.exitFullscreen()
+      }
+    } catch {}
+  }
+  function reloadPage() {
+    window.location.reload()
+  }
+
+  // Persist recent read progress in localStorage and Supabase
   useEffect(() => {
     if (!seriesId || currentIndex < 0) return
     try {
@@ -161,7 +312,7 @@ export default function Read() {
       const raw = localStorage.getItem(key)
       const list = Array.isArray(JSON.parse(raw)) ? JSON.parse(raw) : []
       const cover = getImage(pickImage(seriesInfo || {}) || seriesInfo?.img)
-      const title = seriesInfo?.title || titleId || 'Series'
+      const title = source === 'mf' ? (seriesInfo?.name || 'Series') : (seriesInfo?.title || 'Series')
       const entry = {
         seriesId,
         titleId,
@@ -175,6 +326,30 @@ export default function Read() {
       const next = [entry, ...without].slice(0, 24)
       localStorage.setItem(key, JSON.stringify(next))
     } catch (_) {}
+    // Also upsert server-side progress when logged in
+    ;(async () => {
+      try {
+        await upsertProgress({
+          seriesId,
+          source,
+          lastChapterId: String(orderedChapterIds[currentIndex] || id || ''),
+          lastChapterIndex: currentIndex
+        })
+        // Save recent read entry to Supabase for logged-in users
+        const cover = getImage(pickImage(seriesInfo || {}) || seriesInfo?.img)
+        const title = source === 'mf' ? (seriesInfo?.name || 'Series') : (seriesInfo?.title || 'Series')
+        await upsertRecentRead({
+          seriesId,
+          source,
+          title,
+          titleId,
+          cover,
+          lastChapterId: String(orderedChapterIds[currentIndex] || id || ''),
+          lastChapterIndex: currentIndex,
+          updatedAt: Date.now()
+        })
+      } catch (_) {}
+    })()
   }, [seriesId, titleId, seriesInfo, currentIndex, orderedChapterIds, id])
 
   return (
@@ -194,7 +369,7 @@ export default function Read() {
                   )}
                 </div>
                 <div className="hidden sm:block text-base md:text-lg font-semibold text-stone-900 dark:text-white truncate max-w-[50vw] md:max-w-[56vw] group-hover:opacity-90">
-                  {seriesInfo?.title || titleId || 'Series'}
+                  {source === 'mf' ? (seriesInfo?.name || 'Series') : (seriesInfo?.title || 'Series')}
                 </div>
               </Link>
               <div className="ml-2">
@@ -205,14 +380,17 @@ export default function Read() {
                     const idx = Number(e.target.value)
                     const targetId = orderedChapterIds[idx]
                     if (targetId) {
-                      navigate(`/read/${encodeURIComponent(targetId)}${seriesId ? `?series=${encodeURIComponent(seriesId)}&title=${encodeURIComponent(titleId)}` : ''}`)
+                      const url = source === 'mf' 
+                        ? `/read/chapter/${targetId}${seriesId ? `?series=${encodeURIComponent(seriesId)}&title=${encodeURIComponent(titleId)}` : ''}`
+                        : `/read/${encodeURIComponent(targetId)}${seriesId ? `?series=${encodeURIComponent(seriesId)}&title=${encodeURIComponent(titleId)}` : ''}`
+                      navigate(url)
                       window.scrollTo({ top: 0, behavior: 'smooth' })
                     }
                   }}
                 >
                   {orderedChapterIds.map((cid, idx) => (
                     <option key={cid} value={String(idx)}>
-                      {`Chapter ${idx + 1}`}
+                      {chapterLabels[idx]}
                     </option>
                   ))}
                 </select>
@@ -225,7 +403,7 @@ export default function Read() {
 
       <section className="relative">
         <div className="absolute inset-0 -z-10 bg-gradient-to-b from-black/30 via-black/70 to-black/95" />
-        <div className={`${widthLevels[widthLevel]} mx-auto w-full px-0 sm:px-4 py-6 max-w-none`}>
+        <div className={getWidthClass()}>
           {loading && <div className="text-stone-700 dark:text-gray-300">Loading…</div>}
           {error && <div className="text-red-600 dark:text-red-400">{String(error)}</div>}
           <div className="space-y-0">
@@ -240,12 +418,41 @@ export default function Read() {
         <div className="hidden sm:block fixed left-3 bottom-3 z-30">
           <div className="inline-flex items-center gap-2 rounded-xl border border-stone-300 dark:border-gray-700 bg-white/90 dark:bg-gray-900/90 backdrop-blur px-2 py-1.5 shadow-sm">
             <button onClick={narrow} className="px-2.5 py-1 rounded-md border border-stone-200 dark:border-gray-700 text-stone-700 dark:text-gray-300">- Width</button>
-            <div className="px-1.5 text-xs text-stone-700 dark:text-gray-300 w-24 text-center">{widthLevels[widthLevel].replace('max-w-','')}</div>
+            <div className="px-1.5 text-xs text-stone-700 dark:text-gray-300 w-24 text-center">
+              {widthLevels[widthLevel].replace('max-w-','').replace('[56rem]','med')}
+            </div>
             <button onClick={widen} className="px-2.5 py-1 rounded-md border border-stone-200 dark:border-gray-700 text-stone-700 dark:text-gray-300">+ Width</button>
             <button onClick={widthReset} className="px-2.5 py-1 rounded-md border border-stone-200 dark:border-gray-700 text-stone-700 dark:text-gray-300">Reset</button>
           </div>
         </div>
       </section>
+
+      {/* Chapter change overlay spinner */}
+      {transitioning && (
+        <div className="fixed inset-0 z-20 pointer-events-none flex items-center justify-center">
+          <div className="w-10 h-10 border-2 border-stone-300 dark:border-gray-700 border-t-blue-500 rounded-full animate-spin" />
+        </div>
+      )}
+
+      {/* Floating controls: three-dot menu at previous back-to-top position */}
+      <div className="fixed right-4 bottom-16 z-30" ref={menuRef}>
+        <div className="relative">
+          {menuOpen && (
+            <div className="absolute bottom-14 right-0 w-48 rounded-xl border border-stone-300 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-lg overflow-hidden">
+              <button onClick={() => { setMenuOpen(false); toggleFullscreen() }} className="w-full text-left px-3 py-2 text-sm hover:bg-stone-100 dark:hover:bg-gray-800">{isFullscreen ? 'Exit fullscreen' : 'Read in fullscreen'}</button>
+              <button onClick={() => { setMenuOpen(false); reloadPage() }} className="w-full text-left px-3 py-2 text-sm hover:bg-stone-100 dark:hover:bg-gray-800">Reload page</button>
+            </div>
+          )}
+          <button
+            onClick={() => setMenuOpen(v => !v)}
+            className="h-12 w-12 rounded-full bg-stone-900 dark:bg-gray-800 text-white flex items-center justify-center shadow-lg border border-stone-300/30 dark:border-gray-700/40"
+            aria-label="Reader menu"
+            title="Reader menu"
+          >
+            <svg className="w-6 h-6" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>
+          </button>
+        </div>
+      </div>
 
       <section className="pt-6">
         <div className="w-screen relative left-1/2 right-1/2 -ml-[50vw] -mr-[50vw] mt-2 mb-6 grid grid-cols-12 divide-x divide-stone-200 dark:divide-gray-700 overflow-hidden bg-stone-100 dark:bg-gray-800">
@@ -257,7 +464,7 @@ export default function Read() {
             <svg className="absolute left-4 sm:left-6 h-5 w-5 text-stone-500 dark:text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
             <div className="text-center">
               <div className="text-base font-semibold text-stone-900 dark:text-white">Prev</div>
-              <div className="text-xs text-stone-500 dark:text-gray-400 mt-1">{prevId ? `Ch. ${Math.max(1, (currentIndex) )}` : ''}</div>
+              <div className="text-xs text-stone-500 dark:text-gray-400 mt-1">{prevId ? `${chapterLabels[currentIndex-1]}` : ''}</div>
             </div>
           </button>
           {isLast ? (
@@ -281,7 +488,7 @@ export default function Read() {
             >
               <div className="text-center">
                 <div className="text-base font-semibold text-stone-900 dark:text-white">Next</div>
-                <div className="text-xs text-stone-500 dark:text-gray-400 mt-1">{nextId ? `Ch. ${currentIndex + 2}` : ''}</div>
+                <div className="text-xs text-stone-500 dark:text-gray-400 mt-1">{nextId ? `${chapterLabels[currentIndex+1]}` : ''}</div>
               </div>
               <svg className="absolute right-4 sm:right-6 h-5 w-5 text-stone-500 dark:text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6"/></svg>
             </button>

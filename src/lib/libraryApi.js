@@ -1,0 +1,34 @@
+import { supabase } from './supabaseClient'
+
+export async function fetchLibrary() {
+  const { data, error } = await supabase
+    .from('library')
+    .select('*')
+    .order('added_at', { ascending: false })
+  if (error) throw error
+  return data || []
+}
+
+export async function saveSeries({ seriesId, source, title, cover }) {
+  const { data: auth } = await supabase.auth.getUser()
+  const user = auth?.user
+  if (!user) throw new Error('Not authenticated')
+  const row = { user_id: user.id, series_id: seriesId, source, title, cover }
+  const { error } = await supabase.from('library').upsert(row)
+  if (error) throw error
+}
+
+export async function unsaveSeries({ seriesId, source }) {
+  const { data: auth } = await supabase.auth.getUser()
+  const user = auth?.user
+  if (!user) throw new Error('Not authenticated')
+  const { error } = await supabase
+    .from('library')
+    .delete()
+    .eq('user_id', user.id)
+    .eq('series_id', seriesId)
+    .eq('source', source)
+  if (error) throw error
+}
+
+

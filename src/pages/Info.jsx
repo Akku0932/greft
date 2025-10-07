@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { api, getImage, pickImage, parseIdTitle, sanitizeTitleId } from '../lib/api.js'
+import { useLibrary } from '../hooks/useLibrary'
 
 export default function Info() {
   const { id, titleId } = useParams()
@@ -12,56 +13,111 @@ export default function Info() {
   const [page, setPage] = useState(0)
   const [showMeta, setShowMeta] = useState(false)
 
+  // Determine source based on ID format
+  const isMF = id && id.includes('.') && !id.includes('/')
+  const source = isMF ? 'mf' : 'gf'
+  const { user, add, remove, isSaved } = useLibrary()
+
   useEffect(() => {
     let mounted = true
     async function run() {
       try {
         const parsed = parseIdTitle(id, titleId)
-        const res = await api.info(parsed.id, parsed.titleId)
-        if (mounted) setData(res)
+        const [infoRes, recRes] = await Promise.allSettled([
+          api.info(parsed.id, parsed.titleId, source),
+          api.recommendations(parsed.id, source).catch(() => ({ items: [] }))
+        ])
+        
+        if (mounted) {
+          const infoData = infoRes.status === 'fulfilled' ? infoRes.value : null
+          const recData = recRes.status === 'fulfilled' ? recRes.value : null
+          
+          if (infoData) {
+            // Add recommendations to the data if available
+            if (recData && (recData.items || Array.isArray(recData))) {
+              infoData.recommendations = Array.isArray(recData) ? recData : recData.items || []
+            }
+            setData(infoData)
+          }
+        }
       } catch (e) { if (mounted) setError(e) } finally { if (mounted) setLoading(false) }
     }
     run();
     return () => { mounted = false }
-  }, [id, titleId])
+  }, [id, titleId, source])
 
   if (loading) return <div className="max-w-[95vw] mx-auto px-4 sm:px-6 py-10 text-stone-800 dark:text-gray-200">Loading…</div>
   if (error) return <div className="max-w-[95vw] mx-auto px-4 sm:px-6 py-10 text-red-600 dark:text-red-400">{String(error)}</div>
   if (!data) return null
 
-  const cover = getImage(pickImage(data) || data?.img)
+  // Map data based on source
+  const mappedData = source === 'mf' ? {
+    title: data?.name || data?.title,
+    description: data?.description,
+    img: data?.img,
+    status: data?.status,
+    type: data?.type,
+    author: data?.author || [],
+    published: data?.published,
+    genres: data?.genres || [],
+    otherName: data?.otherName,
+    mangazines: data?.mangazines
+  } : {
+    title: data?.title || data?.name,
+    description: data?.description,
+    img: data?.img,
+    status: data?.otherInfo?.status,
+    type: data?.otherInfo?.type,
+    author: (data?.otherInfo?.authors || []).map(a => a.author).filter(Boolean),
+    published: data?.otherInfo?.released,
+    genres: data?.otherInfo?.tags || [],
+    otherName: data?.otherName,
+    mangazines: data?.mangazines
+  }
+
+  const cover = getImage(pickImage(data) || mappedData.img)
   const bg = cover
-  const authors = (data?.otherInfo?.authors || []).map(a => a.author).filter(Boolean)
-  const tags = data?.otherInfo?.tags || []
+  const authors = mappedData.author
+  const tags = mappedData.genres
   const meta = {
-    Type: data?.otherInfo?.type,
-    Status: data?.otherInfo?.status,
-    Year: data?.otherInfo?.released,
-    Adult: data?.otherInfo?.adultContent,
+    Type: mappedData.type,
+    Status: mappedData.status,
+    Year: mappedData.published,
+    Adult: source === 'gf' ? data?.otherInfo?.adultContent : undefined,
   }
 
   async function onReadFirst() {
     try {
       const parsedSeries = parseIdTitle(id, titleId)
       const series = parsedSeries.id
-      const res = await api.chapters(series)
+      const res = await api.chapters(series, source)
       const list = Array.isArray(res) ? res : (res.items || [])
       if (!list.length) return
       const first = list[list.length - 1] || list[0]
       const chapterId = first.id || first.slug || first.urlId
-      if (chapterId) navigate(`/read/${encodeURIComponent(chapterId)}?series=${encodeURIComponent(series)}&title=${encodeURIComponent(parsedSeries.titleId)}`)
+      if (chapterId) {
+        const url = source === 'mf' 
+          ? `/read/chapter/${chapterId}?series=${encodeURIComponent(series)}&title=${encodeURIComponent(parsedSeries.titleId)}`
+          : `/read/${encodeURIComponent(chapterId)}?series=${encodeURIComponent(series)}&title=${encodeURIComponent(parsedSeries.titleId)}`
+        navigate(url)
+      }
     } catch {}
   }
 
   async function onReadLatest() {
     try {
       const parsedSeries = parseIdTitle(id, titleId)
-      const res = await api.chapters(parsedSeries.id)
+      const res = await api.chapters(parsedSeries.id, source)
       const list = Array.isArray(res) ? res : (res.items || [])
       if (!list.length) return
       const latest = list[0] || list[list.length - 1]
       const chapterId = latest.id || latest.slug || latest.urlId
-      if (chapterId) navigate(`/read/${encodeURIComponent(chapterId)}?series=${encodeURIComponent(parsedSeries.id)}&title=${encodeURIComponent(parsedSeries.titleId)}`)
+      if (chapterId) {
+        const url = source === 'mf' 
+          ? `/read/chapter/${chapterId}?series=${encodeURIComponent(parsedSeries.id)}&title=${encodeURIComponent(parsedSeries.titleId)}`
+          : `/read/${encodeURIComponent(chapterId)}?series=${encodeURIComponent(parsedSeries.id)}&title=${encodeURIComponent(parsedSeries.titleId)}`
+        navigate(url)
+      }
     } catch {}
   }
 
@@ -76,10 +132,13 @@ export default function Info() {
         <div className="relative max-w-[95vw] mx-auto px-4 sm:px-6 pt-8 md:pt-10 pb-24 md:pb-40">
           <div className="grid grid-cols-1 md:grid-cols-[220px_1fr] lg:grid-cols-[260px_1fr] gap-6 md:gap-10 items-start">
             <div className="relative rounded-2xl overflow-hidden ring-1 ring-white/15 dark:ring-gray-700/40 shadow-soft dark:shadow-soft-dark bg-white/5 dark:bg-gray-800/20">
-              {cover && <img src={cover} alt={data.title} className="w-full h-[300px] object-cover md:h-[360px]" />}
+              {cover && <img src={cover} alt={mappedData.title} className="w-full h-[300px] object-cover md:h-[360px]" />}
             </div>
             <div className="text-white">
-              <h1 className="text-2xl sm:text-3xl md:text-5xl font-extrabold leading-tight">{data.title}</h1>
+              <h1 className="text-2xl sm:text-3xl md:text-5xl font-extrabold leading-tight">{mappedData.title}</h1>
+              {source === 'mf' && mappedData.otherName && (
+                <p className="mt-2 text-white/80 text-sm md:text-base italic">{mappedData.otherName}</p>
+              )}
               {!!authors.length && (
                 <div className="mt-2 flex flex-wrap gap-2">
                   {authors.slice(0, 12).map(a => (
@@ -92,9 +151,24 @@ export default function Info() {
                   <span key={t} className="px-2 py-0.5 rounded-full text-[10px] sm:text-xs bg-white/15">{t}</span>
                 ))}
               </div>
-              <p className="mt-3 md:mt-4 max-w-2xl md:max-w-3xl text-white/90 text-sm md:text-base leading-relaxed line-clamp-5 md:line-clamp-none">{data.description || data.summary}</p>
+              <p className="mt-3 md:mt-4 max-w-2xl md:max-w-3xl text-white/90 text-sm md:text-base leading-relaxed line-clamp-none">{mappedData.description || data.summary}</p>
               <div className="mt-5 md:mt-6 flex flex-wrap gap-2 md:gap-3">
                 <button onClick={onReadFirst} className="px-4 md:px-5 py-2.5 md:py-3 rounded-lg bg-white/15 hover:bg-white/25 text-white border border-white/20 transition-colors">Read First</button>
+                {/* Save button - only enabled when logged in */}
+                <button
+                  onClick={async () => {
+                    const parsed = parseIdTitle(id, titleId)
+                    const payload = { seriesId: parsed.id, source, title: mappedData.title, cover }
+                    try {
+                      if (!user) { window.location.href = '/login'; return }
+                      if (isSaved(parsed.id, source)) await remove({ seriesId: parsed.id, source })
+                      else await add(payload)
+                    } catch {}
+                  }}
+                  className="px-4 md:px-5 py-2.5 md:py-3 rounded-lg border border-white/20 text-white hover:bg-white/20 transition-colors"
+                >
+                  {isSaved(parseIdTitle(id, titleId).id, source) ? 'In My List' : 'Add to List'}
+                </button>
               </div>
             </div>
           </div>
@@ -118,18 +192,34 @@ export default function Info() {
                 const s = String(val ?? '').toLowerCase()
                 return s === 'true' || s === 'yes' || s === '1'
               }
-              const entries = [
-                { label: 'Type', value: other.type },
-                { label: 'Status', value: other.status },
-                { label: 'Released', value: other.released },
+              
+              // Build entries based on source
+              const baseEntries = [
+                { label: 'Type', value: mappedData.type },
+                { label: 'Status', value: mappedData.status },
+                { label: 'Published', value: mappedData.published },
+                { label: 'Authors', value: authors.join(', ') },
+                { label: 'Genres', value: (tags || []).join(', ') },
+              ]
+              
+              // Add MF-specific fields
+              const mfEntries = source === 'mf' ? [
+                { label: 'Magazine', value: mappedData.mangazines },
+                { label: 'Manga ID', value: data?.syncData?.manga_id },
+                { label: 'MAL ID', value: data?.syncData?.mal_id },
+                { label: 'AniList ID', value: data?.syncData?.anilist_id },
+              ] : []
+              
+              // Add GF-specific fields
+              const gfEntries = source === 'gf' ? [
                 { label: 'Adult Content', value: other.adultContent, isBool: true },
                 { label: 'Official Translations', value: other.officialTranslations, isBool: true },
                 { label: 'Anime Adaptations', value: other.animeAdaptations, isBool: true },
                 { label: 'AniList ID', value: data?.anilistId },
-                { label: 'Authors', value: authors.join(', ') },
-                { label: 'Tags', value: (tags || []).join(', ') },
                 { label: 'Track Count', value: Array.isArray(other.track) ? other.track.length : (other.track ? 1 : 0) },
-              ]
+              ] : []
+              
+              const entries = [...baseEntries, ...mfEntries, ...gfEntries].filter(item => item.value !== undefined && item.value !== null && item.value !== '')
               return (
                 <>
                   <div className="mb-5 flex items-center gap-3">
@@ -174,7 +264,7 @@ export default function Info() {
              )})()}
           </div>
           <div className="rounded-2xl border border-stone-200 dark:border-gray-700 bg-white/60 dark:bg-gray-900/60 p-3 md:p-4">
-            <ChaptersInline seriesId={parseIdTitle(id, titleId).id} titleId={parseIdTitle(id, titleId).titleId} />
+            <ChaptersInline seriesId={parseIdTitle(id, titleId).id} titleId={parseIdTitle(id, titleId).titleId} source={source} />
           </div>
         </div>
       </section>
@@ -185,7 +275,10 @@ export default function Info() {
           <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-3">
             {data.recommendations.map((rec) => {
               const parsedRec = parseIdTitle(rec.id, rec.title)
-              const href = `/info/${encodeURIComponent(parsedRec.id)}/${encodeURIComponent(sanitizeTitleId(parsedRec.titleId || 'title'))}`
+              // Use same URL format logic as Home page
+              const href = source === 'mf' 
+                ? `/info/${encodeURIComponent(parsedRec.id)}`
+                : `/info/${encodeURIComponent(parsedRec.id)}/${encodeURIComponent(sanitizeTitleId(parsedRec.titleId || 'title'))}`
               return (
                 <Link key={rec.id} to={href} className="group block">
                   <div className="relative aspect-[3/4] overflow-hidden rounded-lg bg-stone-200 dark:bg-gray-700 shadow-soft dark:shadow-soft-dark">
@@ -202,26 +295,35 @@ export default function Info() {
   )
 }
 
-function ChaptersInline({ seriesId, titleId }) {
+function ChaptersInline({ seriesId, titleId, source }) {
   const [list, setList] = useState([])
   const [page, setPage] = useState(0)
   useEffect(() => {
     let mounted = true
     async function run() {
       try {
-        const res = await api.chapters(seriesId)
+        const res = await api.chapters(seriesId, source)
         const arr = Array.isArray(res) ? res : (res.items || [])
         if (mounted) setList(arr)
       } catch {}
     }
     run()
     return () => { mounted = false }
-  }, [seriesId])
+  }, [seriesId, source])
   const pageSize = 25
   const totalCount = list?.length || 0
   const totalPages = Math.max(1, Math.ceil(totalCount / pageSize))
   const start = page * pageSize
   const items = (list || []).slice(start, start + pageSize)
+  function extractChapterNumber(ch) {
+    const candidates = [ch?.chap, ch?.chapter, ch?.title, ch?.name, ch?.no, ch?.number, ch?.index, ch?.chapVol, ch?.chapVol?.chap, ch?.dataNumber]
+    for (const c of candidates) {
+      if (c == null) continue
+      const m = String(c).match(/(\d+(?:\.\d+)?)/)
+      if (m) return m[1]
+    }
+    return null
+  }
   function getChapterId(ch) {
     const direct = ch.id || ch.chapterId || ch.cid || ch.urlId || ch.href || ch.url || ch.slug
     if (direct) return String(direct)
@@ -236,14 +338,17 @@ function ChaptersInline({ seriesId, titleId }) {
       <h2 className="text-xl font-semibold text-stone-900 dark:text-white mb-3">Chapters</h2>
       <ol className="space-y-2">
         {items.map((ch, i) => {
-          const displayNum = Math.max(1, totalCount - (start + i))
+          const apiLabel = ch?.chap ?? ch?.chapter ?? (ch?.chapVol && ch?.chapVol?.chap) ?? ch?.no ?? ch?.number
+          const displayNum = apiLabel ? String(apiLabel) : Math.max(1, totalCount - (start + i))
           const title = ch.title || ch.name || `Chapter ${displayNum}`
           const cid = getChapterId(ch)
           return (
             <li key={cid || i}>
               {cid ? (
                 <Link
-                  to={`/read/${encodeURIComponent(cid)}?series=${encodeURIComponent(seriesId)}&title=${encodeURIComponent(titleId || '')}`}
+                  to={source === 'mf' 
+                    ? `/read/chapter/${cid}?series=${encodeURIComponent(seriesId)}&title=${encodeURIComponent(titleId || '')}`
+                    : `/read/${encodeURIComponent(cid)}?series=${encodeURIComponent(seriesId)}&title=${encodeURIComponent(titleId || '')}`}
                   className="group block rounded-lg bg-white dark:bg-gray-800 hover:bg-stone-50 dark:hover:bg-gray-700 transition-colors"
                 >
                   <div className="flex items-center justify-between gap-4 px-4 py-3">

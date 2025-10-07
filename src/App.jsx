@@ -8,6 +8,10 @@ import Info from './pages/Info.jsx'
 import Chapters from './pages/Chapters.jsx'
 import Read from './pages/Read.jsx'
 import SearchResults from './pages/SearchResults.jsx'
+import Saved from './pages/Saved.jsx'
+import Login from './pages/Login.jsx'
+import Account from './pages/Account.jsx'
+import History from './pages/History.jsx'
 
 export default function App() {
   return (
@@ -20,9 +24,15 @@ export default function App() {
               <Route path="/" element={<Home />} />
               <Route path="/home" element={<Home />} />
               <Route path="/info/:id/:titleId" element={<Info />} />
+              <Route path="/info/:id" element={<Info />} />
               <Route path="/chapters/:id" element={<Chapters />} />
               <Route path="/read/:id" element={<Read />} />
+              <Route path="/read/chapter/:id" element={<Read />} />
               <Route path="/search" element={<SearchResults />} />
+              <Route path="/saved" element={<Saved />} />
+              <Route path="/history" element={<History />} />
+              <Route path="/login" element={<Login />} />
+              <Route path="/account" element={<Account />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </div>

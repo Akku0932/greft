@@ -1,9 +1,12 @@
 import { Link, useNavigate, useLocation } from 'react-router-dom'
+import { useAuth } from '../hooks/useAuth'
+import { supabase } from '../lib/supabaseClient'
 import { useEffect, useRef, useState } from 'react'
 import { useTheme } from '../contexts/ThemeContext.jsx'
 import { api, extractItems, getImage, pickImage, parseIdTitle, sanitizeTitleId } from '../lib/api.js'
 
 export default function Navbar() {
+  const { user } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
   const { theme, toggleTheme } = useTheme()
@@ -18,6 +21,27 @@ export default function Navbar() {
   const [expanded, setExpanded] = useState(false)
   const [showBar, setShowBar] = useState(true)
   const lastYRef = useRef(0)
+  const [avatarUrl, setAvatarUrl] = useState('')
+  const [displayName, setDisplayName] = useState('')
+  const [recentSearches, setRecentSearches] = useState([])
+
+  // Load profile avatar/display name when user changes
+  useEffect(() => {
+    let cancelled = false
+    async function loadProfile() {
+      try {
+        if (!user?.id) { setAvatarUrl(''); setDisplayName(''); return }
+        const { data } = await supabase.from('profiles').select('display_name, avatar_url').eq('id', user.id).single()
+        if (cancelled) return
+        setAvatarUrl(data?.avatar_url || '')
+        setDisplayName(data?.display_name || '')
+      } catch {
+        if (!cancelled) { setAvatarUrl(''); setDisplayName('') }
+      }
+    }
+    loadProfile()
+    return () => { cancelled = true }
+  }, [user?.id])
 
   useEffect(() => {
     if (expanded) {
@@ -28,6 +52,38 @@ export default function Navbar() {
     return () => document.body.classList.remove('overflow-hidden')
   }, [expanded])
 
+  // Load recent searches
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem('search-history')
+      const list = Array.isArray(JSON.parse(raw)) ? JSON.parse(raw) : []
+      setRecentSearches(list)
+    } catch { setRecentSearches([]) }
+  }, [])
+
+  function saveRecentSearch(q) {
+    const s = String(q || '').trim()
+    if (!s) return
+    try {
+      const raw = localStorage.getItem('search-history')
+      const list = Array.isArray(JSON.parse(raw)) ? JSON.parse(raw) : []
+      const without = list.filter(v => String(v || '').toLowerCase() !== s.toLowerCase())
+      const next = [s, ...without].slice(0, 10)
+      localStorage.setItem('search-history', JSON.stringify(next))
+      setRecentSearches(next)
+    } catch {}
+  }
+
+  function removeRecentSearch(s) {
+    try {
+      const raw = localStorage.getItem('search-history')
+      const list = Array.isArray(JSON.parse(raw)) ? JSON.parse(raw) : []
+      const next = list.filter(v => v !== s)
+      localStorage.setItem('search-history', JSON.stringify(next))
+      setRecentSearches(next)
+    } catch {}
+  }
+
   // Hide navbar on scroll down, show on scroll up
   useEffect(() => {
     const isRead = String(location.pathname || '').startsWith('/read')
@@ -35,6 +91,8 @@ export default function Navbar() {
       setShowBar(false)
       return
     }
+    // Ensure navbar is visible immediately on route change into non-read pages
+    setShowBar(true)
     function onScroll() {
       const y = window.scrollY || 0
       const goingUp = y < lastYRef.current
@@ -46,10 +104,25 @@ export default function Navbar() {
     return () => window.removeEventListener('scroll', onScroll)
   }, [location.pathname])
 
+  // On route change, always reset search UI (ensures dropdown/modal closes)
+  useEffect(() => {
+    setExpanded(false)
+    setOpen(false)
+    setResults([])
+    setTerm('')
+    // Also force show navbar for non-read routes so it renders without needing a scroll
+    if (!String(location.pathname || '').startsWith('/read')) {
+      setShowBar(true)
+    }
+  }, [location.pathname])
+
   function onSubmit(e) {
     e.preventDefault()
     const q = term.trim()
-    if (q) navigate(`/search?q=${encodeURIComponent(q)}`)
+    if (q) {
+      saveRecentSearch(q)
+      navigate(`/search?q=${encodeURIComponent(q)}`)
+    }
   }
 
   useEffect(() => {
@@ -73,7 +146,13 @@ export default function Navbar() {
           }
         } catch {}
         const data = await api.search(term.trim())
-        const items = extractItems(data) || []
+        const rawItems = extractItems(data) || []
+        // prioritize MF results in suggestions while preserving relative order otherwise
+        const items = [...rawItems].sort((a, b) => {
+          const amf = String(a?._source || '').toLowerCase() === 'mf' ? 1 : 0
+          const bmf = String(b?._source || '').toLowerCase() === 'mf' ? 1 : 0
+          return bmf - amf
+        })
         setResults(items)
         try { localStorage.setItem(cacheKey, JSON.stringify(items)) } catch {}
         setOpen(true)
@@ -90,11 +169,40 @@ export default function Navbar() {
     const combined = item.seriesId || item.id || item._id || item.slug || item.urlId || ''
     const parsed = parseIdTitle(combined, item.title || item.name || item.slug)
     if (!parsed.id) return
-    navigate(`/info/${encodeURIComponent(parsed.id)}/${encodeURIComponent(sanitizeTitleId(parsed.titleId || 'title'))}`)
+    // aggressively close any dropdown/overlay before navigation
+    saveRecentSearch(term.trim())
     setOpen(false)
+    setExpanded(false)
+    setResults([])
+    setTerm('')
+    try { clearTimeout(timerRef.current) } catch {}
+    try { if (document.activeElement && 'blur' in document.activeElement) document.activeElement.blur() } catch {}
+    // ensure state is flushed before route change
+    requestAnimationFrame(() => {
+      navigate(`/info/${encodeURIComponent(parsed.id)}/${encodeURIComponent(sanitizeTitleId(parsed.titleId || 'title'))}`)
+    })
   }
 
   function onKeyDown(e) {
+    // In expanded modal, allow Enter to go to search page
+    if (e.key === 'Enter') {
+      const q = term.trim()
+      if (activeIdx >= 0 && activeIdx < results.length) {
+        e.preventDefault()
+        gotoInfoFromItem(results[activeIdx])
+        return
+      }
+      if (q) {
+        e.preventDefault()
+        setExpanded(false)
+        setOpen(false)
+        setResults([])
+        setTerm('')
+        saveRecentSearch(q)
+        navigate(`/search?q=${encodeURIComponent(q)}`)
+        return
+      }
+    }
     if (!open || results.length === 0) return
     if (e.key === 'ArrowDown') {
       e.preventDefault()
@@ -102,11 +210,6 @@ export default function Navbar() {
     } else if (e.key === 'ArrowUp') {
       e.preventDefault()
       setActiveIdx((i) => (i <= 0 ? results.length - 1 : i - 1))
-    } else if (e.key === 'Enter') {
-      if (activeIdx >= 0 && activeIdx < results.length) {
-        e.preventDefault()
-        gotoInfoFromItem(results[activeIdx])
-      }
     } else if (e.key === 'Escape') {
       setOpen(false)
     }
@@ -120,7 +223,7 @@ export default function Navbar() {
         <div className="justify-self-start">
           <Link to="/home" className="flex items-center gap-3 font-semibold text-lg sm:text-xl tracking-tight text-stone-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-stone-400 dark:focus:ring-gray-600 rounded-md">
             <img src="/logo.png" alt="Greft" className="h-9 w-9 sm:h-12 sm:w-12 rounded" />
-            <span className="hidden xs:inline">Greft</span>
+            <span className="inline">Greft</span>
           </Link>
         </div>
 
@@ -166,7 +269,7 @@ export default function Navbar() {
           <div className="hidden md:flex items-center gap-5">
             <Link to="/home#categories" className="hover:text-stone-900 dark:hover:text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-stone-400 dark:focus:ring-gray-600 rounded-md px-1">Categories</Link>
             <Link to="/search" className="hover:text-stone-900 dark:hover:text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-stone-400 dark:focus:ring-gray-600 rounded-md px-1">Search</Link>
-            <Link to="/home#my-list" className="hover:text-stone-900 dark:hover:text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-stone-400 dark:focus:ring-gray-600 rounded-md px-1">My List</Link>
+            <Link to="/saved" className="hover:text-stone-900 dark:hover:text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-stone-400 dark:focus:ring-gray-600 rounded-md px-1">My List</Link>
           </div>
           
           {/* Theme Toggle */}
@@ -197,17 +300,20 @@ export default function Navbar() {
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-5 w-5"><path d="M10 4a6 6 0 104.472 10.03l4.249 4.249a1 1 0 001.415-1.415l-4.249-4.249A6 6 0 0010 4zm-4 6a4 4 0 118 0 4 4 0 01-8 0z"/></svg>
           </button>
 
-          <div className="relative">
-            <button onClick={()=>setMenuOpen((v)=>!v)} className="h-9 w-9 rounded-full bg-stone-900 dark:bg-gray-700 text-white dark:text-gray-200 flex items-center justify-center hover:bg-stone-800 dark:hover:bg-gray-600 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-stone-400 dark:focus:ring-gray-600" aria-haspopup="menu" aria-expanded={menuOpen} aria-label="Open menu">≡</button>
-            {menuOpen && (
-              <div className="absolute right-0 mt-2 w-56 rounded-lg border border-stone-200 dark:border-gray-600 bg-white dark:bg-gray-800 shadow-soft overflow-hidden" role="menu">
-                <Link to="/login" className="block px-4 py-2 hover:bg-stone-50 dark:hover:bg-gray-700 text-stone-900 dark:text-white" role="menuitem">Register / Login</Link>
-                <button className="w-full text-left px-4 py-2 hover:bg-stone-50 dark:hover:bg-gray-700 text-stone-900 dark:text-white" role="menuitem">Language</button>
-                <button className="w-full text-left px-4 py-2 hover:bg-stone-50 dark:hover:bg-gray-700 text-stone-900 dark:text-white" role="menuitem">Settings</button>
-                <button className="w-full text-left px-4 py-2 hover:bg-stone-50 dark:hover:bg-gray-700 text-stone-900 dark:text-white" role="menuitem">FAQ</button>
-              </div>
-            )}
-          </div>
+          {/* Account avatar / menu */}
+          {user ? (
+            <Link to="/account" title={displayName || user.email || 'Account'} className="h-9 w-9 rounded-full overflow-hidden ring-1 ring-stone-300 dark:ring-gray-600 inline-flex">
+              {avatarUrl ? (
+                <img src={avatarUrl} alt="avatar" className="h-full w-full object-cover" />
+              ) : (
+                <div className="h-full w-full bg-stone-900 dark:bg-gray-700 text-white flex items-center justify-center text-xs font-semibold">
+                  {(displayName || user.email || 'U').slice(0,1).toUpperCase()}
+                </div>
+              )}
+            </Link>
+          ) : (
+            <Link to="/login" className="px-3 py-1.5 rounded-md border border-stone-300 dark:border-gray-700 hover:bg-stone-50 dark:hover:bg-gray-800">Login</Link>
+          )}
         </div>
       </div>
 
@@ -215,7 +321,7 @@ export default function Navbar() {
 
      {/* Expanded search overlay outside header to blur entire app */}
     {expanded && (
-      <div className="fixed inset-0 z-[9999] bg-black/50 backdrop-blur-lg" onClick={()=>{setExpanded(false); setOpen(false); setResults([]); setTerm('')}}>
+      <div className="fixed inset-0 z-[9999] bg-black/50 backdrop-blur-lg" onClick={()=>{ if(term.trim()) saveRecentSearch(term.trim()); setExpanded(false); setOpen(false); setResults([]); setTerm('') }}>
         <div className="max-w-3xl mx-auto mt-16 sm:mt-24 px-3 sm:px-4" onClick={(e)=>e.stopPropagation()}>
            <div className="rounded-xl border border-stone-300 dark:border-gray-600 bg-white dark:bg-gray-800 shadow-soft">
              <input
@@ -230,8 +336,22 @@ export default function Navbar() {
               {searchLoading && (
                 <div className="px-5 py-4 text-stone-500 dark:text-gray-400 text-sm">Searching…</div>
               )}
-              {!searchLoading && results.length === 0 && (
-                <div className="px-4 sm:px-5 py-4 text-stone-500 dark:text-gray-400 text-sm">Start typing to search…</div>
+              {!searchLoading && results.length === 0 && term.trim().length === 0 && (
+                <div className="px-4 sm:px-5 py-3">
+                  <div className="text-sm font-semibold text-stone-700 dark:text-gray-200 mb-2">Recent searches</div>
+                  {recentSearches.length === 0 ? (
+                    <div className="text-sm text-stone-500 dark:text-gray-400">Start typing to search…</div>
+                  ) : (
+                    <div className="flex flex-wrap gap-2">
+                      {recentSearches.map((s) => (
+                        <div key={s} className="inline-flex items-center gap-1 px-2 py-1 rounded-full border border-stone-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm">
+                          <button onClick={()=>{ setTerm(s); setTimeout(()=>{ saveRecentSearch(s); setExpanded(false); setOpen(false); setResults([]); setTerm(''); navigate(`/search?q=${encodeURIComponent(s)}`) }, 0) }} className="text-stone-800 dark:text-gray-200">{s}</button>
+                          <button onClick={()=>removeRecentSearch(s)} className="text-stone-500 hover:text-stone-700 dark:text-gray-400 dark:hover:text-gray-200" title="Remove">×</button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               )}
                {results.map((item, idx) => {
                  const cover = getImage(pickImage(item))

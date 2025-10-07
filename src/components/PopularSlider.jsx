@@ -163,7 +163,14 @@ export default function PopularSlider({ items }) {
       if (!list.length) return
       const latest = list[0] || list[list.length - 1]
       const chapterId = latest.id || latest.slug || latest.urlId
-      if (chapterId) navigate(`/read/${encodeURIComponent(chapterId)}?series=${encodeURIComponent(id)}&title=${encodeURIComponent(titleId)}`)
+      if (chapterId) {
+        // Determine source based on series ID format
+        const isMF = id && id.includes('.') && !id.includes('/')
+        const url = isMF 
+          ? `/read/chapter/${chapterId}?series=${encodeURIComponent(id)}&title=${encodeURIComponent(titleId)}`
+          : `/read/${encodeURIComponent(chapterId)}?series=${encodeURIComponent(id)}&title=${encodeURIComponent(titleId)}`
+        navigate(url)
+      }
     } catch (_) {
       // no-op; keep UX silent if missing data
     }

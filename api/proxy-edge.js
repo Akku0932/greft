@@ -24,9 +24,21 @@ export default async function handler(req) {
     }
   }
 
-  const originBase = 'http://ger.visionhost.cloud:2056';
-  const targetUrl = targetPath
-    ? `${originBase}/${targetPath}${url.search ? url.search : ''}`
+  // Multi-upstream selection via path prefix: /api/proxy-edge/mf/* -> mangafire upstream; otherwise default origin
+  const ORIGINS = {
+    default: 'http://ger.visionhost.cloud:2056',
+    mf: 'https://mangafire-xi.vercel.app',
+  };
+
+  let originBase = ORIGINS.default;
+  let upstreamPath = targetPath;
+  if (upstreamPath.startsWith('mf/')) {
+    originBase = ORIGINS.mf;
+    upstreamPath = upstreamPath.replace(/^mf\//, '');
+  }
+
+  const targetUrl = upstreamPath
+    ? `${originBase}/${upstreamPath}${url.search ? url.search : ''}`
     : originBase + (url.search || '');
 
   try {
