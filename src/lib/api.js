@@ -17,13 +17,14 @@ function withSource(path, source) {
   if (!source) return path
   // Prefix only when using the edge proxy base
   const base = getBaseFor(source)
-  if (base === EDGE_BASE && source === 'mf') return `/mf${path}`
+  if (base === EDGE_BASE && source === 'mf') return `?src=mf&p=${encodeURIComponent(path)}`
   return path
 }
 
 async function request(path, options = {}, source) {
   const base = getBaseFor(source)
-  const url = `${base}${withSource(path, source)}`;
+  const suffix = withSource(path, source)
+  const url = suffix.startsWith('?') ? `${base}${suffix}` : `${base}${suffix}`;
   const response = await fetch(url, {
     headers: { 'Accept': 'application/json' },
     ...options,

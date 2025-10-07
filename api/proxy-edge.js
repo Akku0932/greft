@@ -6,6 +6,8 @@ export default async function handler(req) {
   const url = new URL(req.url);
   const targetPath = url.pathname.replace(/^\/api\/proxy-edge\/?/, '');
   const imageUrl = url.searchParams.get('url');
+  const src = url.searchParams.get('src'); // e.g., 'mf'
+  const p = url.searchParams.get('p');     // e.g., '/most-viewed'
 
   // CORS preflight support
   if (req.method === 'OPTIONS') {
@@ -36,7 +38,7 @@ export default async function handler(req) {
     }
   }
 
-  // Multi-upstream selection via path prefix: /api/proxy-edge/mf/* -> mangafire upstream; otherwise default origin
+  // Multi-upstream selection via path prefix or query params
   const ORIGINS = {
     default: 'http://ger.visionhost.cloud:2056',
     mf: 'https://mangafire-xi.vercel.app',
@@ -44,7 +46,10 @@ export default async function handler(req) {
 
   let originBase = ORIGINS.default;
   let upstreamPath = targetPath;
-  if (upstreamPath.startsWith('mf/')) {
+  if (p && src) {
+    originBase = ORIGINS[src] || ORIGINS.default;
+    upstreamPath = String(p).replace(/^\//, '');
+  } else if (upstreamPath.startsWith('mf/')) {
     originBase = ORIGINS.mf;
     upstreamPath = upstreamPath.replace(/^mf\//, '');
   }
