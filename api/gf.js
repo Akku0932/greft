@@ -1,35 +1,19 @@
-async function handler(req, res) {
-  let url
-  try {
-    url = new URL(req.url || '/', 'http://local')
-  } catch (_) {
-    res.status(400)
-    res.setHeader('content-type', 'application/json')
-    return res.send(JSON.stringify({ error: 'Bad request URL' }))
-  }
+export const config = { runtime: 'edge' }
+
+export default async function handler(req) {
+  const url = new URL(req.url)
   const p = url.searchParams.get('p') || ''
-  const upstreamPath = String(p || '').replace(/^\/+/, '')
+  const upstreamPath = String(p).replace(/^\/+/, '')
   if (!upstreamPath) {
-    res.status(400)
-    res.setHeader('content-type', 'application/json')
-    return res.send(JSON.stringify({ error: 'Missing required query param p' }))
+    return new Response(JSON.stringify({ error: 'Missing required query param p' }), { status: 400, headers: { 'content-type': 'application/json' } })
   }
   const originBase = 'https://ger.visionhost.cloud:2056'
   const targetUrl = `${originBase}/${upstreamPath}`
-
-  if (req.method === 'OPTIONS') {
-    res.status(204)
-    res.setHeader('Access-Control-Allow-Origin', '*')
-    res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS')
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization')
-    return res.end()
-  }
 
   try {
     const controller = new AbortController()
     const t = setTimeout(() => controller.abort(), 15000)
     const upstream = await fetch(targetUrl, {
-      method: 'GET',
       headers: {
         accept: 'application/json, text/plain, */*',
         'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36',
@@ -43,20 +27,15 @@ async function handler(req, res) {
       signal: controller.signal,
     })
     clearTimeout(t)
-    const text = await upstream.text()
-    res.status(upstream.status)
-    res.setHeader('Access-Control-Allow-Origin', '*')
-    res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS')
-    res.setHeader('Content-Type', upstream.headers.get('content-type') || 'application/json')
-    return res.send(text)
+    const body = await upstream.arrayBuffer()
+    const headers = new Headers(upstream.headers)
+    headers.set('Access-Control-Allow-Origin', '*')
+    headers.set('Access-Control-Allow-Methods', 'GET, OPTIONS')
+    if (!headers.has('content-type')) headers.set('content-type', 'application/json')
+    return new Response(body, { status: upstream.status, headers })
   } catch (e) {
-    res.status(502)
-    res.setHeader('content-type', 'application/json')
-    return res.send(JSON.stringify({ error: 'GF proxy failed', detail: String(e), targetUrl }))
+    return new Response(JSON.stringify({ error: 'GF edge proxy failed', detail: String(e), targetUrl }), { status: 502, headers: { 'content-type': 'application/json' } })
   }
 }
-
-module.exports = handler
-module.exports.config = { runtime: 'nodejs' }
 
 
