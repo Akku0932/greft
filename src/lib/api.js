@@ -332,14 +332,13 @@ export const api = {
         }
       }
 
-      // Merge, de-duplicate by normalized title, prefer higher chapterNumber; then sort by uploadTime desc
+      // Merge, de-duplicate by normalized title. IMPORTANT: Prefer keeping GF entries if both exist
       const byTitle = new Map()
       const consider = (arr) => {
         for (const it of arr) {
           const key = normalizeTitleKey(it.title || it.name)
           if (!key) continue
-          const current = byTitle.get(key)
-          if (!current || (it.chapterNumber || 0) > (current.chapterNumber || 0)) {
+          if (!byTitle.has(key)) {
             byTitle.set(key, it)
           }
         }
@@ -392,27 +391,19 @@ export const api = {
         .replace(/\s+/g, ' ')
         .trim()
 
-      const parseChapterNumber = (it) => {
-        return it.chapterNumber || 0
-      }
-
       const byTitle = new Map()
       const consider = (arr) => {
         for (const it of arr) {
           const title = it.title || it.name || (it.info && (it.info.title || it.info.name)) || ''
           const key = normalizeTitleKey(title)
           if (!key) continue
-          const score = parseChapterNumber(it)
-          const current = byTitle.get(key)
-          if (!current || score > current.score) {
-            byTitle.set(key, { item: it, score })
-          }
+          if (!byTitle.has(key)) byTitle.set(key, it)
         }
       }
+      // Prefer GF (left) then fill gaps with MF (right)
       consider(left)
       consider(right)
-
-      return Array.from(byTitle.values()).map(v => v.item)
+      return Array.from(byTitle.values())
     },
   }
 };
