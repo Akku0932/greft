@@ -1,8 +1,8 @@
-export const config = {
+module.exports.config = {
   runtime: 'nodejs',
 };
 
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
   const url = new URL(req.url || '/', 'http://local');
   const targetPath = url.pathname.replace(/^\/api\/proxy-edge\/?/, '');
   const imageUrl = url.searchParams.get('url');
