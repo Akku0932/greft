@@ -126,38 +126,31 @@ export const api = {
   newRelease: () => requestMapped('/new-release', {}, 'mf'),
   search: async (q, source) => {
     const query = encodeURIComponent(q)
-    const attempts = [
+    const gfPaths = [
       `/search?q=${query}`,
       `/search/${query}`,
       `/search?query=${query}`,
       `/search?keyword=${query}`,
-      `/search?q=${query}&limit=50`,
-      `/search/${query}?limit=50`,
     ]
+    // Run GF and MF searches in parallel to cut latency
+    const settled = await Promise.allSettled([
+      // GF variants (parallel)
+      ...gfPaths.map(p => requestMapped(p, {}, source)),
+      // MF search
+      requestMapped(`/category/filter?keyword=${query}`, {}, 'mf')
+    ])
     const results = []
-    // Primary (GF) attempts
-    for (const path of attempts) {
-      try {
-        const res = await requestMapped(path, {}, source)
-        results.push(res)
-      } catch (_) { /* try next */ }
-    }
-    // MF search (unlabeled, merged in)
-    try {
-      const mf = await requestMapped(`/category/filter?keyword=${query}`, {}, 'mf')
-      if (mf && (Array.isArray(mf.data) || Array.isArray(mf.items))) {
-        const arr = Array.isArray(mf.data) ? mf.data : mf.items
-        const mapped = arr.map(item => ({
-          id: item.id,
-          seriesId: item.id,
-          title: item.name,
-          name: item.name,
-          img: item.img,
-          _source: 'mf'
-        }))
+    for (const s of settled) {
+      if (s.status !== 'fulfilled' || !s.value) continue
+      // MF payload shape normalization
+      if (s.value && (Array.isArray(s.value.data) || Array.isArray(s.value.items))) {
+        const arr = Array.isArray(s.value.data) ? s.value.data : s.value.items
+        const mapped = arr.map(item => ({ id: item.id, seriesId: item.id, title: item.name, name: item.name, img: item.img, _source: 'mf' }))
         results.push(mapped)
+      } else {
+        results.push(s.value)
       }
-    } catch (_) {}
+    }
     // Merge arrays/items into one unique list
     const all = results.flatMap(r => extractItems(r))
     const seen = new Set()
