@@ -26,13 +26,8 @@ function getBaseFor(source) {
 }
 
 function withSource(path, source) {
-  if (!source) return path
-  // Prefix only when using the edge proxy base
-  const base = getBaseFor(source)
-  if (source === 'mf') {
-    // Dedicated edge function expects ?p=encodedPath
-    return `?p=${encodeURIComponent(path)}`
-  }
+  // Always use query form for both MF and GF so our edge functions receive ?p=...
+  const isMF = source === 'mf'
   return `?p=${encodeURIComponent(path)}`
 }
 
