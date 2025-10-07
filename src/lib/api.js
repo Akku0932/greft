@@ -426,12 +426,7 @@ export function getImage(input) {
   if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('data:')) {
     if (typeof window !== 'undefined' && window.location?.protocol === 'https:' && url.startsWith('http://')) {
       // route insecure absolute images via proxy
-      try {
-        const u = new URL(url)
-        return `/api/proxy-edge${u.pathname}${u.search}`
-      } catch {
-        return url
-      }
+      return `/api/proxy-edge?url=${encodeURIComponent(url)}`
     }
     return url
   }
