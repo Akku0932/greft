@@ -1,9 +1,11 @@
 // Use Vercel edge function proxy in production to avoid mixed content
 const EDGE_BASE = '/api/proxy-edge'
 const PLAIN_BASE = 'http://ger.visionhost.cloud:2056'
-const BASE_URL = typeof window !== 'undefined' && window.location?.protocol === 'https:'
-  ? EDGE_BASE
-  : PLAIN_BASE;
+const IS_BROWSER = typeof window !== 'undefined'
+const IS_HTTPS = IS_BROWSER && window.location?.protocol === 'https:'
+const HOST = IS_BROWSER ? (window.location?.host || '') : ''
+const IS_LOCAL = /localhost|127\.0\.0\.1/i.test(HOST)
+const BASE_URL = IS_HTTPS ? EDGE_BASE : PLAIN_BASE
 
 async function fetchWithTimeout(url, options = {}, timeoutMs = 12000) {
   const controller = new AbortController()
@@ -16,8 +18,10 @@ async function fetchWithTimeout(url, options = {}, timeoutMs = 12000) {
 }
 
 function getBaseFor(source) {
-  // For Mangafire, always use edge proxy in production to avoid CORS
   if (source === 'mf') {
+    // In local dev, route through Vite dev proxy at /api/mf
+    if (IS_LOCAL) return '/api/mf'
+    // In production (HTTPS), use edge proxy to avoid CORS
     return EDGE_BASE
   }
   return BASE_URL
@@ -27,7 +31,11 @@ function withSource(path, source) {
   if (!source) return path
   // Prefix only when using the edge proxy base
   const base = getBaseFor(source)
-  if (base === EDGE_BASE && source === 'mf') return `?src=mf&p=${encodeURIComponent(path)}`
+  if (source === 'mf') {
+    if (base === EDGE_BASE) return `?src=mf&p=${encodeURIComponent(path)}`
+    // base === '/api/mf' in dev: return the original path (leading slash)
+    return path.startsWith('/') ? path : `/${path}`
+  }
   return path
 }
 
