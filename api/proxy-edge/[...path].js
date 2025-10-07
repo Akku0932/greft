@@ -1,8 +1,4 @@
-module.exports.config = {
-  runtime: 'nodejs',
-};
-
-module.exports = async function handler(req, res) {
+async function handler(req, res) {
   const url = new URL(req.url || '/', 'http://local');
   const targetPath = url.pathname.replace(/^\/api\/proxy-edge\/?/, '');
   const imageUrl = url.searchParams.get('url');
@@ -76,4 +72,7 @@ module.exports = async function handler(req, res) {
     return res.send(`Proxy error: ${error.message}`)
   }
 }
+
+module.exports = handler
+module.exports.config = { runtime: 'nodejs' }
 
