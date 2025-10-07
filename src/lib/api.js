@@ -252,8 +252,8 @@ export const api = {
       // Fetch from all MF types with pagination
       const mfTypes = ['updated-manga', 'updated-manhwa', 'updated-manhua']
       const mfPromises = mfTypes.map(type => 
-        fetch(`${EDGE_BASE}/mf/recently-updated/${type}?page=${encodeURIComponent(page)}`)
-          .then(r => r.json())
+        requestMapped(`/recently-updated/${type}?page=${encodeURIComponent(page)}`, {}, 'mf')
+          .then(r => Array.isArray(r) ? r : (Array.isArray(r.items) ? r.items : []))
           .catch(() => [])
       )
 
@@ -312,8 +312,8 @@ export const api = {
       // Use top-trending for MF hot updates
       const results = await Promise.allSettled([
         api.hotUpdates().catch(() => ({ items: [] })),
-        fetch(`${EDGE_BASE}/mf/top-trending`)
-          .then(res => res.json())
+        requestMapped('/top-trending', {}, 'mf')
+          .then(res => Array.isArray(res) ? res : (Array.isArray(res.items) ? res.items : []))
           .catch(() => [])
       ])
       
