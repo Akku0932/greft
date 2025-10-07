@@ -1,7 +1,19 @@
 async function handler(req, res) {
-  const url = new URL(req.url || '/', 'http://local')
+  let url
+  try {
+    url = new URL(req.url || '/', 'http://local')
+  } catch (_) {
+    res.status(400)
+    res.setHeader('content-type', 'application/json')
+    return res.send(JSON.stringify({ error: 'Bad request URL' }))
+  }
   const p = url.searchParams.get('p') || ''
-  const upstreamPath = String(p).replace(/^\/+/, '')
+  const upstreamPath = String(p || '').replace(/^\/+/, '')
+  if (!upstreamPath) {
+    res.status(400)
+    res.setHeader('content-type', 'application/json')
+    return res.send(JSON.stringify({ error: 'Missing required query param p' }))
+  }
   const originBase = 'http://ger.visionhost.cloud:2056'
   const targetUrl = `${originBase}/${upstreamPath}`
 
