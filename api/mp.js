@@ -9,7 +9,6 @@ export default async function handler(req) {
   }
   const ORIGINS = [
     'https://mangapark-sigma.vercel.app',
-    'https://mangapark.com',
   ]
 
   try {
@@ -42,11 +41,7 @@ export default async function handler(req) {
         const headers = new Headers(upstream.headers)
         headers.set('Access-Control-Allow-Origin', '*')
         headers.set('Access-Control-Allow-Methods', 'GET, OPTIONS')
-        // Preserve upstream content-type for images; default to json otherwise
-        if (!headers.has('content-type')) {
-          const isImage = /\.(jpg|jpeg|png|webp|gif|avif)(\?|$)/i.test(upstreamPath) || /^(thumb|media|mpim|ampi|amim|mpav)\//i.test(upstreamPath)
-          headers.set('content-type', isImage ? 'image/jpeg' : 'application/json')
-        }
+        if (!headers.has('content-type')) headers.set('content-type', 'application/json')
         return new Response(body, { status: upstream.status, headers })
       } catch (err) {
         lastError = String(err)

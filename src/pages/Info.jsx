@@ -393,13 +393,9 @@ function ChaptersInline({ seriesId, titleId, source }) {
             <li key={cid || i}>
               {cid ? (
                 <Link
-                  to={(function(){
-                    const base = source === 'mf' 
-                      ? `/read/chapter/${cid}`
-                      : `/read/${encodeURIComponent(cid)}`
-                    const qs = `?series=${encodeURIComponent(seriesId)}&title=${encodeURIComponent(titleId || '')}${source==='mp' ? '&src=mp' : (source==='mf' ? '&src=mf' : '')}`
-                    return base + qs
-                  })()}
+                  to={source === 'mf' 
+                    ? `/read/chapter/${cid}?series=${encodeURIComponent(seriesId)}&title=${encodeURIComponent(titleId || '')}`
+                    : `/read/${encodeURIComponent(cid)}?series=${encodeURIComponent(seriesId)}&title=${encodeURIComponent(titleId || '')}`}
                   className="group block rounded-lg bg-white dark:bg-gray-800 hover:bg-stone-50 dark:hover:bg-gray-700 transition-colors"
                 >
                   <div className="flex items-center justify-between gap-4 px-4 py-3">

@@ -392,13 +392,19 @@ export function getImage(input) {
       // route insecure absolute images via proxy
       return `/api/proxy-edge?url=${encodeURIComponent(url)}`
     }
+    // Allow direct mangapark.com thumbnails
+    if (/^https?:\/\/mangapark\.com\/thumb\//i.test(url)) return url
     return url
   }
   if (url.startsWith('//')) return `https:${url}`
   if (url.startsWith('/')) {
     // Route MP asset paths via MP proxy; others via GF base
     const lower = url.toLowerCase()
-    const isMpAsset = /\/(mpim|mpav|ampi|amim)\//.test(lower) || lower.startsWith('/thumb/') || lower.startsWith('/media/')
+    // Use direct host for thumbnails
+    if (lower.startsWith('/thumb/')) {
+      return `https://mangapark.com${url}`
+    }
+    const isMpAsset = /\/(mpim|mpav|ampi|amim)\//.test(lower) || lower.startsWith('/media/')
     if (isMpAsset) {
       const path = url.replace(/^\/+/, '')
       return `/api/mp?p=${encodeURIComponent(path)}`
