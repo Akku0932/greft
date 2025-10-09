@@ -24,7 +24,6 @@ export default async function handler(req) {
     }
 
     // Normalize upstream target
-    const originBase = 'https://mangapark-sigma.vercel.app'
     let upstreamPath = String(p).trim()
     // Allow absolute mp asset URLs too
     if (/^https?:\/\//i.test(upstreamPath)) {
@@ -34,6 +33,9 @@ export default async function handler(req) {
     } else {
       upstreamPath = upstreamPath.replace(/^\/+/, '')
     }
+    // Choose origin based on whether this is an image asset or API path
+    const isAsset = /^(thumb|media|mpim|amim|ampi|mpav)\//i.test(upstreamPath)
+    const originBase = isAsset ? 'https://mangapark.com' : 'https://mangapark-sigma.vercel.app'
     const targetUrl = `${originBase}/${upstreamPath}`
 
     const controller = new AbortController()

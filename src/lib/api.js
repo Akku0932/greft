@@ -251,7 +251,7 @@ export const api = {
           const last = Array.isArray(d.last_chapterNodes) && d.last_chapterNodes.length ? d.last_chapterNodes[0]?.data : null
           const updatedAt = last?.dateCreate || null
           const rawImg = d.urlCover600 || d.urlCoverOri || d.urlCover || ''
-          const img = rawImg ? toMpAbsolute(rawImg) : ''
+          const img = rawImg ? `/api/mp?p=${encodeURIComponent((rawImg.startsWith('/') ? rawImg.slice(1) : rawImg))}` : ''
           return {
             id: String(d.id || row.id || ''),
             seriesId: String(d.id || row.id || ''),
@@ -448,8 +448,8 @@ function toMpAbsolute(raw) {
   const s = String(raw || '')
   if (!s) return ''
   if (s.startsWith('http://') || s.startsWith('https://')) return s
-  // Ensure absolute to mangapark.com
-  return `https://mangapark.com${s.startsWith('/') ? s : `/${s}`}`
+  // Prefer proxy for reliability and CORS
+  return `/api/mp?p=${encodeURIComponent((s.startsWith('/') ? s.slice(1) : s))}`
 }
 
 function normalizeMpListItem(it) {
