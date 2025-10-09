@@ -237,6 +237,28 @@ export const api = {
         uploadTime: toTimestamp(it.updatedAt || it.time || it.date || it.updated || it.lastUpdate)
       })) : []
 
+      // Fetch MP latest-releases via edge proxy
+      let mpItems = []
+      try {
+        const mpRaw = await requestMapped('/latest-releases', {}, 'mp')
+        const mpArr = extractItems(mpRaw)
+        mpItems = (mpArr || []).map(row => {
+          const d = row?.data || {}
+          const last = Array.isArray(d.last_chapterNodes) && d.last_chapterNodes.length ? d.last_chapterNodes[0]?.data : null
+          const updatedAt = last?.dateCreate || null
+          return {
+            id: String(d.id || row.id || ''),
+            seriesId: String(d.id || row.id || ''),
+            title: d.name || row.name,
+            img: d.urlCover600 || d.urlCoverOri || d.urlCover || '',
+            tag: last?.dname || '',
+            updatedAt,
+            uploadTime: typeof updatedAt === 'number' ? updatedAt : toTimestamp(updatedAt),
+            _source: 'mp',
+          }
+        })
+      } catch {}
+
       // Merge and de-duplicate by normalized title, prefer newer uploadTime
       const byTitle = new Map()
       const consider = (arr) => {
@@ -258,6 +280,7 @@ export const api = {
         }
       }
       consider(gfItems)
+      consider(mpItems)
 
       return Array.from(byTitle.values()).sort((a, b) => (b.uploadTime || 0) - (a.uploadTime || 0))
     },
