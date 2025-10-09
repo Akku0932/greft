@@ -338,6 +338,23 @@ export const api = {
   }
 };
 
+// Dedicated MP endpoints, mirroring server routes
+export const mp = {
+  base: (path) => requestMapped(path, {}, 'mp'),
+  popularUpdates: () => requestMapped('/popular-updates', {}, 'mp'),
+  memberUploads: () => requestMapped('/member-uploads', {}, 'mp'),
+  latestReleases: () => requestMapped('/latest-releases', {}, 'mp'),
+  randomMangas: () => requestMapped('/random', {}, 'mp'),
+  yWeekList: () => requestMapped('/yweek-list', {}, 'mp'),
+  mplistsWeekly: (yweek) => requestMapped(`/mplists-weekly/${encodeURIComponent(yweek)}`, {}, 'mp'),
+  newlyAdded: () => requestMapped('/newly-added', {}, 'mp'),
+  mostLikes: () => requestMapped('/most-likes', {}, 'mp'),
+  search: (q) => requestMapped(`/search?keyword=${encodeURIComponent(q)}`, {}, 'mp'),
+  info: (id) => requestMapped(`/info/${encodeURIComponent(id)}`, {}, 'mp'),
+  chapters: (id) => requestMapped(`/chapters/${encodeURIComponent(id)}`, {}, 'mp'),
+  images: (infoId, id) => requestMapped(`/images/${encodeURIComponent(infoId)}/${encodeURIComponent(id)}`, {}, 'mp'),
+}
+
 export function getImage(input) {
   const url = String(input || '')
   if (!url || url === 'undefined' || url === 'null') return ''
