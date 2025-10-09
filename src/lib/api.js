@@ -241,10 +241,10 @@ export const api = {
         uploadTime: toTimestamp(it.updatedAt || it.time || it.date || it.updated || it.lastUpdate)
       })) : []
 
-      // Fetch MP latest-releases via edge proxy
+      // Fetch MP latest-releases with pagination
       let mpItems = []
       try {
-        const mpRaw = await requestMapped('/latest-releases', {}, 'mp')
+        const mpRaw = await requestMapped(`/latest-releases?page=${encodeURIComponent(page)}`, {}, 'mp')
         const mpArr = extractItems(mpRaw)
         mpItems = (mpArr || []).map(row => {
           const d = row?.data || {}
@@ -265,30 +265,52 @@ export const api = {
         })
       } catch {}
 
-      // Merge and de-duplicate by normalized title, prefer newer uploadTime
+      // Merge and de-duplicate by ID first, then by normalized title
+      const byId = new Map()
       const byTitle = new Map()
+      
       const consider = (arr) => {
         for (const it of arr) {
-          const key = normalizeTitleKey(it.title || it.name)
-          if (!key) continue
-          const current = byTitle.get(key)
-          if (!current) {
-            byTitle.set(key, it)
+          const id = it.id || it.seriesId
+          const titleKey = normalizeTitleKey(it.title || it.name)
+          
+          // Prefer by ID first (exact match)
+          if (id && byId.has(id)) {
+            const current = byId.get(id)
+            const curTime = current.uploadTime || 0
+            const newTime = it.uploadTime || 0
+            if (newTime > curTime) {
+              byId.set(id, it)
+            }
             continue
           }
-          // Prefer newer uploadTime
+          
+          if (id) {
+            byId.set(id, it)
+            continue
+          }
+          
+          // Fallback to title-based deduplication
+          if (!titleKey) continue
+          const current = byTitle.get(titleKey)
+          if (!current) {
+            byTitle.set(titleKey, it)
+            continue
+          }
           const curTime = current.uploadTime || 0
           const newTime = it.uploadTime || 0
           if (newTime > curTime) {
-            byTitle.set(key, it)
-            continue
+            byTitle.set(titleKey, it)
           }
         }
       }
+      
       consider(gfItems)
       consider(mpItems)
 
-      return Array.from(byTitle.values()).sort((a, b) => (b.uploadTime || 0) - (a.uploadTime || 0))
+      // Combine results, preferring ID-based matches
+      const combined = [...byId.values(), ...byTitle.values()]
+      return combined.sort((a, b) => (b.uploadTime || 0) - (a.uploadTime || 0))
     },
     hotUpdates: async () => {
       // Use top-trending for MF hot updates
