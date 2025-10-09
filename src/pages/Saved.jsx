@@ -6,7 +6,7 @@ import { fetchProgress } from '../lib/progressApi'
 import { api } from '../lib/api'
 
 export default function Saved() {
-  const { user, items, loading, remove } = useLibrary()
+  const { user, items, loading, remove, setStatus } = useLibrary()
   const [prog, setProg] = useState([])
   const [chaptersBySeries, setChaptersBySeries] = useState({})
   const [query, setQuery] = useState('')
@@ -137,7 +137,7 @@ export default function Saved() {
         <>
         {/* Desktop professional table */}
         <div className="hidden lg:block rounded-xl overflow-hidden ring-1 ring-stone-200 dark:ring-gray-800 bg-white dark:bg-gray-900">
-          <div className="grid grid-cols-[1fr_auto_110px_120px_110px_110px] gap-0 px-5 py-3 text-xs font-semibold text-stone-600 dark:text-gray-300 border-b border-stone-200 dark:border-gray-800">
+          <div className="grid grid-cols-[1fr_auto_160px_120px_110px_110px] gap-0 px-5 py-3 text-xs font-semibold text-stone-600 dark:text-gray-300 border-b border-stone-200 dark:border-gray-800">
             <div className="uppercase tracking-wide">Title</div>
             <div className="uppercase tracking-wide text-right pr-2">Continue</div>
             <div className="uppercase tracking-wide text-center">Status</div>
@@ -160,7 +160,7 @@ export default function Saved() {
                 : `/read/${encodeURIComponent(p.last_chapter_id)}?series=${encodeURIComponent(it.series_id)}&title=${encodeURIComponent(sanitizeTitleId(it.title || 'title'))}`)
               : href
               return (
-                <div key={`${it.source}:${it.series_id}`} className="grid grid-cols-[1fr_auto_110px_120px_110px_110px] items-center gap-0 px-5 py-4 border-b border-stone-200 dark:border-gray-800 hover:bg-stone-50/70 dark:hover:bg-gray-800/50 transition-colors">
+                <div key={`${it.source}:${it.series_id}`} className="grid grid-cols-[1fr_auto_160px_120px_110px_110px] items-center gap-0 px-5 py-4 border-b border-stone-200 dark:border-gray-800 hover:bg-stone-50/70 dark:hover:bg-gray-800/50 transition-colors">
                   <a href={href} className="flex items-center gap-3 min-w-0">
                     <div className="h-14 w-10 rounded-md overflow-hidden bg-stone-200 dark:bg-gray-800 flex-shrink-0">
                       {it.cover && <img src={it.cover} alt="" className="w-full h-full object-cover" />}
@@ -177,7 +177,17 @@ export default function Saved() {
                     </a>
                   </div>
                   <div className="text-center">
-                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300">Reading</span>
+                    <select
+                      value={it.status || 'planning'}
+                      onChange={async (e) => { try { await setStatus({ seriesId: it.series_id, source: it.source, status: e.target.value }) } catch {} }}
+                      className="px-3 py-1.5 rounded-lg text-xs bg-white dark:bg-gray-800 border border-stone-300 dark:border-gray-700 text-stone-800 dark:text-gray-200 shadow-sm"
+                    >
+                      <option value="planning">Planning</option>
+                      <option value="reading">Reading</option>
+                      <option value="completed">Completed</option>
+                      <option value="dropped">Dropped</option>
+                      <option value="on_hold">On hold</option>
+                    </select>
                   </div>
                   <div className="text-center text-sm text-stone-600 dark:text-gray-300">{timeAgo(p?.updated_at)}</div>
                   <div className="text-center text-sm text-stone-600 dark:text-gray-300">{timeAgo(it.updated_at)}</div>
@@ -220,8 +230,19 @@ export default function Saved() {
                   )}
                 </div>
                 <div className="mt-2 text-sm font-semibold line-clamp-2">{it.title}</div>
-                <div className="mt-1">
+                <div className="mt-2 flex items-center justify-between">
                   <a href={continueHref} className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-stone-900 text-white dark:bg-gray-700 text-xs">Continue</a>
+                  <select
+                    value={it.status || 'planning'}
+                    onChange={async (e) => { try { await setStatus({ seriesId: it.series_id, source: it.source, status: e.target.value }) } catch {} }}
+                    className="px-2 py-1 rounded-lg text-[10px] bg-white dark:bg-gray-800 border border-stone-300 dark:border-gray-700 text-stone-800 dark:text-gray-200"
+                  >
+                    <option value="planning">Planning</option>
+                    <option value="reading">Reading</option>
+                    <option value="completed">Completed</option>
+                    <option value="dropped">Dropped</option>
+                    <option value="on_hold">On hold</option>
+                  </select>
                 </div>
               </a>
             )
