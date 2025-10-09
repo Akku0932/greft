@@ -12,6 +12,9 @@ export default async function handler(req) {
     if (req.method === 'OPTIONS') {
       return new Response(null, { status: 204, headers: corsHeaders })
     }
+    if (req.method === 'GET') {
+      return new Response(JSON.stringify({ ok: true, info: 'POST a JSON body { token } to verify.' }), { status: 200, headers: { 'content-type': 'application/json', ...corsHeaders } })
+    }
     if (req.method !== 'POST') {
       return new Response(JSON.stringify({ error: 'Method not allowed' }), { status: 405, headers: { 'content-type': 'application/json', ...corsHeaders } })
     }
