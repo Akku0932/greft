@@ -161,7 +161,7 @@ export default function Navbar() {
         setResults([])
         setOpen(false)
       } finally { setSearchLoading(false) }
-    }, 200)
+    }, 300)
     return () => clearTimeout(timerRef.current)
   }, [term])
 

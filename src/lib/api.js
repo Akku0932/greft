@@ -10,7 +10,9 @@ const BASE_URL = IS_HTTPS ? EDGE_BASE : PLAIN_BASE
 // Lightning-fast in-memory cache for MP and GF data
 const mpCache = new Map()
 const gfCache = new Map()
+const searchCache = new Map()
 const CACHE_TTL = 20 * 60 * 1000 // 20 minutes (maximum cache for instant performance)
+const SEARCH_CACHE_TTL = 5 * 60 * 1000 // 5 minutes for search results
 
 // Preload popular content for instant access
 const preloadQueue = new Set()
@@ -52,6 +54,19 @@ function setCached(key, data, source = 'mp') {
   cache.set(key, { data, timestamp: Date.now() })
 }
 
+function getSearchCached(query) {
+  const cached = searchCache.get(query.toLowerCase())
+  if (cached && Date.now() - cached.timestamp < SEARCH_CACHE_TTL) {
+    return cached.data
+  }
+  searchCache.delete(query.toLowerCase())
+  return null
+}
+
+function setSearchCached(query, data) {
+  searchCache.set(query.toLowerCase(), { data, timestamp: Date.now() })
+}
+
 async function fetchWithTimeout(url, options = {}, timeoutMs = 12000) {
   const controller = new AbortController()
   const id = setTimeout(() => controller.abort(), timeoutMs)
@@ -64,8 +79,8 @@ async function fetchWithTimeout(url, options = {}, timeoutMs = 12000) {
 
 // Lightning-fast fetch with instant timeouts and connection pooling
 async function fastFetch(url, options = {}, maxRetries = 1) {
-  // Ultra-aggressive parallel timeouts for instant response
-  const timeouts = [500, 800, 1200] // 0.5s, 0.8s, 1.2s
+  // Balanced parallel timeouts for reliable response
+  const timeouts = [1000, 2000, 3000] // 1s, 2s, 3s
   const promises = timeouts.map(timeout => 
     fetchWithTimeout(url, {
       ...options,
@@ -85,10 +100,10 @@ async function fastFetch(url, options = {}, maxRetries = 1) {
         return result.value
       }
     }
-    throw new Error('All ultra-fast attempts failed')
+    throw new Error('All fast attempts failed')
   } catch (e) {
-    // Final fallback with minimal timeout
-    return fetchWithTimeout(url, options, 2000)
+    // Final fallback with reasonable timeout
+    return fetchWithTimeout(url, options, 5000)
   }
 }
 
@@ -140,7 +155,7 @@ async function request(path, options = {}, source) {
   
   // Use lightning-fast fetch for MP requests, fast fetch for GF
   const fetchFn = source === 'mp' ? fastFetch : (source === 'gf' ? fastGfFetch : fetchWithTimeout)
-  const defaultTimeout = source === 'mp' ? 500 : (source === 'gf' ? 2000 : 12000)
+  const defaultTimeout = source === 'mp' ? 1000 : (source === 'gf' ? 2000 : 12000)
   
   let response
   try {
@@ -188,21 +203,28 @@ export const api = {
   random: (source) => request('/random', {}, source),
   // Removed MF-only endpoints: mostViewed and newRelease
   search: async (q, source) => {
-    const query = encodeURIComponent(q)
+    if (!q || q.trim().length < 2) return { items: [] }
+    
+    // Check search cache first
+    const cached = getSearchCached(q)
+    if (cached) return cached
+    
+    const query = encodeURIComponent(q.trim())
     const gfPaths = [
       `/search?q=${query}`,
       `/search/${query}`,
       `/search?query=${query}`,
       `/search?keyword=${query}`,
     ]
-    // Run GF and MF searches in parallel to cut latency
-    // Run with aggressive timeouts to keep UX snappy
+    
+    // Run GF and MP searches in parallel with optimized timeouts
     const settled = await Promise.allSettled([
-      ...gfPaths.map(p => requestMapped(p, { timeoutMs: 2000 }, 'gf')),
-      // MP search with ultra-fast timeout
-      requestMapped(`/search?keyword=${query}`, { timeoutMs: 2000 }, 'mp')
+      ...gfPaths.map(p => requestMapped(p, { timeoutMs: 3000 }, 'gf')),
+      // MP search with fast timeout
+      requestMapped(`/search?keyword=${query}`, { timeoutMs: 3000 }, 'mp')
         .then(v => ({ _mp: true, v }))
     ])
+    
     const results = []
     for (const s of settled) {
       if (s.status !== 'fulfilled' || !s.value) continue
@@ -219,6 +241,7 @@ export const api = {
         results.push(s.value)
       }
     }
+    
     // Merge arrays/items into one unique list
     const all = results.flatMap(r => extractItems(r))
     const seen = new Set()
@@ -230,6 +253,7 @@ export const api = {
       seen.add(key)
       merged.push({ ...it, _normTitle: normTitle })
     }
+    
     // Deduplicate by normalized title
     const byTitle = new Map()
     for (const it of merged) {
@@ -238,6 +262,7 @@ export const api = {
       if (!byTitle.has(t)) byTitle.set(t, it)
     }
     const deduped = Array.from(byTitle.values())
+    
     // Position/quality scoring - put strongest matches first
     const qNorm = String(q || '').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim()
     const qTokens = qNorm.split(' ').filter(Boolean)
@@ -271,7 +296,13 @@ export const api = {
       // fallback: keep existing order
       return 0
     })
-    return { items: deduped.map(({ _normTitle, ...rest }) => rest) }
+    
+    const finalResult = { items: deduped.map(({ _normTitle, ...rest }) => rest) }
+    
+    // Cache the search result
+    setSearchCached(q, finalResult)
+    
+    return finalResult
   },
   info: async (id, titleId, source) => {
     const { id: baseId, titleId: safeTitle } = parseIdTitle(id, titleId)
@@ -280,8 +311,8 @@ export const api = {
       const cached = getCached(cacheKey)
       if (cached) return cached
       
-      // Use lightning-fast timeout for first load
-      const result = await requestMapped(`/info/${encodeURIComponent(baseId)}`, { timeoutMs: 500 }, 'mp')
+      // Use fast timeout for first load
+      const result = await requestMapped(`/info/${encodeURIComponent(baseId)}`, { timeoutMs: 1000 }, 'mp')
       setCached(cacheKey, result)
       return result
     }
@@ -311,8 +342,8 @@ export const api = {
       const cached = getCached(cacheKey)
       if (cached) return cached
       
-      // Use lightning-fast timeout for first load
-      const result = await requestMapped(`/chapters/${id}`, { timeoutMs: 500 }, 'mp')
+      // Use fast timeout for first load
+      const result = await requestMapped(`/chapters/${id}`, { timeoutMs: 1000 }, 'mp')
       setCached(cacheKey, result)
       return result
     }
