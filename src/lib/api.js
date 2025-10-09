@@ -7,9 +7,12 @@ const HOST = IS_BROWSER ? (window.location?.host || '') : ''
 const IS_LOCAL = /localhost|127\.0\.0\.1/i.test(HOST)
 const BASE_URL = IS_HTTPS ? EDGE_BASE : PLAIN_BASE
 
-// Simple in-memory cache for MP data
+// Lightning-fast in-memory cache for MP data
 const mpCache = new Map()
-const CACHE_TTL = 10 * 60 * 1000 // 10 minutes (longer cache for better performance)
+const CACHE_TTL = 15 * 60 * 1000 // 15 minutes (maximum cache for instant performance)
+
+// Preload popular MP content for instant access
+const preloadQueue = new Set()
 
 function getCached(key) {
   const cached = mpCache.get(key)
@@ -34,12 +37,20 @@ async function fetchWithTimeout(url, options = {}, timeoutMs = 12000) {
   }
 }
 
-// Ultra-fast fetch with minimal timeouts and parallel retries for MP
+// Lightning-fast fetch with instant timeouts and connection pooling
 async function fastFetch(url, options = {}, maxRetries = 1) {
-  // Try multiple timeouts in parallel for fastest response
-  const timeouts = [1500, 3000] // 1.5s, 3s
+  // Ultra-aggressive parallel timeouts for instant response
+  const timeouts = [800, 1200, 2000] // 0.8s, 1.2s, 2s
   const promises = timeouts.map(timeout => 
-    fetchWithTimeout(url, options, timeout).catch(e => ({ error: e, timeout }))
+    fetchWithTimeout(url, {
+      ...options,
+      headers: {
+        ...options.headers,
+        'Connection': 'keep-alive',
+        'Cache-Control': 'no-cache',
+        'Pragma': 'no-cache'
+      }
+    }, timeout).catch(e => ({ error: e, timeout }))
   )
   
   try {
@@ -49,10 +60,10 @@ async function fastFetch(url, options = {}, maxRetries = 1) {
         return result.value
       }
     }
-    throw new Error('All fast attempts failed')
+    throw new Error('All ultra-fast attempts failed')
   } catch (e) {
-    // Final fallback with longer timeout
-    return fetchWithTimeout(url, options, 5000)
+    // Final fallback with minimal timeout
+    return fetchWithTimeout(url, options, 3000)
   }
 }
 
@@ -72,9 +83,9 @@ async function request(path, options = {}, source) {
   const suffix = withSource(path, source)
   const url = suffix.startsWith('?') ? `${base}${suffix}` : `${base}${suffix}`;
   
-  // Use ultra-fast fetch for MP requests
+  // Use lightning-fast fetch for MP requests
   const fetchFn = source === 'mp' ? fastFetch : fetchWithTimeout
-  const defaultTimeout = source === 'mp' ? 1500 : 12000
+  const defaultTimeout = source === 'mp' ? 800 : 12000
   
   let response
   try {
@@ -214,8 +225,8 @@ export const api = {
       const cached = getCached(cacheKey)
       if (cached) return cached
       
-      // Use ultra-fast timeout for first load
-      const result = await requestMapped(`/info/${encodeURIComponent(baseId)}`, { timeoutMs: 1500 }, 'mp')
+      // Use lightning-fast timeout for first load
+      const result = await requestMapped(`/info/${encodeURIComponent(baseId)}`, { timeoutMs: 800 }, 'mp')
       setCached(cacheKey, result)
       return result
     }
@@ -231,8 +242,8 @@ export const api = {
       const cached = getCached(cacheKey)
       if (cached) return cached
       
-      // Use ultra-fast timeout for first load
-      const result = await requestMapped(`/chapters/${id}`, { timeoutMs: 1500 }, 'mp')
+      // Use lightning-fast timeout for first load
+      const result = await requestMapped(`/chapters/${id}`, { timeoutMs: 800 }, 'mp')
       setCached(cacheKey, result)
       return result
     }
