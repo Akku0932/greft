@@ -39,7 +39,7 @@ export default async function handler(req) {
     const targetUrl = `${originBase}/${upstreamPath}`
 
     const controller = new AbortController()
-    const timeout = setTimeout(() => controller.abort(), 5000)
+    const timeout = setTimeout(() => controller.abort(), 3000)
     const upstream = await fetch(targetUrl, {
       headers: {
         accept: '*/*',

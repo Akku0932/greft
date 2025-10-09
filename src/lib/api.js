@@ -9,7 +9,7 @@ const BASE_URL = IS_HTTPS ? EDGE_BASE : PLAIN_BASE
 
 // Simple in-memory cache for MP data
 const mpCache = new Map()
-const CACHE_TTL = 5 * 60 * 1000 // 5 minutes
+const CACHE_TTL = 10 * 60 * 1000 // 10 minutes (longer cache for better performance)
 
 function getCached(key) {
   const cached = mpCache.get(key)
@@ -34,17 +34,25 @@ async function fetchWithTimeout(url, options = {}, timeoutMs = 12000) {
   }
 }
 
-// Fast fetch with aggressive timeouts and retries for MP
-async function fastFetch(url, options = {}, maxRetries = 2) {
-  for (let attempt = 0; attempt <= maxRetries; attempt++) {
-    const timeout = attempt === 0 ? 3000 : (attempt === 1 ? 5000 : 8000) // 3s, 5s, 8s
-    try {
-      return await fetchWithTimeout(url, options, timeout)
-    } catch (e) {
-      if (attempt === maxRetries) throw e
-      // Brief delay before retry
-      await new Promise(resolve => setTimeout(resolve, 200))
+// Ultra-fast fetch with minimal timeouts and parallel retries for MP
+async function fastFetch(url, options = {}, maxRetries = 1) {
+  // Try multiple timeouts in parallel for fastest response
+  const timeouts = [1500, 3000] // 1.5s, 3s
+  const promises = timeouts.map(timeout => 
+    fetchWithTimeout(url, options, timeout).catch(e => ({ error: e, timeout }))
+  )
+  
+  try {
+    const results = await Promise.allSettled(promises)
+    for (const result of results) {
+      if (result.status === 'fulfilled' && !result.value.error) {
+        return result.value
+      }
     }
+    throw new Error('All fast attempts failed')
+  } catch (e) {
+    // Final fallback with longer timeout
+    return fetchWithTimeout(url, options, 5000)
   }
 }
 
@@ -64,9 +72,9 @@ async function request(path, options = {}, source) {
   const suffix = withSource(path, source)
   const url = suffix.startsWith('?') ? `${base}${suffix}` : `${base}${suffix}`;
   
-  // Use fast fetch for MP requests
+  // Use ultra-fast fetch for MP requests
   const fetchFn = source === 'mp' ? fastFetch : fetchWithTimeout
-  const defaultTimeout = source === 'mp' ? 3000 : 12000
+  const defaultTimeout = source === 'mp' ? 1500 : 12000
   
   let response
   try {
@@ -206,8 +214,8 @@ export const api = {
       const cached = getCached(cacheKey)
       if (cached) return cached
       
-      // Use aggressive timeout for first load
-      const result = await requestMapped(`/info/${encodeURIComponent(baseId)}`, { timeoutMs: 3000 }, 'mp')
+      // Use ultra-fast timeout for first load
+      const result = await requestMapped(`/info/${encodeURIComponent(baseId)}`, { timeoutMs: 1500 }, 'mp')
       setCached(cacheKey, result)
       return result
     }
@@ -223,8 +231,8 @@ export const api = {
       const cached = getCached(cacheKey)
       if (cached) return cached
       
-      // Use aggressive timeout for first load
-      const result = await requestMapped(`/chapters/${id}`, { timeoutMs: 3000 }, 'mp')
+      // Use ultra-fast timeout for first load
+      const result = await requestMapped(`/chapters/${id}`, { timeoutMs: 1500 }, 'mp')
       setCached(cacheKey, result)
       return result
     }
