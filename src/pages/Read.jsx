@@ -187,9 +187,11 @@ export default function Read() {
     setTransitioning(true)
     setLoading(true)
     setPages([])
-    const url = source === 'mf' 
-      ? `/read/chapter/${prevId}${seriesId ? `?series=${encodeURIComponent(seriesId)}&title=${encodeURIComponent(titleId)}` : ''}`
-      : `/read/${encodeURIComponent(prevId)}${seriesId ? `?series=${encodeURIComponent(seriesId)}&title=${encodeURIComponent(titleId)}` : ''}`
+    const base = source === 'mf' 
+      ? `/read/chapter/${prevId}`
+      : `/read/${encodeURIComponent(prevId)}`
+    const qs = seriesId ? `?series=${encodeURIComponent(seriesId)}&title=${encodeURIComponent(titleId)}${source==='mp' ? '&src=mp' : (source==='mf' ? '&src=mf' : '')}` : ''
+    const url = base + qs
     navigate(url)
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }, [prevId, source, seriesId, titleId, navigate])
@@ -198,14 +200,16 @@ export default function Read() {
     setTransitioning(true)
     setLoading(true)
     setPages([])
-    const url = source === 'mf' 
-      ? `/read/chapter/${nextId}${seriesId ? `?series=${encodeURIComponent(seriesId)}&title=${encodeURIComponent(titleId)}` : ''}`
-      : `/read/${encodeURIComponent(nextId)}${seriesId ? `?series=${encodeURIComponent(seriesId)}&title=${encodeURIComponent(titleId)}` : ''}`
+    const base = source === 'mf' 
+      ? `/read/chapter/${nextId}`
+      : `/read/${encodeURIComponent(nextId)}`
+    const qs = seriesId ? `?series=${encodeURIComponent(seriesId)}&title=${encodeURIComponent(titleId)}${source==='mp' ? '&src=mp' : (source==='mf' ? '&src=mf' : '')}` : ''
+    const url = base + qs
     navigate(url)
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }, [nextId, source, seriesId, titleId, navigate])
 
-  const infoHref = seriesId && titleId ? `/info/${encodeURIComponent(seriesId)}/${encodeURIComponent(titleId)}` : '/home'
+  const infoHref = seriesId ? (`/info/${encodeURIComponent(seriesId)}${source==='mp' ? '?src=mp' : ''}`) : '/home'
 
   function widen() { 
     setButtonClicked(true)
