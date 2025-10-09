@@ -10,6 +10,7 @@ export default function PopularSlider({ items }) {
   const [active, setActive] = useState(0)
   const [isHover, setIsHover] = useState(false)
   const [extra, setExtra] = useState({}) // cache info by base id
+  const [chaptersCache, setChaptersCache] = useState({}) // cache chapters by id
   const [list, setList] = useState(items || [])
   const [titleGradient, setTitleGradient] = useState('linear-gradient(to right, rgba(255,123,23,0.9), #ffffff)')
   const gradientPalette = [
@@ -77,6 +78,22 @@ export default function PopularSlider({ items }) {
       const sample = sampleUnique(items, 10)
       setList(sample)
       setActive(0)
+      
+      // Preload chapters for first 3 items in background
+      setTimeout(() => {
+        sample.slice(0, 3).forEach(async (item) => {
+          const combined = item.seriesId || item.id || item.slug || item.urlId
+          const { id } = parseIdTitle(combined, item.titleId || item.slug)
+          if (!id || chaptersCache[id]) return
+          
+          try {
+            const { api } = await import('../lib/api.js')
+            const res = await api.chapters(id)
+            const list = Array.isArray(res) ? res : (res.items || [])
+            setChaptersCache(prev => ({ ...prev, [id]: list }))
+          } catch {}
+        })
+      }, 100)
     }
   }, [items])
 
@@ -85,7 +102,11 @@ export default function PopularSlider({ items }) {
     if (!list || list.length === 0) return
     let cancelled = false
     ;(async () => {
-      const tasks = list.map(async (it) => {
+      // Only fetch info for current and next 2 slides for faster loading
+      const visibleIndices = [active, (active + 1) % list.length, (active + 2) % list.length]
+      const tasks = visibleIndices.map(async (index) => {
+        const it = list[index]
+        if (!it) return
         const combined = it.seriesId || it.id || it.slug || it.urlId
         const { id, titleId } = parseIdTitle(combined, it.titleId || it.slug)
         if (!id) return
@@ -101,7 +122,7 @@ export default function PopularSlider({ items }) {
       await Promise.allSettled(tasks)
     })()
     return () => { cancelled = true }
-  }, [list])
+  }, [list, active])
 
   function shuffle(arr) { return cryptoShuffle(arr) }
 
@@ -112,8 +133,42 @@ export default function PopularSlider({ items }) {
       const reshuffled = items && items.length ? sampleUnique(items, 10) : shuffle(list)
       setList(reshuffled)
       setActive(0)
+      
+      // Preload chapters for new first 3 items
+      setTimeout(() => {
+        reshuffled.slice(0, 3).forEach(async (item) => {
+          const combined = item.seriesId || item.id || item.slug || item.urlId
+          const { id } = parseIdTitle(combined, item.titleId || item.slug)
+          if (!id || chaptersCache[id]) return
+          
+          try {
+            const { api } = await import('../lib/api.js')
+            const res = await api.chapters(id)
+            const list = Array.isArray(res) ? res : (res.items || [])
+            setChaptersCache(prev => ({ ...prev, [id]: list }))
+          } catch {}
+        })
+      }, 100)
     } else {
       setActive((a) => a + 1)
+      
+      // Preload chapters for next item when advancing
+      const nextIndex = (active + 1) % list.length
+      const nextItem = list[nextIndex]
+      if (nextItem) {
+        const combined = nextItem.seriesId || nextItem.id || nextItem.slug || nextItem.urlId
+        const { id } = parseIdTitle(combined, nextItem.titleId || nextItem.slug)
+        if (id && !chaptersCache[id]) {
+          setTimeout(async () => {
+            try {
+              const { api } = await import('../lib/api.js')
+              const res = await api.chapters(id)
+              const list = Array.isArray(res) ? res : (res.items || [])
+              setChaptersCache(prev => ({ ...prev, [id]: list }))
+            } catch {}
+          }, 100)
+        }
+      }
     }
   }
 
@@ -158,8 +213,16 @@ export default function PopularSlider({ items }) {
     try {
       const combined = item.seriesId || item.id || item.slug || item.urlId
       const { id, titleId } = parseIdTitle(combined, item.titleId || item.slug)
-      const res = await (await import('../lib/api.js')).api.chapters(id)
-      const list = Array.isArray(res) ? res : (res.items || [])
+      
+      // Check cache first
+      let list = chaptersCache[id]
+      if (!list) {
+        const res = await (await import('../lib/api.js')).api.chapters(id)
+        list = Array.isArray(res) ? res : (res.items || [])
+        // Cache the chapters
+        setChaptersCache(prev => ({ ...prev, [id]: list }))
+      }
+      
       if (!list.length) return
       const latest = list[0] || list[list.length - 1]
       const chapterId = latest.id || latest.slug || latest.urlId
@@ -183,7 +246,7 @@ export default function PopularSlider({ items }) {
              onMouseEnter={() => setIsHover(true)} onMouseLeave={() => setIsHover(false)}>
           {bg && (
           <>
-              <img src={bg} alt="bg" className="absolute inset-0 w-full h-full object-cover md:scale-105" />
+              <img src={bg} alt="bg" className="absolute inset-0 w-full h-full object-cover md:scale-105" loading="eager" decoding="async" />
               <div className="absolute inset-0 backdrop-blur-none md:backdrop-blur-md" />
               {/* Mobile lighter, desktop stronger gradients */}
               <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-black/40 to-black/80 md:from-black/30 md:via-black/60 md:to-black/95" />
@@ -241,7 +304,7 @@ export default function PopularSlider({ items }) {
                      <div className="absolute -inset-1 rounded-3xl bg-gradient-to-br from-white/10 dark:from-gray-700/20 to-transparent" />
                      <div className="relative p-2">
                     <div className="relative aspect-[3/4] w-full rounded-xl overflow-hidden bg-black/40 flex items-center justify-center">
-                        <img src={getImage(pickImage(activeItem) || pickImage(info))} alt="thumb" className="w-full h-full object-cover" loading="eager" />
+                        <img src={getImage(pickImage(activeItem) || pickImage(info))} alt="thumb" className="w-full h-full object-cover" loading="eager" decoding="async" />
                         <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
                       </div>
                     </div>
