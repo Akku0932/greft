@@ -14,6 +14,7 @@ export default function Login() {
   const [loading, setLoading] = useState(false)
   const [err, setErr] = useState('')
   const [captcha, setCaptcha] = useState('')
+  const [captchaMountId, setCaptchaMountId] = useState(0)
   const { user } = useAuth()
   const navigate = useNavigate()
 
@@ -47,6 +48,8 @@ export default function Login() {
         const msg = vj?.error || (Array.isArray(vj?.errorCodes) ? vj.errorCodes.join(', ') : '')
         setErr(`Verification failed${msg ? ': ' + msg : ''}. Please try again.`)
         setCaptcha('')
+        // Force remount the widget to avoid timeout-or-duplicate
+        setCaptchaMountId((x) => x + 1)
         return
       }
       if (mode === 'login') {
@@ -103,7 +106,7 @@ export default function Login() {
             </div>
           )}
           {err && <div className="text-sm text-red-600 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-2">{err}</div>}
-          <Turnstile className="mt-1" onChange={setCaptcha} />
+          <Turnstile key={captchaMountId} className="mt-1" onChange={setCaptcha} />
           <button type="submit" disabled={loading || !captcha} className="w-full px-4 py-2 rounded-xl bg-stone-900 dark:bg-gray-700 text-white disabled:opacity-60">{loading ? 'Please wait…' : (mode === 'login' ? 'Sign in' : 'Sign up')}</button>
         </form>
         <div className="flex items-center gap-2 my-5">
