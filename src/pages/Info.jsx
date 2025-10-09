@@ -17,6 +17,7 @@ export default function Info() {
   const isMF = id && id.includes('.') && !id.includes('/')
   const source = isMF ? 'mf' : 'gf'
   const { user, add, remove, isSaved, items, setStatus } = useLibrary()
+  const [statusValue, setStatusValue] = useState('planning')
 
   useEffect(() => {
     let mounted = true
@@ -45,6 +46,13 @@ export default function Info() {
     run();
     return () => { mounted = false }
   }, [id, titleId, source])
+
+  // Sync local statusValue with saved item if present
+  useEffect(() => {
+    const parsed = parseIdTitle(id, titleId)
+    const row = items.find(it => it.series_id === parsed.id && it.source === source)
+    if (row && row.status && row.status !== statusValue) setStatusValue(row.status)
+  }, [items, id, titleId, source])
 
   if (loading) return <div className="max-w-[95vw] mx-auto px-4 sm:px-6 py-10 text-stone-800 dark:text-gray-200">Loading…</div>
   if (error) return <div className="max-w-[95vw] mx-auto px-4 sm:px-6 py-10 text-red-600 dark:text-red-400">{String(error)}</div>
@@ -158,7 +166,7 @@ export default function Info() {
                 <button
                   onClick={async () => {
                     const parsed = parseIdTitle(id, titleId)
-                    const payload = { seriesId: parsed.id, source, title: mappedData.title, cover }
+                    const payload = { seriesId: parsed.id, source, title: mappedData.title, cover, status: statusValue }
                     try {
                       if (!user) { window.location.href = '/login'; return }
                       if (isSaved(parsed.id, source)) await remove({ seriesId: parsed.id, source })
@@ -169,17 +177,19 @@ export default function Info() {
                 >
                   {isSaved(parseIdTitle(id, titleId).id, source) ? 'In My List' : 'Add to List'}
                 </button>
-                {isSaved(parseIdTitle(id, titleId).id, source) && (
+                {user && (
                   <div className="flex items-center gap-2">
                     <label className="text-xs text-white/80">Status</label>
                     <select
                       onChange={async (e) => {
+                        const next = e.target.value
+                        setStatusValue(next)
                         const parsed = parseIdTitle(id, titleId)
-                        try {
-                          await setStatus({ seriesId: parsed.id, source, status: e.target.value })
-                        } catch {}
+                        if (isSaved(parsed.id, source)) {
+                          try { await setStatus({ seriesId: parsed.id, source, status: next }) } catch {}
+                        }
                       }}
-                      value={(items.find(it => it.series_id === parseIdTitle(id, titleId).id && it.source === source)?.status) || 'planning'}
+                      value={statusValue}
                       className="px-3 py-2 rounded-lg bg-white/10 border border-white/20 text-white"
                     >
                       <option value="planning">Planning</option>
