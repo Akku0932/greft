@@ -45,8 +45,10 @@ export default function Login() {
       let vj
       try { vj = await vr.json() } catch (_) { vj = null }
       if (!vr.ok || !vj?.success) {
-        const msg = vj?.error || (Array.isArray(vj?.errorCodes) ? vj.errorCodes.join(', ') : '')
-        setErr(`Verification failed${msg ? ': ' + msg : ''}. Please try again.`)
+        const codes = Array.isArray(vj?.errorCodes) ? vj.errorCodes.join(', ') : ''
+        const extras = vj && typeof vj === 'object' ? JSON.stringify({ action: vj.action, cdata: vj.cdata, hostname: vj.hostname }) : ''
+        const msg = vj?.error || codes || ''
+        setErr(`Verification failed${msg ? ': ' + msg : ''}${extras ? ' ' + extras : ''}. Please try again.`)
         setCaptcha('')
         // Force remount the widget to avoid timeout-or-duplicate
         setCaptchaMountId((x) => x + 1)

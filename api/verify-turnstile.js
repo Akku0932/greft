@@ -30,8 +30,8 @@ module.exports = async (req, res) => {
       const text = await r.text()
       return res.status(502).json({ error: 'invalid_turnstile_response', detail: text?.slice(0,200) })
     }
-    if (!data.success) return res.status(400).json({ success: false, errorCodes: data['error-codes'] || [] })
-    return res.status(200).json({ success: true })
+    if (!data.success) return res.status(400).json({ success: false, ...data, errorCodes: data['error-codes'] || [] })
+    return res.status(200).json({ success: true, ...data })
   } catch (e) {
     return res.status(500).json({ error: 'verify_failed', detail: String(e.message || e) })
   }
