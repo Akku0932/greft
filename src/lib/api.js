@@ -34,6 +34,20 @@ async function fetchWithTimeout(url, options = {}, timeoutMs = 12000) {
   }
 }
 
+// Fast fetch with aggressive timeouts and retries for MP
+async function fastFetch(url, options = {}, maxRetries = 2) {
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    const timeout = attempt === 0 ? 3000 : (attempt === 1 ? 5000 : 8000) // 3s, 5s, 8s
+    try {
+      return await fetchWithTimeout(url, options, timeout)
+    } catch (e) {
+      if (attempt === maxRetries) throw e
+      // Brief delay before retry
+      await new Promise(resolve => setTimeout(resolve, 200))
+    }
+  }
+}
+
 function getBaseFor(source) {
   if (source === 'mp') return '/api/mp'
   return BASE_URL
@@ -49,15 +63,20 @@ async function request(path, options = {}, source) {
   const base = getBaseFor(source)
   const suffix = withSource(path, source)
   const url = suffix.startsWith('?') ? `${base}${suffix}` : `${base}${suffix}`;
+  
+  // Use fast fetch for MP requests
+  const fetchFn = source === 'mp' ? fastFetch : fetchWithTimeout
+  const defaultTimeout = source === 'mp' ? 3000 : 12000
+  
   let response
   try {
-    response = await fetchWithTimeout(url, {
+    response = await fetchFn(url, {
       headers: { 'Accept': 'application/json' },
       ...options,
-    }, options.timeoutMs || 12000)
+    }, options.timeoutMs || defaultTimeout)
   } catch (_) {
     // One retry with shorter timeout
-    response = await fetchWithTimeout(url, {
+    response = await fetchFn(url, {
       headers: { 'Accept': 'application/json' },
       ...options,
     }, Math.min(8000, (options.timeoutMs ? Math.max(2000, Math.floor(options.timeoutMs / 2)) : 8000)))
@@ -187,7 +206,8 @@ export const api = {
       const cached = getCached(cacheKey)
       if (cached) return cached
       
-      const result = await requestMapped(`/info/${encodeURIComponent(baseId)}`, { timeoutMs: 8000 }, 'mp')
+      // Use aggressive timeout for first load
+      const result = await requestMapped(`/info/${encodeURIComponent(baseId)}`, { timeoutMs: 3000 }, 'mp')
       setCached(cacheKey, result)
       return result
     }
@@ -203,7 +223,8 @@ export const api = {
       const cached = getCached(cacheKey)
       if (cached) return cached
       
-      const result = await requestMapped(`/chapters/${id}`, { timeoutMs: 6000 }, 'mp')
+      // Use aggressive timeout for first load
+      const result = await requestMapped(`/chapters/${id}`, { timeoutMs: 3000 }, 'mp')
       setCached(cacheKey, result)
       return result
     }
