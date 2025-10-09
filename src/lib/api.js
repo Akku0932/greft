@@ -99,9 +99,9 @@ export const api = {
       if (s.value && s.value._mp) {
         const payload = s.value.v
         if (Array.isArray(payload)) {
-          results.push(payload.map(it => ({ ...it, _source: 'mp' })))
+          results.push(payload.map(it => normalizeMpListItem(it)))
         } else if (payload && Array.isArray(payload.items)) {
-          results.push(payload.items.map(it => ({ ...it, _source: 'mp' })))
+          results.push(payload.items.map(it => normalizeMpListItem(it)))
         } else {
           results.push(payload)
         }
@@ -251,7 +251,7 @@ export const api = {
           const last = Array.isArray(d.last_chapterNodes) && d.last_chapterNodes.length ? d.last_chapterNodes[0]?.data : null
           const updatedAt = last?.dateCreate || null
           const rawImg = d.urlCover600 || d.urlCoverOri || d.urlCover || ''
-          const img = rawImg && rawImg.startsWith('/') ? `/api/mp?p=${encodeURIComponent(rawImg.replace(/^\/+/, ''))}` : rawImg
+          const img = rawImg ? toMpAbsolute(rawImg) : ''
           return {
             id: String(d.id || row.id || ''),
             seriesId: String(d.id || row.id || ''),
@@ -441,6 +441,25 @@ export function parseIdTitle(idMaybeCombined, titleMaybe) {
     return { id: idPart, titleId: sanitizeTitleId(titlePart) }
   }
   return { id: raw, titleId: sanitizeTitleId(titleMaybe || '') }
+}
+
+// Helpers for MP normalization
+function toMpAbsolute(raw) {
+  const s = String(raw || '')
+  if (!s) return ''
+  if (s.startsWith('http://') || s.startsWith('https://')) return s
+  // Ensure absolute to mangapark.com
+  return `https://mangapark.com${s.startsWith('/') ? s : `/${s}`}`
+}
+
+function normalizeMpListItem(it) {
+  // Support both flat and { id, data } shapes
+  const data = it?.data || it
+  const id = String(data?.id || it?.id || '')
+  const title = data?.name || it?.name || it?.title || ''
+  const rawImg = data?.urlCover600 || data?.urlCoverOri || data?.urlCover || it?.img || ''
+  const img = rawImg ? toMpAbsolute(rawImg) : ''
+  return { ...it, id, seriesId: id, title, img, _source: 'mp' }
 }
 
 
