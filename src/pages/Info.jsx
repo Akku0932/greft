@@ -190,13 +190,13 @@ export default function Info() {
                         try { await setStatus({ seriesId: parsed.id, source, status: next }) } catch {}
                       }}
                       value={statusValue}
-                      className="px-3 py-2 rounded-lg bg-white/10 border border-white/20 text-white"
+                      className="px-3 py-2 rounded-lg bg-white dark:bg-gray-800 border border-white/20 text-stone-900 dark:text-gray-100 shadow-sm"
                     >
-                      <option value="planning">Planning</option>
-                      <option value="reading">Reading</option>
-                      <option value="completed">Completed</option>
-                      <option value="dropped">Dropped</option>
-                      <option value="on_hold">On hold</option>
+                      <option className="text-stone-900 dark:text-gray-100" value="planning">Planning</option>
+                      <option className="text-stone-900 dark:text-gray-100" value="reading">Reading</option>
+                      <option className="text-stone-900 dark:text-gray-100" value="completed">Completed</option>
+                      <option className="text-stone-900 dark:text-gray-100" value="dropped">Dropped</option>
+                      <option className="text-stone-900 dark:text-gray-100" value="on_hold">On hold</option>
                     </select>
                   </div>
                 )}
