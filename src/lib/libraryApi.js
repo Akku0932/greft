@@ -9,11 +9,11 @@ export async function fetchLibrary() {
   return data || []
 }
 
-export async function saveSeries({ seriesId, source, title, cover }) {
+export async function saveSeries({ seriesId, source, title, cover, status = 'planning' }) {
   const { data: auth } = await supabase.auth.getUser()
   const user = auth?.user
   if (!user) throw new Error('Not authenticated')
-  const row = { user_id: user.id, series_id: seriesId, source, title, cover }
+  const row = { user_id: user.id, series_id: seriesId, source, title, cover, status }
   const { error } = await supabase.from('library').upsert(row)
   if (error) throw error
 }
@@ -25,6 +25,19 @@ export async function unsaveSeries({ seriesId, source }) {
   const { error } = await supabase
     .from('library')
     .delete()
+    .eq('user_id', user.id)
+    .eq('series_id', seriesId)
+    .eq('source', source)
+  if (error) throw error
+}
+
+export async function updateSeriesStatus({ seriesId, source, status }) {
+  const { data: auth } = await supabase.auth.getUser()
+  const user = auth?.user
+  if (!user) throw new Error('Not authenticated')
+  const { error } = await supabase
+    .from('library')
+    .update({ status })
     .eq('user_id', user.id)
     .eq('series_id', seriesId)
     .eq('source', source)

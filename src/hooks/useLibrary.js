@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { fetchLibrary, saveSeries, unsaveSeries } from '../lib/libraryApi'
+import { fetchLibrary, saveSeries, unsaveSeries, updateSeriesStatus } from '../lib/libraryApi'
 import { useAuth } from './useAuth'
 
 export function useLibrary() {
@@ -36,7 +36,13 @@ export function useLibrary() {
     return items.some(it => it.series_id === seriesId && it.source === source)
   }, [items])
 
-  return { user, items, loading, add, remove, isSaved, refresh }
+  const setStatus = useCallback(async ({ seriesId, source, status }) => {
+    if (!user) throw new Error('login-required')
+    await updateSeriesStatus({ seriesId, source, status })
+    await refresh()
+  }, [user, refresh])
+
+  return { user, items, loading, add, remove, isSaved, refresh, setStatus }
 }
 
 

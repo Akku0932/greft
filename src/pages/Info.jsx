@@ -16,7 +16,7 @@ export default function Info() {
   // Determine source based on ID format
   const isMF = id && id.includes('.') && !id.includes('/')
   const source = isMF ? 'mf' : 'gf'
-  const { user, add, remove, isSaved } = useLibrary()
+  const { user, add, remove, isSaved, items, setStatus } = useLibrary()
 
   useEffect(() => {
     let mounted = true
@@ -152,7 +152,7 @@ export default function Info() {
                 ))}
               </div>
               <p className="mt-3 md:mt-4 max-w-2xl md:max-w-3xl text-white/90 text-sm md:text-base leading-relaxed line-clamp-none">{mappedData.description || data.summary}</p>
-              <div className="mt-5 md:mt-6 flex flex-wrap gap-2 md:gap-3">
+              <div className="mt-5 md:mt-6 flex flex-wrap gap-2 md:gap-3 items-center">
                 <button onClick={onReadFirst} className="px-4 md:px-5 py-2.5 md:py-3 rounded-lg bg-white/15 hover:bg-white/25 text-white border border-white/20 transition-colors">Read First</button>
                 {/* Save button - only enabled when logged in */}
                 <button
@@ -169,6 +169,27 @@ export default function Info() {
                 >
                   {isSaved(parseIdTitle(id, titleId).id, source) ? 'In My List' : 'Add to List'}
                 </button>
+                {isSaved(parseIdTitle(id, titleId).id, source) && (
+                  <div className="flex items-center gap-2">
+                    <label className="text-xs text-white/80">Status</label>
+                    <select
+                      onChange={async (e) => {
+                        const parsed = parseIdTitle(id, titleId)
+                        try {
+                          await setStatus({ seriesId: parsed.id, source, status: e.target.value })
+                        } catch {}
+                      }}
+                      value={(items.find(it => it.series_id === parseIdTitle(id, titleId).id && it.source === source)?.status) || 'planning'}
+                      className="px-3 py-2 rounded-lg bg-white/10 border border-white/20 text-white"
+                    >
+                      <option value="planning">Planning</option>
+                      <option value="reading">Reading</option>
+                      <option value="completed">Completed</option>
+                      <option value="dropped">Dropped</option>
+                      <option value="on_hold">On hold</option>
+                    </select>
+                  </div>
+                )}
               </div>
             </div>
           </div>
