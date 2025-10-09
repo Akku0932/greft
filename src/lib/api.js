@@ -7,6 +7,23 @@ const HOST = IS_BROWSER ? (window.location?.host || '') : ''
 const IS_LOCAL = /localhost|127\.0\.0\.1/i.test(HOST)
 const BASE_URL = IS_HTTPS ? EDGE_BASE : PLAIN_BASE
 
+// Simple in-memory cache for MP data
+const mpCache = new Map()
+const CACHE_TTL = 5 * 60 * 1000 // 5 minutes
+
+function getCached(key) {
+  const cached = mpCache.get(key)
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+    return cached.data
+  }
+  mpCache.delete(key)
+  return null
+}
+
+function setCached(key, data) {
+  mpCache.set(key, { data, timestamp: Date.now() })
+}
+
 async function fetchWithTimeout(url, options = {}, timeoutMs = 12000) {
   const controller = new AbortController()
   const id = setTimeout(() => controller.abort(), timeoutMs)
@@ -163,10 +180,16 @@ export const api = {
     })
     return { items: deduped.map(({ _normTitle, ...rest }) => rest) }
   },
-  info: (id, titleId, source) => {
+  info: async (id, titleId, source) => {
     const { id: baseId, titleId: safeTitle } = parseIdTitle(id, titleId)
     if (source === 'mp') {
-      return requestMapped(`/info/${encodeURIComponent(baseId)}`, {}, 'mp')
+      const cacheKey = `mp-info-${baseId}`
+      const cached = getCached(cacheKey)
+      if (cached) return cached
+      
+      const result = await requestMapped(`/info/${encodeURIComponent(baseId)}`, { timeoutMs: 8000 }, 'mp')
+      setCached(cacheKey, result)
+      return result
     }
     // For GF: support both /info/:id and /info/:id/:title
     if (safeTitle) {
@@ -174,8 +197,16 @@ export const api = {
     }
     return requestMapped(`/info/${encodeURIComponent(baseId)}`, {}, 'gf')
   },
-  chapters: (id, source) => {
-    if (source === 'mp') return requestMapped(`/chapters/${id}`, {}, 'mp')
+  chapters: async (id, source) => {
+    if (source === 'mp') {
+      const cacheKey = `mp-chapters-${id}`
+      const cached = getCached(cacheKey)
+      if (cached) return cached
+      
+      const result = await requestMapped(`/chapters/${id}`, { timeoutMs: 6000 }, 'mp')
+      setCached(cacheKey, result)
+      return result
+    }
     return requestMapped(`/chapters/${id}`, {}, source)
   },
   // For MP, ctx should include { seriesId }
