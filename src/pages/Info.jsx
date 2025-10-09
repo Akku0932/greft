@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { api, getImage, pickImage, parseIdTitle, sanitizeTitleId } from '../lib/api.js'
 import { useLibrary } from '../hooks/useLibrary'
@@ -18,8 +18,6 @@ export default function Info() {
   const source = isMF ? 'mf' : 'gf'
   const { user, add, remove, isSaved, items, setStatus } = useLibrary()
   const [statusValue, setStatusValue] = useState('planning')
-  const [chooserOpen, setChooserOpen] = useState(false)
-  const chooserRef = useRef(null)
 
   useEffect(() => {
     let mounted = true
@@ -56,15 +54,7 @@ export default function Info() {
     if (row && row.status && row.status !== statusValue) setStatusValue(row.status)
   }, [items, id, titleId, source])
 
-  // Close chooser on outside click
-  useEffect(() => {
-    function onDoc(e) {
-      if (!chooserRef.current) return
-      if (!chooserRef.current.contains(e.target)) setChooserOpen(false)
-    }
-    if (chooserOpen) document.addEventListener('mousedown', onDoc)
-    return () => document.removeEventListener('mousedown', onDoc)
-  }, [chooserOpen])
+  // no-op
 
   if (loading) return <div className="max-w-[95vw] mx-auto px-4 sm:px-6 py-10 text-stone-800 dark:text-gray-200">Loading…</div>
   if (error) return <div className="max-w-[95vw] mx-auto px-4 sm:px-6 py-10 text-red-600 dark:text-red-400">{String(error)}</div>
@@ -172,29 +162,22 @@ export default function Info() {
                 ))}
               </div>
               <p className="mt-3 md:mt-4 max-w-2xl md:max-w-3xl text-white/90 text-sm md:text-base leading-relaxed line-clamp-none">{mappedData.description || data.summary}</p>
-              <div className="mt-5 md:mt-6 flex flex-wrap gap-2 md:gap-3 items-center relative">
+              <div className="mt-5 md:mt-6 flex flex-wrap gap-2 md:gap-3 items-center">
                 <button onClick={onReadFirst} className="px-4 md:px-5 py-2.5 md:py-3 rounded-lg bg-white/15 hover:bg-white/25 text-white border border-white/20 transition-colors">Read First</button>
                 {/* Save button - only enabled when logged in */}
                 <button
                   onClick={async () => {
                     const parsed = parseIdTitle(id, titleId)
-                    const payload = { seriesId: parsed.id, source, title: mappedData.title, cover, status: statusValue }
+                    const payload = { seriesId: parsed.id, source, title: mappedData.title, cover, status: 'planning' }
                     try {
                       if (!user) { window.location.href = '/login'; return }
-                      if (isSaved(parsed.id, source)) {
-                        // Go to list page when already saved
-                        window.location.href = '/saved'
-                      } else {
-                        // Open chooser first to pick status, then save
-                        if (!chooserOpen) { setChooserOpen(true); return }
-                        await add(payload)
-                        setChooserOpen(false)
-                      }
+                      if (isSaved(parsed.id, source)) { window.location.href = '/saved'; return }
+                      await add(payload)
                     } catch {}
                   }}
                   className="px-4 md:px-5 py-2.5 md:py-3 rounded-lg border border-white/20 text-white hover:bg-white/20 transition-colors"
                 >
-                  {isSaved(parseIdTitle(id, titleId).id, source) ? 'In My List' : (chooserOpen ? 'Confirm Add' : 'Add to List')}
+                  {isSaved(parseIdTitle(id, titleId).id, source) ? 'In My List' : 'Add to List'}
                 </button>
                 {user && isSaved(parseIdTitle(id, titleId).id, source) && (
                   <div className="flex items-center gap-2">
@@ -215,28 +198,6 @@ export default function Info() {
                       <option value="dropped">Dropped</option>
                       <option value="on_hold">On hold</option>
                     </select>
-                  </div>
-                )}
-
-                {/* Beautiful status chooser popover shown before first save */}
-                {user && !isSaved(parseIdTitle(id, titleId).id, source) && chooserOpen && (
-                  <div ref={chooserRef} className="absolute z-30 top-full mt-2 left-0 w-max max-w-[90vw] rounded-2xl backdrop-blur bg-white/90 dark:bg-gray-900/90 ring-1 ring-stone-200 dark:ring-gray-700 shadow-xl p-3">
-                    <div className="text-xs font-semibold text-stone-600 dark:text-gray-300 mb-2">Choose status</div>
-                    <div className="flex flex-wrap gap-2">
-                      {[
-                        { key: 'planning', label: 'Planning', color: 'bg-stone-100 text-stone-800 dark:bg-gray-700 dark:text-gray-100' },
-                        { key: 'reading', label: 'Reading', color: 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300' },
-                        { key: 'completed', label: 'Completed', color: 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300' },
-                        { key: 'dropped', label: 'Dropped', color: 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300' },
-                        { key: 'on_hold', label: 'On hold', color: 'bg-amber-100 text-amber-900 dark:bg-amber-900/40 dark:text-amber-300' },
-                      ].map(opt => (
-                        <button
-                          key={opt.key}
-                          onClick={() => setStatusValue(opt.key)}
-                          className={`px-3 py-1.5 rounded-full text-xs font-semibold border border-transparent hover:opacity-90 ${statusValue===opt.key ? 'ring-2 ring-black/10 dark:ring-white/20' : ''} ${opt.color}`}
-                        >{opt.label}</button>
-                      ))}
-                    </div>
                   </div>
                 )}
               </div>
