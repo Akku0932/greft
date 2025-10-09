@@ -27,21 +27,45 @@ export default function Info() {
     async function run() {
       try {
         const parsed = parseIdTitle(id, '')
-        const [infoRes, recRes] = await Promise.allSettled([
-          api.info(parsed.id, parsed.titleId, source),
-          api.recommendations(parsed.id, source).catch(() => ({ items: [] }))
-        ])
         
-        if (mounted) {
-          const infoData = infoRes.status === 'fulfilled' ? infoRes.value : null
-          const recData = recRes.status === 'fulfilled' ? recRes.value : null
-          
-          if (infoData) {
-            // Add recommendations to the data if available
-            if (recData && (recData.items || Array.isArray(recData))) {
-              infoData.recommendations = Array.isArray(recData) ? recData : recData.items || []
-            }
+        // For MP, only fetch info first for instant loading
+        if (source === 'mp') {
+          const infoData = await api.info(parsed.id, parsed.titleId, source)
+          if (mounted) {
             setData(infoData)
+            setLoading(false)
+          }
+          
+          // Fetch recommendations in background after info loads
+          if (mounted) {
+            try {
+              const recData = await api.recommendations(parsed.id, source)
+              if (mounted && recData && (recData.items || Array.isArray(recData))) {
+                setData(prev => ({
+                  ...prev,
+                  recommendations: Array.isArray(recData) ? recData : recData.items || []
+                }))
+              }
+            } catch {}
+          }
+        } else {
+          // For GF/MF, fetch both in parallel as before
+          const [infoRes, recRes] = await Promise.allSettled([
+            api.info(parsed.id, parsed.titleId, source),
+            api.recommendations(parsed.id, source).catch(() => ({ items: [] }))
+          ])
+          
+          if (mounted) {
+            const infoData = infoRes.status === 'fulfilled' ? infoRes.value : null
+            const recData = recRes.status === 'fulfilled' ? recRes.value : null
+            
+            if (infoData) {
+              if (recData && (recData.items || Array.isArray(recData))) {
+                infoData.recommendations = Array.isArray(recData) ? recData : recData.items || []
+              }
+              setData(infoData)
+            }
+            setLoading(false)
           }
         }
       } catch (e) { if (mounted) setError(e) } finally { if (mounted) setLoading(false) }

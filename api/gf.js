@@ -19,7 +19,7 @@ export default async function handler(req) {
       const targetUrl = `${originBase}/${upstreamPath}`
       try {
         const controller = new AbortController()
-        const t = setTimeout(() => controller.abort(), 15000)
+        const t = setTimeout(() => controller.abort(), 3000)
         const upstream = await fetch(targetUrl, {
           headers: {
             accept: 'application/json, text/plain, */*',
@@ -30,6 +30,8 @@ export default async function handler(req) {
             pragma: 'no-cache',
             'cache-control': 'no-cache',
             'x-requested-with': 'XMLHttpRequest',
+            'connection': 'keep-alive',
+            'keep-alive': 'timeout=5, max=1000',
           },
           signal: controller.signal,
         })

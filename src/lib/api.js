@@ -7,24 +7,49 @@ const HOST = IS_BROWSER ? (window.location?.host || '') : ''
 const IS_LOCAL = /localhost|127\.0\.0\.1/i.test(HOST)
 const BASE_URL = IS_HTTPS ? EDGE_BASE : PLAIN_BASE
 
-// Lightning-fast in-memory cache for MP data
+// Lightning-fast in-memory cache for MP and GF data
 const mpCache = new Map()
-const CACHE_TTL = 15 * 60 * 1000 // 15 minutes (maximum cache for instant performance)
+const gfCache = new Map()
+const CACHE_TTL = 20 * 60 * 1000 // 20 minutes (maximum cache for instant performance)
 
-// Preload popular MP content for instant access
+// Preload popular content for instant access
 const preloadQueue = new Set()
 
-function getCached(key) {
-  const cached = mpCache.get(key)
+// Cache warming for popular MP content
+const warmCache = async (id) => {
+  if (preloadQueue.has(id)) return
+  preloadQueue.add(id)
+  try {
+    await api.info(id, '', 'mp')
+    await api.chapters(id, 'mp')
+  } catch {}
+  preloadQueue.delete(id)
+}
+
+// Cache warming for popular GF content
+const warmGfCache = async (id) => {
+  if (preloadQueue.has(`gf-${id}`)) return
+  preloadQueue.add(`gf-${id}`)
+  try {
+    await api.info(id, '', 'gf')
+    await api.chapters(id, 'gf')
+  } catch {}
+  preloadQueue.delete(`gf-${id}`)
+}
+
+function getCached(key, source = 'mp') {
+  const cache = source === 'gf' ? gfCache : mpCache
+  const cached = cache.get(key)
   if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
     return cached.data
   }
-  mpCache.delete(key)
+  cache.delete(key)
   return null
 }
 
-function setCached(key, data) {
-  mpCache.set(key, { data, timestamp: Date.now() })
+function setCached(key, data, source = 'mp') {
+  const cache = source === 'gf' ? gfCache : mpCache
+  cache.set(key, { data, timestamp: Date.now() })
 }
 
 async function fetchWithTimeout(url, options = {}, timeoutMs = 12000) {
@@ -40,7 +65,7 @@ async function fetchWithTimeout(url, options = {}, timeoutMs = 12000) {
 // Lightning-fast fetch with instant timeouts and connection pooling
 async function fastFetch(url, options = {}, maxRetries = 1) {
   // Ultra-aggressive parallel timeouts for instant response
-  const timeouts = [800, 1200, 2000] // 0.8s, 1.2s, 2s
+  const timeouts = [500, 800, 1200] // 0.5s, 0.8s, 1.2s
   const promises = timeouts.map(timeout => 
     fetchWithTimeout(url, {
       ...options,
@@ -63,6 +88,36 @@ async function fastFetch(url, options = {}, maxRetries = 1) {
     throw new Error('All ultra-fast attempts failed')
   } catch (e) {
     // Final fallback with minimal timeout
+    return fetchWithTimeout(url, options, 2000)
+  }
+}
+
+// Fast fetch for GF with moderate timeouts
+async function fastGfFetch(url, options = {}, maxRetries = 1) {
+  // Moderate parallel timeouts for GF
+  const timeouts = [1000, 1500, 2000] // 1s, 1.5s, 2s
+  const promises = timeouts.map(timeout => 
+    fetchWithTimeout(url, {
+      ...options,
+      headers: {
+        ...options.headers,
+        'Connection': 'keep-alive',
+        'Cache-Control': 'no-cache',
+        'Pragma': 'no-cache'
+      }
+    }, timeout).catch(e => ({ error: e, timeout }))
+  )
+  
+  try {
+    const results = await Promise.allSettled(promises)
+    for (const result of results) {
+      if (result.status === 'fulfilled' && !result.value.error) {
+        return result.value
+      }
+    }
+    throw new Error('All fast GF attempts failed')
+  } catch (e) {
+    // Final fallback with moderate timeout
     return fetchWithTimeout(url, options, 3000)
   }
 }
@@ -83,9 +138,9 @@ async function request(path, options = {}, source) {
   const suffix = withSource(path, source)
   const url = suffix.startsWith('?') ? `${base}${suffix}` : `${base}${suffix}`;
   
-  // Use lightning-fast fetch for MP requests
-  const fetchFn = source === 'mp' ? fastFetch : fetchWithTimeout
-  const defaultTimeout = source === 'mp' ? 800 : 12000
+  // Use lightning-fast fetch for MP requests, fast fetch for GF
+  const fetchFn = source === 'mp' ? fastFetch : (source === 'gf' ? fastGfFetch : fetchWithTimeout)
+  const defaultTimeout = source === 'mp' ? 500 : (source === 'gf' ? 2000 : 12000)
   
   let response
   try {
@@ -143,9 +198,9 @@ export const api = {
     // Run GF and MF searches in parallel to cut latency
     // Run with aggressive timeouts to keep UX snappy
     const settled = await Promise.allSettled([
-      ...gfPaths.map(p => requestMapped(p, { timeoutMs: 7000 }, 'gf')),
-      // MP search
-      requestMapped(`/search?keyword=${query}`, { timeoutMs: 7000 }, 'mp')
+      ...gfPaths.map(p => requestMapped(p, { timeoutMs: 2000 }, 'gf')),
+      // MP search with ultra-fast timeout
+      requestMapped(`/search?keyword=${query}`, { timeoutMs: 2000 }, 'mp')
         .then(v => ({ _mp: true, v }))
     ])
     const results = []
@@ -226,15 +281,29 @@ export const api = {
       if (cached) return cached
       
       // Use lightning-fast timeout for first load
-      const result = await requestMapped(`/info/${encodeURIComponent(baseId)}`, { timeoutMs: 800 }, 'mp')
+      const result = await requestMapped(`/info/${encodeURIComponent(baseId)}`, { timeoutMs: 500 }, 'mp')
       setCached(cacheKey, result)
       return result
     }
-    // For GF: support both /info/:id and /info/:id/:title
-    if (safeTitle) {
-      return requestMapped(`/info/${encodeURIComponent(baseId)}/${encodeURIComponent(safeTitle)}`, {}, 'gf')
+    // For GF: support both /info/:id and /info/:id/:title with caching
+    if (source === 'gf') {
+      const cacheKey = `gf-info-${baseId}${safeTitle ? `-${safeTitle}` : ''}`
+      const cached = getCached(cacheKey, 'gf')
+      if (cached) return cached
+      
+      const result = safeTitle 
+        ? await requestMapped(`/info/${encodeURIComponent(baseId)}/${encodeURIComponent(safeTitle)}`, { timeoutMs: 2000 }, 'gf')
+        : await requestMapped(`/info/${encodeURIComponent(baseId)}`, { timeoutMs: 2000 }, 'gf')
+      
+      setCached(cacheKey, result, 'gf')
+      return result
     }
-    return requestMapped(`/info/${encodeURIComponent(baseId)}`, {}, 'gf')
+    
+    // For other sources
+    if (safeTitle) {
+      return requestMapped(`/info/${encodeURIComponent(baseId)}/${encodeURIComponent(safeTitle)}`, {}, source)
+    }
+    return requestMapped(`/info/${encodeURIComponent(baseId)}`, {}, source)
   },
   chapters: async (id, source) => {
     if (source === 'mp') {
@@ -243,10 +312,22 @@ export const api = {
       if (cached) return cached
       
       // Use lightning-fast timeout for first load
-      const result = await requestMapped(`/chapters/${id}`, { timeoutMs: 800 }, 'mp')
+      const result = await requestMapped(`/chapters/${id}`, { timeoutMs: 500 }, 'mp')
       setCached(cacheKey, result)
       return result
     }
+    
+    if (source === 'gf') {
+      const cacheKey = `gf-chapters-${id}`
+      const cached = getCached(cacheKey, 'gf')
+      if (cached) return cached
+      
+      // Use fast timeout for GF chapters
+      const result = await requestMapped(`/chapters/${id}`, { timeoutMs: 2000 }, 'gf')
+      setCached(cacheKey, result, 'gf')
+      return result
+    }
+    
     return requestMapped(`/chapters/${id}`, {}, source)
   },
   // For MP, ctx should include { seriesId }
@@ -306,11 +387,17 @@ export const api = {
         gfRes = { status: 'rejected', reason: e }
       }
 
-      const gfItems = gfRes && gfRes.status === 'fulfilled' ? extractItems(gfRes.value).map(it => ({
-        ...it,
-        _source: 'greft',
-        uploadTime: toTimestamp(it.updatedAt || it.time || it.date || it.updated || it.lastUpdate)
-      })) : []
+      const gfItems = gfRes && gfRes.status === 'fulfilled' ? extractItems(gfRes.value).map(it => {
+        const id = it.id || it.seriesId || it.slug || it.urlId
+        // Warm cache for popular GF content in background
+        if (id) warmGfCache(id)
+        
+        return {
+          ...it,
+          _source: 'greft',
+          uploadTime: toTimestamp(it.updatedAt || it.time || it.date || it.updated || it.lastUpdate)
+        }
+      }) : []
 
       // Fetch MP latest-releases with pagination
       let mpItems = []
@@ -323,9 +410,14 @@ export const api = {
           const updatedAt = last?.dateCreate || null
           const rawImg = d.urlCover600 || d.urlCoverOri || d.urlCover || ''
           const img = rawImg ? `/api/mp?p=${encodeURIComponent((rawImg.startsWith('/') ? rawImg.slice(1) : rawImg))}` : ''
+          const id = String(d.id || row.id || '')
+          
+          // Warm cache for popular MP content in background
+          if (id) warmCache(id)
+          
           return {
-            id: String(d.id || row.id || ''),
-            seriesId: String(d.id || row.id || ''),
+            id,
+            seriesId: id,
             title: d.name || row.name,
             img,
             tag: last?.dname || '',
