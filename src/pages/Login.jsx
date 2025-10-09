@@ -12,6 +12,7 @@ export default function Login() {
   const [confirm, setConfirm] = useState('')
   const [loading, setLoading] = useState(false)
   const [err, setErr] = useState('')
+  const [info, setInfo] = useState('')
   const { user } = useAuth()
   const navigate = useNavigate()
 
@@ -27,6 +28,7 @@ export default function Login() {
   async function submit(e) {
     e.preventDefault()
     setErr('')
+    setInfo('')
     setLoading(true)
     try {
       if (mode === 'login') {
@@ -62,6 +64,27 @@ export default function Login() {
     }
   }
 
+  async function onForgotPassword() {
+    try {
+      setErr('')
+      setInfo('')
+      if (!email) {
+        setErr('Enter your email above, then click Forgot password.')
+        return
+      }
+      // Send password reset email. Supabase will email a link to the recovery URL.
+      const origin = window.location.origin
+      const redirectTo = `${origin}/auth/callback`
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo,
+      })
+      if (error) throw error
+      setInfo('Password reset email sent. Check your inbox.')
+    } catch (e) {
+      setErr(String(e.message || e))
+    }
+  }
+
   return (
     <div className="min-h-[60vh] flex items-center justify-center px-4 py-8">
       <div className="w-full max-w-md rounded-2xl border border-stone-200 dark:border-gray-700 bg-white/70 dark:bg-gray-900/70 backdrop-blur p-6 shadow-soft">
@@ -75,6 +98,11 @@ export default function Login() {
           <div>
             <label className="block text-xs font-medium text-stone-600 dark:text-gray-400 mb-1">Password</label>
             <input value={password} onChange={e=>setPassword(e.target.value)} type="password" placeholder="••••••••" required className="w-full px-4 py-2 rounded-xl border border-stone-300 dark:border-gray-700 bg-transparent" />
+            {mode === 'login' && (
+              <div className="mt-1 text-xs">
+                <button type="button" onClick={onForgotPassword} className="underline text-stone-600 dark:text-gray-400">Forgot password?</button>
+              </div>
+            )}
           </div>
           {mode === 'signup' && (
             <div>
@@ -83,6 +111,7 @@ export default function Login() {
             </div>
           )}
           {err && <div className="text-sm text-red-600 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-2">{err}</div>}
+          {info && <div className="text-sm text-green-700 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-2">{info}</div>}
           <button type="submit" disabled={loading} className="w-full px-4 py-2 rounded-xl bg-stone-900 dark:bg-gray-700 text-white disabled:opacity-60">{loading ? 'Please wait…' : (mode === 'login' ? 'Sign in' : 'Sign up')}</button>
         </form>
         <div className="flex items-center gap-2 my-5">
