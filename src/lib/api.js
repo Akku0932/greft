@@ -387,6 +387,12 @@ export const mp = {
 export function getImage(input) {
   const url = String(input || '')
   if (!url || url === 'undefined' || url === 'null') return ''
+  
+  // Don't process already-proxied URLs
+  if (url.startsWith('/api/mp?p=') || url.startsWith('/api/gf?p=') || url.startsWith('/api/proxy-edge?url=')) {
+    return url
+  }
+  
   if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('data:')) {
     if (typeof window !== 'undefined' && window.location?.protocol === 'https:' && url.startsWith('http://')) {
       // route insecure absolute images via proxy
@@ -405,6 +411,7 @@ export function getImage(input) {
       const path = url.replace(/^\/+/, '')
       return `/api/mp?p=${encodeURIComponent(path)}`
     }
+    // Only use BASE_URL for non-MP assets
     return `${BASE_URL}${url}`
   }
   return url
