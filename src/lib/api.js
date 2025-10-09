@@ -400,11 +400,7 @@ export function getImage(input) {
   if (url.startsWith('/')) {
     // Route MP asset paths via MP proxy; others via GF base
     const lower = url.toLowerCase()
-    // Use direct host for thumbnails
-    if (lower.startsWith('/thumb/')) {
-      return `https://mangapark.com${url}`
-    }
-    const isMpAsset = /\/(mpim|mpav|ampi|amim)\//.test(lower) || lower.startsWith('/media/')
+    const isMpAsset = /\/(mpim|mpav|ampi|amim)\//.test(lower) || lower.startsWith('/thumb/') || lower.startsWith('/media/')
     if (isMpAsset) {
       const path = url.replace(/^\/+/, '')
       return `/api/mp?p=${encodeURIComponent(path)}`
