@@ -14,7 +14,9 @@ export async function saveSeries({ seriesId, source, title, cover, status = 'pla
   const user = auth?.user
   if (!user) throw new Error('Not authenticated')
   const row = { user_id: user.id, series_id: seriesId, source, title, cover, status }
-  const { error } = await supabase.from('library').upsert(row)
+  const { error } = await supabase
+    .from('library')
+    .upsert(row, { onConflict: 'user_id,series_id,source' })
   if (error) throw error
 }
 
