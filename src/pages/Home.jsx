@@ -604,7 +604,9 @@ function RecItem({ item, index }) {
   const title = item.title || item.name || 'Untitled'
   const parsed = parseIdTitle(item.seriesId || item.id || item.slug || item.urlId, item.title || item.slug)
   // For MF items, only use ID; for GF items, use ID/title format
-  const href = `/info/${encodeURIComponent(parsed.id)}/${encodeURIComponent(sanitizeTitleId(parsed.titleId || 'title'))}`
+  const href = item._source === 'mf' 
+    ? `/info/${encodeURIComponent(parsed.id)}`
+    : `/info/${encodeURIComponent(parsed.id)}/${encodeURIComponent(sanitizeTitleId(parsed.titleId || 'title'))}`
   const showBg = index < 3
   // gradient palette for hover title
   const grads = [
@@ -787,7 +789,12 @@ function LatestCard({ item, index }) {
           ) : (
             <div className="absolute inset-0 bg-stone-200 dark:bg-gray-800 rounded-lg" />
           )}
-          {/* source badge removed */}
+          {item._source && (
+            <div className="absolute top-1 left-1 px-2 py-0.5 rounded-full text-[10px] font-medium backdrop-blur-sm border border-white/20"
+                 style={{ background: item._source === 'mf' ? 'linear-gradient(90deg,#06b6d4,#3b82f6)' : 'linear-gradient(90deg,#f59e0b,#ef4444)', color: 'white' }}>
+              {item._source === 'mf' ? 'MF' : 'GF'}
+            </div>
+          )}
         </div>
         <div className="px-1.5 pt-2">
           <h3 className="text-sm font-semibold truncate text-stone-900 dark:text-white group-hover:text-transparent" style={{ WebkitBackgroundClip: 'text', backgroundImage: hoverGrad }}>
