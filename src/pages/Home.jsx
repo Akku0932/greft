@@ -23,12 +23,7 @@ export default function Home() {
   const [hotRange, setHotRange] = useState('weekly')
   const [hotItems, setHotItems] = useState([])
   const [hotLoading, setHotLoading] = useState(false)
-  const [mostViewedRange, setMostViewedRange] = useState('day')
-  const [mostViewedData, setMostViewedData] = useState(null)
-  const [mostViewedItems, setMostViewedItems] = useState([])
-  const [mostViewedLoading, setMostViewedLoading] = useState(false)
-  const [newReleaseItems, setNewReleaseItems] = useState([])
-  const [newReleaseLoading, setNewReleaseLoading] = useState(false)
+  // Removed MF sections: Most Viewed and New Release
   const [showLeftArrow, setShowLeftArrow] = useState(false)
   const [showRightArrow, setShowRightArrow] = useState(true)
   const recentContainerRef = useRef(null)
@@ -324,52 +319,7 @@ export default function Home() {
     return () => { mounted = false }
   }, [hotRange])
 
-  // Load Most Viewed data (MF)
-  useEffect(() => {
-    let mounted = true
-    async function run() {
-      setMostViewedLoading(true)
-      try {
-        const res = await api.mostViewed('mf')
-        if (!mounted) return
-        setMostViewedData(res)
-      } catch (e) {
-        if (mounted) setError(e)
-      } finally {
-        if (mounted) setMostViewedLoading(false)
-      }
-    }
-    run()
-    return () => { mounted = false }
-  }, [])
-
-  // Derive items by selected range from MF payload { day, week, month }
-  useEffect(() => {
-    const list = (mostViewedData && mostViewedData[mostViewedRange]) || []
-    const withSource = Array.isArray(list) ? list.map(it => ({ ...it, _source: 'mf' })) : []
-    setMostViewedItems(withSource)
-  }, [mostViewedData, mostViewedRange])
-
-  // Load New Release (via unified API; server proxies MF)
-  useEffect(() => {
-    let mounted = true
-    async function run() {
-      setNewReleaseLoading(true)
-      try {
-        const res = await api.newRelease()
-        if (!mounted) return
-        const list = extractItems(res)
-        const items = Array.isArray(list) ? list : []
-        setNewReleaseItems(items)
-      } catch (_) {
-        if (mounted) setNewReleaseItems([])
-      } finally {
-        if (mounted) setNewReleaseLoading(false)
-      }
-    }
-    run()
-    return () => { mounted = false }
-  }, [])
+  // Removed MF data loaders
 
   // Load more latest updates
   const loadMoreLatest = useCallback(async () => {
@@ -455,46 +405,7 @@ export default function Home() {
                 </div>
               </section>
             )}
-            <div className="rounded-xl border border-stone-200 dark:border-gray-700/60 bg-white/60 dark:bg-gray-900/60 p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-xl font-bold text-stone-900 dark:text-white">New Release</h3>
-              </div>
-              <div className="space-y-4">
-                {newReleaseLoading ? Array.from({ length: 4 }).map((_, i) => (
-                  <div key={i} className="animate-pulse h-24 rounded-xl bg-stone-200 dark:bg-gray-800" />
-                )) : newReleaseItems.slice(0, 6).map((it, i) => (
-                  <RecItem key={(it.id || it.seriesId || i) + 'newrel-m'} item={it} index={i} />
-                ))}
-              </div>
-            </div>
-
-            <div className="rounded-xl border border-stone-200 dark:border-gray-700/60 bg-white/60 dark:bg-gray-900/60 p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-xl font-bold text-stone-900 dark:text-white">Most Viewed</h3>
-                <div className="inline-flex rounded-lg border border-stone-300 dark:border-gray-600 overflow-hidden text-sm">
-                  {['day','week','month'].map((r) => (
-                    <button 
-                      key={r} 
-                      onClick={() => setMostViewedRange(r)} 
-                      className={`px-3 py-2 transition-colors duration-200 ${
-                        mostViewedRange===r 
-                          ? 'bg-stone-900 dark:bg-gray-700 text-white' 
-                          : 'bg-white dark:bg-gray-800 text-stone-700 dark:text-gray-300 hover:bg-stone-50 dark:hover:bg-gray-700'
-                      }`}
-                    >
-                      {r[0].toUpperCase()+r.slice(1)}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <div className="space-y-4">
-                {mostViewedLoading ? Array.from({ length: 4 }).map((_, i) => (
-                  <div key={i} className="animate-pulse h-24 rounded-xl bg-stone-200 dark:bg-gray-800" />
-                )) : mostViewedItems.slice(0, 6).map((it, i) => (
-                  <RecItem key={(it.id || it.seriesId || i) + 'mostviewed'} item={it} index={i} />
-                ))}
-              </div>
-            </div>
+            {/* Removed New Release and Most Viewed sections */}
             <div className="rounded-xl border border-stone-200 dark:border-gray-700/60 bg-white/60 dark:bg-gray-900/60 p-6">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-xl font-bold text-stone-900 dark:text-white">Recent Popular</h3>
@@ -634,45 +545,7 @@ export default function Home() {
           />
         </div>
         <aside className="pt-8 lg:pt-16 justify-self-end w-full hidden lg:block">
-          <div className="mb-8 rounded-xl border border-stone-200 dark:border-gray-700/60 bg-white/60 dark:bg-gray-900/60 p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xl font-bold text-stone-900 dark:text-white">New Release</h3>
-            </div>
-            <div className="space-y-4">
-              {newReleaseLoading ? Array.from({ length: 4 }).map((_, i) => (
-                <div key={i} className="animate-pulse h-24 rounded-xl bg-stone-200 dark:bg-gray-800" />
-              )) : newReleaseItems.slice(0, 6).map((it, i) => (
-                <RecItem key={(it.id || it.seriesId || i) + 'newrel-d'} item={it} index={i} />
-              ))}
-            </div>
-          </div>
-          <div className="mb-8 rounded-xl border border-stone-200 dark:border-gray-700/60 bg-white/60 dark:bg-gray-900/60 p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xl font-bold text-stone-900 dark:text-white">Most Viewed</h3>
-              <div className="inline-flex rounded-lg border border-stone-300 dark:border-gray-600 overflow-hidden text-sm">
-                {['day','week','month'].map((r) => (
-                  <button 
-                    key={r} 
-                    onClick={() => setMostViewedRange(r)} 
-                    className={`px-3 py-2 transition-colors duration-200 ${
-                      mostViewedRange===r 
-                        ? 'bg-stone-900 dark:bg-gray-700 text-white' 
-                        : 'bg-white dark:bg-gray-800 text-stone-700 dark:text-gray-300 hover:bg-stone-50 dark:hover:bg-gray-700'
-                    }`}
-                  >
-                    {r[0].toUpperCase()+r.slice(1)}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div className="space-y-4">
-              {mostViewedLoading ? Array.from({ length: 4 }).map((_, i) => (
-                <div key={i} className="animate-pulse h-24 rounded-xl bg-stone-200 dark:bg-gray-800" />
-              )) : mostViewedItems.slice(0, 6).map((it, i) => (
-                <RecItem key={(it.id || it.seriesId || i) + 'mostviewed-d'} item={it} index={i} />
-              ))}
-            </div>
-          </div>
+          {/* Removed New Release and Most Viewed sections */}
           <div className="mb-8 rounded-xl border border-stone-200 dark:border-gray-700/60 bg-white/60 dark:bg-gray-900/60 p-6">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-xl font-bold text-stone-900 dark:text-white">Recent Popular</h3>

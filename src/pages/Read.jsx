@@ -409,7 +409,14 @@ export default function Read() {
           <div className="space-y-0">
             {pages?.map((src, i) => (
               <div key={i} className="w-full overflow-hidden rounded-none sm:rounded-lg bg-transparent sm:bg-stone-100 dark:sm:bg-gray-800">
-                <img src={getImage(src)} alt={`page-${i + 1}`} className="w-full block" />
+                <img
+                  src={getImage(src)}
+                  alt={`page-${i + 1}`}
+                  className="w-full block"
+                  loading={i < 2 ? 'eager' : 'lazy'}
+                  decoding="async"
+                  referrerPolicy="no-referrer"
+                />
               </div>
             ))}
           </div>

@@ -6,7 +6,7 @@ import { fetchProgress } from '../lib/progressApi'
 import { api } from '../lib/api'
 
 export default function Saved() {
-  const { user, items, loading, remove, setStatus } = useLibrary()
+  const { user, items, loading, remove, setStatus, markHasUpdates } = useLibrary()
   const [prog, setProg] = useState([])
   const [chaptersBySeries, setChaptersBySeries] = useState({})
   const [query, setQuery] = useState('')
@@ -30,6 +30,17 @@ export default function Saved() {
           } catch { map[key] = 0 }
         }))
         setChaptersBySeries(map)
+        // mark has_updates when new chapters are detected (server flag)
+        const byKey = Object.fromEntries(items.map(it => [[`${it.source}:${it.series_id}`], it]))
+        await Promise.all(uniqueSeries.map(async key => {
+          const item = byKey[key]
+          if (!item) return
+          const pItem = p.find(x => x.source === item.source && x.series_id === item.series_id)
+          const total = map[key] || 0
+          const lastIdx = Math.max(-1, Number(pItem?.last_chapter_index ?? -1))
+          const hasNew = total > 0 && lastIdx + 1 < total
+          try { await markHasUpdates({ seriesId: item.series_id, source: item.source, hasUpdates: hasNew }) } catch {}
+        }))
       } catch {}
     })()
   }, [user, items])
@@ -166,7 +177,14 @@ export default function Saved() {
                       {it.cover && <img src={it.cover} alt="" className="w-full h-full object-cover" />}
                     </div>
                     <div className="min-w-0">
-                      <div className="text-sm font-semibold text-stone-900 dark:text-white truncate">{it.title}</div>
+                      <div className="text-sm font-semibold text-stone-900 dark:text-white truncate flex items-center gap-2">
+                        <span className="truncate">{it.title}</span>
+                        {!!it.has_updates && (
+                          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-semibold bg-blue-100 text-blue-700 border border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800">
+                            New
+                          </span>
+                        )}
+                      </div>
                       <div className="text-xs text-stone-500 dark:text-gray-400">Ch {Math.max(1, idx + 1)} / {total}</div>
                     </div>
                   </a>

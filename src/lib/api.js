@@ -18,10 +18,6 @@ async function fetchWithTimeout(url, options = {}, timeoutMs = 12000) {
 }
 
 function getBaseFor(source) {
-  if (source === 'mf') {
-    // Always use dedicated MF edge function in all environments
-    return '/api/mf'
-  }
   return BASE_URL
 }
 
@@ -62,48 +58,7 @@ async function request(path, options = {}, source) {
   return response.json();
 }
 
-function mapPathForSource(path, source) {
-  if (!source || source !== 'mf') return path
-  // Map generic endpoints to Mangafire-compatible endpoints
-  if (path.startsWith('/hot-updates')) {
-    const [base, qs] = path.split('?')
-    return '/top-trending' + (qs ? `?${qs}` : '')
-  }
-  if (path.startsWith('/latest-updates')) {
-    // Mangafire uses /recently-updated/:type; default to updated-manga
-    const [base, qs] = path.split('?')
-    return '/recently-updated/updated-manga' + (qs ? `?${qs}` : '')
-  }
-  if (path.startsWith('/recommendations')) {
-    // Map recommendations to you-may-also-like for MF
-    const [, , id] = path.split('/')
-    return id ? `/you-may-also-like/${encodeURIComponent(id)}` : '/top-trending'
-  }
-  if (path.startsWith('/most-viewed')) {
-    // Map most-viewed to MF most-viewed endpoint which returns { day, week, month }
-    const [base, qs] = path.split('?')
-    return '/most-viewed' + (qs ? `?${qs}` : '')
-  }
-  if (path.startsWith('/chapters/')) {
-    // Fallback: language-scoped chapters: /chap-vol/:id/chapter/en
-    const id = path.replace('/chapters/', '')
-    return `/chap-vol/${encodeURIComponent(id)}/chapter/en`
-  }
-  if (path.startsWith('/read/chapter/')) {
-    // For MF read endpoint: /read/chapter/:id
-    return path
-  }
-  if (path.startsWith('/read/')) {
-    // Fallback generic reader: /read/:type/:id with type=chapter
-    const id = path.replace('/read/', '')
-    return `/read/chapter/${encodeURIComponent(id)}`
-  }
-  if (path.startsWith('/info/')) {
-    const [, , sid, title] = path.split('/')
-    return `/info/${encodeURIComponent(sid || '')}`
-  }
-  return path
-}
+function mapPathForSource(path, source) { return path }
 
 async function requestMapped(path, options = {}, source) {
   const mapped = mapPathForSource(path, source)
@@ -118,12 +73,9 @@ export const api = {
     return requestMapped(path, {}, source)
   },
   hotSeries: (range = 'weekly_views', source) => request(`/hot-series/${range}`, {}, source),
-  mostViewed: (source) => requestMapped('/most-viewed', {}, source),
   recentlyAdded: (source) => request('/recently-added', {}, source),
   random: (source) => request('/random', {}, source),
-  // Unified "new release" that hides the MF source detail from UI
-  // Calls MF new-release endpoint directly
-  newRelease: () => requestMapped('/new-release', {}, 'mf'),
+  // Removed MF-only endpoints: mostViewed and newRelease
   search: async (q, source) => {
     const query = encodeURIComponent(q)
     const gfPaths = [
@@ -135,22 +87,12 @@ export const api = {
     // Run GF and MF searches in parallel to cut latency
     // Run with aggressive timeouts to keep UX snappy
     const settled = await Promise.allSettled([
-      // GF variants (parallel)
       ...gfPaths.map(p => requestMapped(p, { timeoutMs: 7000 }, source)),
-      // MF search via edge proxy
-      requestMapped(`/category/filter?keyword=${query}`, { timeoutMs: 7000 }, 'mf')
     ])
     const results = []
     for (const s of settled) {
       if (s.status !== 'fulfilled' || !s.value) continue
-      // MF payload shape normalization
-      if (s.value && (Array.isArray(s.value.data) || Array.isArray(s.value.items))) {
-        const arr = Array.isArray(s.value.data) ? s.value.data : s.value.items
-        const mapped = arr.map(item => ({ id: item.id, seriesId: item.id, title: item.name, name: item.name, img: item.img, _source: 'mf' }))
-        results.push(mapped)
-      } else {
-        results.push(s.value)
-      }
+      results.push(s.value)
     }
     // Merge arrays/items into one unique list
     const all = results.flatMap(r => extractItems(r))
@@ -163,17 +105,12 @@ export const api = {
       seen.add(key)
       merged.push({ ...it, _normTitle: normTitle })
     }
-    // Deduplicate by normalized title, prefer MF entries if duplicates exist
+    // Deduplicate by normalized title
     const byTitle = new Map()
     for (const it of merged) {
       const t = it._normTitle
       if (!t) continue
-      const cur = byTitle.get(t)
-      if (!cur) byTitle.set(t, it)
-      else {
-        const pick = (it._source === 'mf') ? it : (cur._source === 'mf' ? cur : it)
-        byTitle.set(t, pick)
-      }
+      if (!byTitle.has(t)) byTitle.set(t, it)
     }
     const deduped = Array.from(byTitle.values())
     // Position/quality scoring - put strongest matches first
@@ -215,21 +152,8 @@ export const api = {
     const { id: baseId, titleId: safeTitle } = parseIdTitle(id, titleId)
     return requestMapped(`/info/${encodeURIComponent(baseId)}/${encodeURIComponent(safeTitle)}`, {}, source)
   },
-  chapters: (id, source) => {
-    if (source === 'mf') {
-      // For MF, use /read-chap-vol/:id/:type/:language endpoint
-      return requestMapped(`/read-chap-vol/${id}/chapter/en`, {}, source)
-    }
-    return requestMapped(`/chapters/${id}`, {}, source)
-  },
-  read: (id, source) => {
-    if (source === 'mf') {
-      // For MF, the id should be the numeric chapter ID directly
-      // e.g., "5284528" -> "/read/chapter/5284528"
-      return requestMapped(`/read/chapter/${id}`, {}, source)
-    }
-    return requestMapped(`/read/${id}`, {}, source)
-  },
+  chapters: (id, source) => requestMapped(`/chapters/${id}`, {}, source),
+  read: (id, source) => requestMapped(`/read/${id}`, {}, source),
 
   // Combined helpers
   combined: {
@@ -270,20 +194,7 @@ export const api = {
         return Number.isNaN(parsed) ? 0 : parsed
       }
 
-      // Fetch MF types SEQUENTIALLY to avoid upstream rate limits/timeouts
-      const mfTypes = ['updated-manhwa', 'updated-manga', 'updated-manhua']
-      const mfResults = []
-      for (const type of mfTypes) {
-        try {
-          const r = await requestMapped(`/recently-updated/${type}?page=${encodeURIComponent(page)}`, {}, 'mf')
-          const arr = Array.isArray(r) ? r : (Array.isArray(r.items) ? r.items : [])
-          mfResults.push({ status: 'fulfilled', value: arr })
-        } catch (_) {
-          mfResults.push({ status: 'rejected', reason: 'mf fetch failed' })
-        }
-      }
-
-      // Fetch GF latest through our proxy as well (already handled by requestMapped base)
+      // Fetch GF latest through our proxy
       let gfRes
       try {
         const raw = await api.latestUpdates(page)
@@ -298,30 +209,7 @@ export const api = {
         uploadTime: toTimestamp(it.updatedAt || it.time || it.date || it.updated || it.lastUpdate)
       })) : []
 
-      // Combine all MF results
-      const allMFItems = []
-      for (const mfRes of mfResults) {
-        if (mfRes.status === 'fulfilled' && Array.isArray(mfRes.value)) {
-          const mfItems = mfRes.value.map(item => {
-            const latestChapter = item.chapVol?.chap?.[0]
-            const chapterNumber = latestChapter ? parseFloat(String(latestChapter.chap).replace(/[^0-9.]/g, '')) || 0 : 0
-            return {
-              id: item.id,
-              seriesId: item.id,
-              title: item.name,
-              img: item.img,
-              tag: latestChapter?.chap || '',
-              updatedAt: latestChapter?.uploaded || '',
-              uploadTime: toTimestamp(latestChapter?.uploaded || ''),
-              _source: 'mf',
-              chapterNumber,
-            }
-          })
-          allMFItems.push(...mfItems)
-        }
-      }
-
-      // Merge and de-duplicate by normalized title, prefer GF when duplicates exist; otherwise pick newer uploadTime
+      // Merge and de-duplicate by normalized title, prefer newer uploadTime
       const byTitle = new Map()
       const consider = (arr) => {
         for (const it of arr) {
@@ -332,29 +220,15 @@ export const api = {
             byTitle.set(key, it)
             continue
           }
-          // Prefer GF if either is GF
-          if ((current._source === 'greft') && (it._source !== 'greft')) {
-            // keep GF
-            continue
-          }
-          if ((it._source === 'greft') && (current._source !== 'greft')) {
-            byTitle.set(key, it)
-            continue
-          }
-          // Otherwise prefer newer uploadTime, then higher chapterNumber
+          // Prefer newer uploadTime
           const curTime = current.uploadTime || 0
           const newTime = it.uploadTime || 0
           if (newTime > curTime) {
             byTitle.set(key, it)
             continue
           }
-          const curChap = current.chapterNumber || 0
-          const newChap = it.chapterNumber || 0
-          if (newChap > curChap) byTitle.set(key, it)
         }
       }
-      // Consider MF then GF so that GF can override where present
-      consider(allMFItems)
       consider(gfItems)
 
       return Array.from(byTitle.values()).sort((a, b) => (b.uploadTime || 0) - (a.uploadTime || 0))

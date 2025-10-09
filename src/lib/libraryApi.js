@@ -13,7 +13,7 @@ export async function saveSeries({ seriesId, source, title, cover, status = 'pla
   const { data: auth } = await supabase.auth.getUser()
   const user = auth?.user
   if (!user) throw new Error('Not authenticated')
-  const row = { user_id: user.id, series_id: seriesId, source, title, cover, status }
+  const row = { user_id: user.id, series_id: seriesId, source, title, cover, status, has_updates: false }
   const { error } = await supabase
     .from('library')
     .upsert(row, { onConflict: 'user_id,series_id,source' })
@@ -39,7 +39,20 @@ export async function updateSeriesStatus({ seriesId, source, status }) {
   if (!user) throw new Error('Not authenticated')
   const { error } = await supabase
     .from('library')
-    .update({ status })
+    .update({ status, updated_at: new Date().toISOString() })
+    .eq('user_id', user.id)
+    .eq('series_id', seriesId)
+    .eq('source', source)
+  if (error) throw error
+}
+
+export async function updateSeriesHasUpdates({ seriesId, source, hasUpdates }) {
+  const { data: auth } = await supabase.auth.getUser()
+  const user = auth?.user
+  if (!user) throw new Error('Not authenticated')
+  const { error } = await supabase
+    .from('library')
+    .update({ has_updates: !!hasUpdates, updated_at: new Date().toISOString() })
     .eq('user_id', user.id)
     .eq('series_id', seriesId)
     .eq('source', source)
