@@ -604,11 +604,7 @@ function RecItem({ item, index }) {
   const title = item.title || item.name || 'Untitled'
   const parsed = parseIdTitle(item.seriesId || item.id || item.slug || item.urlId, item.title || item.slug)
   // For MF items, only use ID; for GF items, use ID/title format
-  const href = item._source === 'mf'
-    ? `/info/${encodeURIComponent(parsed.id)}`
-    : item._source === 'mp'
-      ? `/info/${encodeURIComponent(parsed.id)}?src=mp`
-      : `/info/${encodeURIComponent(parsed.id)}/${encodeURIComponent(sanitizeTitleId(parsed.titleId || 'title'))}`
+  const href = `/info/${encodeURIComponent(parsed.id)}${item._source === 'mp' ? '?src=mp' : ''}`
   const showBg = index < 3
   // gradient palette for hover title
   const grads = [

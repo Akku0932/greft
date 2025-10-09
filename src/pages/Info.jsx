@@ -325,11 +325,7 @@ export default function Info() {
             {data.recommendations.map((rec) => {
               const parsedRec = parseIdTitle(rec.id, rec.title)
               // Use same URL format logic as Home page
-              const href = source === 'mf' 
-                ? `/info/${encodeURIComponent(parsedRec.id)}`
-                : source === 'mp'
-                  ? `/info/${encodeURIComponent(parsedRec.id)}?src=mp`
-                  : `/info/${encodeURIComponent(parsedRec.id)}/${encodeURIComponent(sanitizeTitleId(parsedRec.titleId || 'title'))}`
+              const href = `/info/${encodeURIComponent(parsedRec.id)}${source==='mp' ? '?src=mp' : ''}`
               return (
                 <Link key={rec.id} to={href} className="group block">
                   <div className="relative aspect-[3/4] overflow-hidden rounded-lg bg-stone-200 dark:bg-gray-700 shadow-soft dark:shadow-soft-dark">
