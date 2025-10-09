@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react'
-import { useParams, Link, useNavigate } from 'react-router-dom'
+import { useParams, Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { api, getImage, pickImage, parseIdTitle, sanitizeTitleId } from '../lib/api.js'
 import { useLibrary } from '../hooks/useLibrary'
 
 export default function Info() {
   const { id, titleId } = useParams()
+  const [searchParams] = useSearchParams()
   const navigate = useNavigate()
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -13,9 +14,11 @@ export default function Info() {
   const [page, setPage] = useState(0)
   const [showMeta, setShowMeta] = useState(false)
 
-  // Determine source based on ID format
-  const isMF = id && id.includes('.') && !id.includes('/')
-  const source = isMF ? 'mf' : 'gf'
+  // Determine source based on query or ID format (support mp)
+  const srcParam = (searchParams.get('src') || '').toLowerCase()
+  const isMP = srcParam === 'mp'
+  const isMF = !isMP && id && id.includes('.') && !id.includes('/')
+  const source = isMP ? 'mp' : (isMF ? 'mf' : 'gf')
   const { user, add, remove, isSaved, items, setStatus } = useLibrary()
   const [statusValue, setStatusValue] = useState('planning')
 
@@ -106,9 +109,11 @@ export default function Info() {
       const first = list[list.length - 1] || list[0]
       const chapterId = first.id || first.slug || first.urlId
       if (chapterId) {
-        const url = source === 'mf' 
-          ? `/read/chapter/${chapterId}?series=${encodeURIComponent(series)}&title=${encodeURIComponent(parsedSeries.titleId)}`
-          : `/read/${encodeURIComponent(chapterId)}?series=${encodeURIComponent(series)}&title=${encodeURIComponent(parsedSeries.titleId)}`
+        const base = source === 'mf' 
+          ? `/read/chapter/${chapterId}`
+          : `/read/${encodeURIComponent(chapterId)}`
+        const extra = source === 'mp' ? `&src=mp` : (source === 'mf' ? `&src=mf` : '')
+        const url = `${base}?series=${encodeURIComponent(series)}&title=${encodeURIComponent(parsedSeries.titleId)}${extra}`
         navigate(url)
       }
     } catch {}
@@ -123,9 +128,11 @@ export default function Info() {
       const latest = list[0] || list[list.length - 1]
       const chapterId = latest.id || latest.slug || latest.urlId
       if (chapterId) {
-        const url = source === 'mf' 
-          ? `/read/chapter/${chapterId}?series=${encodeURIComponent(parsedSeries.id)}&title=${encodeURIComponent(parsedSeries.titleId)}`
-          : `/read/${encodeURIComponent(chapterId)}?series=${encodeURIComponent(parsedSeries.id)}&title=${encodeURIComponent(parsedSeries.titleId)}`
+        const base = source === 'mf' 
+          ? `/read/chapter/${chapterId}`
+          : `/read/${encodeURIComponent(chapterId)}`
+        const extra = source === 'mp' ? `&src=mp` : (source === 'mf' ? `&src=mf` : '')
+        const url = `${base}?series=${encodeURIComponent(parsedSeries.id)}&title=${encodeURIComponent(parsedSeries.titleId)}${extra}`
         navigate(url)
       }
     } catch {}

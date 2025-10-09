@@ -18,6 +18,7 @@ async function fetchWithTimeout(url, options = {}, timeoutMs = 12000) {
 }
 
 function getBaseFor(source) {
+  if (source === 'mp') return '/api/mp'
   return BASE_URL
 }
 
@@ -87,12 +88,26 @@ export const api = {
     // Run GF and MF searches in parallel to cut latency
     // Run with aggressive timeouts to keep UX snappy
     const settled = await Promise.allSettled([
-      ...gfPaths.map(p => requestMapped(p, { timeoutMs: 7000 }, source)),
+      ...gfPaths.map(p => requestMapped(p, { timeoutMs: 7000 }, 'gf')),
+      // MP search
+      requestMapped(`/search?keyword=${query}`, { timeoutMs: 7000 }, 'mp')
+        .then(v => ({ _mp: true, v }))
     ])
     const results = []
     for (const s of settled) {
       if (s.status !== 'fulfilled' || !s.value) continue
-      results.push(s.value)
+      if (s.value && s.value._mp) {
+        const payload = s.value.v
+        if (Array.isArray(payload)) {
+          results.push(payload.map(it => ({ ...it, _source: 'mp' })))
+        } else if (payload && Array.isArray(payload.items)) {
+          results.push(payload.items.map(it => ({ ...it, _source: 'mp' })))
+        } else {
+          results.push(payload)
+        }
+      } else {
+        results.push(s.value)
+      }
     }
     // Merge arrays/items into one unique list
     const all = results.flatMap(r => extractItems(r))
@@ -150,10 +165,23 @@ export const api = {
   },
   info: (id, titleId, source) => {
     const { id: baseId, titleId: safeTitle } = parseIdTitle(id, titleId)
+    if (source === 'mp') {
+      return requestMapped(`/info/${encodeURIComponent(baseId)}`, {}, 'mp')
+    }
     return requestMapped(`/info/${encodeURIComponent(baseId)}/${encodeURIComponent(safeTitle)}`, {}, source)
   },
-  chapters: (id, source) => requestMapped(`/chapters/${id}`, {}, source),
-  read: (id, source) => requestMapped(`/read/${id}`, {}, source),
+  chapters: (id, source) => {
+    if (source === 'mp') return requestMapped(`/chapters/${id}`, {}, 'mp')
+    return requestMapped(`/chapters/${id}`, {}, source)
+  },
+  // For MP, ctx should include { seriesId }
+  read: (id, source, ctx = {}) => {
+    if (source === 'mp') {
+      const seriesId = ctx.seriesId || ''
+      return requestMapped(`/images/${encodeURIComponent(seriesId)}/${encodeURIComponent(id)}`, {}, 'mp')
+    }
+    return requestMapped(`/read/${id}`, {}, source)
+  },
 
   // Combined helpers
   combined: {

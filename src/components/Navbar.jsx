@@ -179,7 +179,9 @@ export default function Navbar() {
     try { if (document.activeElement && 'blur' in document.activeElement) document.activeElement.blur() } catch {}
     // ensure state is flushed before route change
     requestAnimationFrame(() => {
-      navigate(`/info/${encodeURIComponent(parsed.id)}/${encodeURIComponent(sanitizeTitleId(parsed.titleId || 'title'))}`)
+      const src = String(item?._source || '').toLowerCase() === 'mp' ? 'mp' : undefined
+      const base = `/info/${encodeURIComponent(parsed.id)}/${encodeURIComponent(sanitizeTitleId(parsed.titleId || 'title'))}`
+      navigate(src ? `${base}?src=${src}` : base)
     })
   }
 

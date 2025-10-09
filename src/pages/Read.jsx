@@ -10,6 +10,7 @@ export default function Read() {
   const [searchParams] = useSearchParams()
   const seriesParam = searchParams.get('series') || ''
   const titleParam = searchParams.get('title') || ''
+  const srcParam = (searchParams.get('src') || '').toLowerCase()
   const [pages, setPages] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -52,8 +53,8 @@ export default function Read() {
   const titleId = useMemo(() => sanitizeTitleId(titleParam || ''), [titleParam])
 
   // Determine source based on series ID format
-  const isMF = seriesId && seriesId.includes('.') && !seriesId.includes('/')
-  const source = isMF ? 'mf' : 'gf'
+  const isMF = !srcParam && seriesId && seriesId.includes('.') && !seriesId.includes('/')
+  const source = srcParam === 'mp' ? 'mp' : (isMF ? 'mf' : 'gf')
   
   // For MF, the id is the chapter ID directly (e.g., "5284492")
   // For GF, the id might be a path or just the chapter ID
@@ -66,7 +67,8 @@ export default function Read() {
         // For GF, it might be a path that needs processing
         const chapterId = source === 'mf' ? id : decodeURIComponent(id)
         
-        const res = await api.read(chapterId, source)
+        const ctx = source === 'mp' ? { seriesId } : undefined
+        const res = await api.read(chapterId, source, ctx)
         if (!mounted) return
         const imgs = Array.isArray(res) ? res : (res.pages || res.images || res.items || [])
         setPages(imgs.map(img => {
