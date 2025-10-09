@@ -1,32 +1,33 @@
-// Cloudflare Turnstile verification endpoint (Node runtime)
+// Cloudflare Turnstile verification - Edge runtime
 // Env: TURNSTILE_SECRET, VITE_TURNSTILE_SITE_KEY (optional)
-module.exports = async (req, res) => {
-  res.setHeader('Access-Control-Allow-Origin', '*')
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS')
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
-  if (req.method === 'OPTIONS') return res.status(204).end()
-  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
+export const config = { runtime: 'edge' }
+
+export default async function handler(req) {
+  const corsHeaders = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type',
+  }
   try {
-    let body = req.body
-    if (!body) {
-      // Some runtimes provide a raw stream instead of parsing JSON
-      let raw = ''
-      await new Promise(resolve => { req.on('data', c => { raw += c }); req.on('end', resolve) })
-      if (raw) { try { body = JSON.parse(raw) } catch { body = {} } }
-    } else if (typeof body === 'string') {
-      try { body = JSON.parse(body) } catch { body = {} }
+    if (req.method === 'OPTIONS') {
+      return new Response(null, { status: 204, headers: corsHeaders })
     }
-    const token = body?.token || req.query?.token
+    if (req.method !== 'POST') {
+      return new Response(JSON.stringify({ error: 'Method not allowed' }), { status: 405, headers: { 'content-type': 'application/json', ...corsHeaders } })
+    }
+    let body = {}
+    try { body = await req.json() } catch { body = {} }
+    const token = body?.token || new URL(req.url).searchParams.get('token')
     const secret = process.env.TURNSTILE_SECRET
     const sitekey = process.env.VITE_TURNSTILE_SITE_KEY || process.env.TURNSTILE_SITE_KEY
-    if (!secret) return res.status(500).json({ error: 'Missing TURNSTILE_SECRET' })
-    if (!token) return res.status(400).json({ error: 'Missing token' })
+    if (!secret) return new Response(JSON.stringify({ error: 'Missing TURNSTILE_SECRET' }), { status: 500, headers: { 'content-type': 'application/json', ...corsHeaders } })
+    if (!token) return new Response(JSON.stringify({ error: 'Missing token' }), { status: 400, headers: { 'content-type': 'application/json', ...corsHeaders } })
 
     const form = new URLSearchParams()
     form.append('secret', secret)
     form.append('response', token)
     if (sitekey) form.append('sitekey', sitekey)
-    const ip = (req.headers['x-forwarded-for'] || '').split(',')[0].trim()
+    const ip = req.headers.get('x-forwarded-for')?.split(',')[0].trim()
     if (ip) form.append('remoteip', ip)
 
     const r = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
@@ -37,20 +38,15 @@ module.exports = async (req, res) => {
     let data
     try { data = await r.json() } catch (e) {
       const text = await r.text()
-      return res.status(502).json({ error: 'invalid_turnstile_response', detail: text?.slice(0,200) })
+      return new Response(JSON.stringify({ error: 'invalid_turnstile_response', detail: text?.slice(0,200) }), { status: 502, headers: { 'content-type': 'application/json', ...corsHeaders } })
     }
-    if (!data.success) return res.status(400).json({ success: false, ...data, errorCodes: data['error-codes'] || [], debug: { ip, host: req.headers.host, sitekeyPresent: Boolean(sitekey) } })
-    return res.status(200).json({ success: true, ...data, debug: { ip, host: req.headers.host } })
+    if (!data.success) {
+      return new Response(JSON.stringify({ success: false, ...data, errorCodes: data['error-codes'] || [], debug: { ip, host: req.headers.get('host'), sitekeyPresent: Boolean(sitekey) } }), { status: 400, headers: { 'content-type': 'application/json', ...corsHeaders } })
+    }
+    return new Response(JSON.stringify({ success: true, ...data, debug: { ip, host: req.headers.get('host') } }), { status: 200, headers: { 'content-type': 'application/json', ...corsHeaders } })
   } catch (e) {
-    try {
-      return res.status(500).json({ error: 'verify_failed', detail: String(e && e.stack || e && e.message || e) })
-    } catch (_) {
-      res.statusCode = 500
-      res.end('verify_failed')
-    }
+    return new Response(JSON.stringify({ error: 'verify_failed', detail: String(e && e.stack || e && e.message || e) }), { status: 500, headers: { 'content-type': 'application/json', ...corsHeaders } })
   }
 }
-
-module.exports.config = { runtime: 'nodejs18.x' }
 
 
