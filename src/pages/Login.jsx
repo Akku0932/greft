@@ -3,7 +3,7 @@ import { useAuth } from '../hooks/useAuth'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient'
-import Recaptcha from '../components/Recaptcha'
+import Turnstile from '../components/Turnstile'
 
 export default function Login() {
   // All hooks must be called before any conditional return
@@ -35,8 +35,8 @@ export default function Login() {
         setErr('Please verify the reCAPTCHA.')
         return
       }
-      // Verify reCAPTCHA token server-side before proceeding
-      const vr = await fetch('/api/verify-recaptcha', {
+      // Verify Turnstile token server-side before proceeding
+      const vr = await fetch('/api/verify-turnstile', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ token: captcha })
@@ -45,8 +45,7 @@ export default function Login() {
       try { vj = await vr.json() } catch (_) { vj = null }
       if (!vr.ok || !vj?.success) {
         const msg = vj?.error || (Array.isArray(vj?.errorCodes) ? vj.errorCodes.join(', ') : '')
-        setErr(`reCAPTCHA verification failed${msg ? ': ' + msg : ''}. Please try again.`)
-        try { if (window.grecaptcha && window.grecaptcha.reset) window.grecaptcha.reset() } catch (_) {}
+        setErr(`Verification failed${msg ? ': ' + msg : ''}. Please try again.`)
         setCaptcha('')
         return
       }
@@ -104,7 +103,7 @@ export default function Login() {
             </div>
           )}
           {err && <div className="text-sm text-red-600 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-2">{err}</div>}
-          <Recaptcha className="mt-1" onChange={setCaptcha} onExpired={() => setCaptcha('')} />
+          <Turnstile className="mt-1" onChange={setCaptcha} />
           <button type="submit" disabled={loading || !captcha} className="w-full px-4 py-2 rounded-xl bg-stone-900 dark:bg-gray-700 text-white disabled:opacity-60">{loading ? 'Please wait…' : (mode === 'login' ? 'Sign in' : 'Sign up')}</button>
         </form>
         <div className="flex items-center gap-2 my-5">
