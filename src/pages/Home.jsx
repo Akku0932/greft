@@ -604,9 +604,11 @@ function RecItem({ item, index }) {
   const title = item.title || item.name || 'Untitled'
   const parsed = parseIdTitle(item.seriesId || item.id || item.slug || item.urlId, item.title || item.slug)
   // For MF items, only use ID; for GF items, use ID/title format
-  const href = item._source === 'mf' 
+  const href = item._source === 'mf'
     ? `/info/${encodeURIComponent(parsed.id)}`
-    : `/info/${encodeURIComponent(parsed.id)}/${encodeURIComponent(sanitizeTitleId(parsed.titleId || 'title'))}`
+    : item._source === 'mp'
+      ? `/info/${encodeURIComponent(parsed.id)}/${encodeURIComponent(sanitizeTitleId(parsed.titleId || 'title'))}?src=mp`
+      : `/info/${encodeURIComponent(parsed.id)}/${encodeURIComponent(sanitizeTitleId(parsed.titleId || 'title'))}`
   const showBg = index < 3
   // gradient palette for hover title
   const grads = [
@@ -791,8 +793,8 @@ function LatestCard({ item, index }) {
           )}
           {item._source && (
             <div className="absolute top-1 left-1 px-2 py-0.5 rounded-full text-[10px] font-medium backdrop-blur-sm border border-white/20"
-                 style={{ background: item._source === 'mf' ? 'linear-gradient(90deg,#06b6d4,#3b82f6)' : 'linear-gradient(90deg,#f59e0b,#ef4444)', color: 'white' }}>
-              {item._source === 'mf' ? 'MF' : 'GF'}
+                 style={{ background: item._source === 'mf' ? 'linear-gradient(90deg,#06b6d4,#3b82f6)' : item._source === 'mp' ? 'linear-gradient(90deg,#10b981,#34d399)' : 'linear-gradient(90deg,#f59e0b,#ef4444)', color: 'white' }}>
+              {item._source === 'mf' ? 'MF' : item._source === 'mp' ? 'MP' : 'GF'}
             </div>
           )}
         </div>

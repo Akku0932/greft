@@ -67,13 +67,13 @@ async function requestMapped(path, options = {}, source) {
 }
 
 export const api = {
-  hotUpdates: (source) => requestMapped('/hot-updates', {}, source),
-  latestUpdates: (page, source) => page ? requestMapped(`/latest-updates?page=${encodeURIComponent(page)}`, {}, source) : requestMapped('/latest-updates', {}, source),
+  hotUpdates: (source) => requestMapped('/hot-updates', {}, 'gf'),
+  latestUpdates: (page, source) => page ? requestMapped(`/latest-updates?page=${encodeURIComponent(page)}`, {}, 'gf') : requestMapped('/latest-updates', {}, 'gf'),
   recommendations: (id, source) => {
     const path = id ? `/recommendations/${encodeURIComponent(id)}` : '/recommendations'
-    return requestMapped(path, {}, source)
+    return requestMapped(path, {}, 'gf')
   },
-  hotSeries: (range = 'weekly_views', source) => request(`/hot-series/${range}`, {}, source),
+  hotSeries: (range = 'weekly_views', source) => request(`/hot-series/${range}`, {}, 'gf'),
   recentlyAdded: (source) => request('/recently-added', {}, source),
   random: (source) => request('/random', {}, source),
   // Removed MF-only endpoints: mostViewed and newRelease
@@ -246,11 +246,13 @@ export const api = {
           const d = row?.data || {}
           const last = Array.isArray(d.last_chapterNodes) && d.last_chapterNodes.length ? d.last_chapterNodes[0]?.data : null
           const updatedAt = last?.dateCreate || null
+          const rawImg = d.urlCover600 || d.urlCoverOri || d.urlCover || ''
+          const img = rawImg && rawImg.startsWith('/') ? `/api/mp?p=${encodeURIComponent(rawImg.replace(/^\/+/, ''))}` : rawImg
           return {
             id: String(d.id || row.id || ''),
             seriesId: String(d.id || row.id || ''),
             title: d.name || row.name,
-            img: d.urlCover600 || d.urlCoverOri || d.urlCover || '',
+            img,
             tag: last?.dname || '',
             updatedAt,
             uploadTime: typeof updatedAt === 'number' ? updatedAt : toTimestamp(updatedAt),
