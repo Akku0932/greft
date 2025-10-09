@@ -709,10 +709,8 @@ function LatestCard({ item, index }) {
   const rawTag = item.tag || item.chapter || item.update || ''
   const tag = typeof rawTag === 'string' ? rawTag.replace(/episode/gi, 'Chapter') : rawTag
   const parsed = parseIdTitle(item.seriesId || item.id || item.slug || item.urlId, item.title || item.slug)
-  // For MF items, only use ID; for GF items, use ID/title format
-  const href = item._source === 'mf' 
-    ? `/info/${encodeURIComponent(parsed.id)}`
-    : `/info/${encodeURIComponent(parsed.id)}/${encodeURIComponent(sanitizeTitleId(parsed.titleId || 'title'))}`
+  // Link with ID-only; MP will use mp info, GF supports ID-only too
+  const href = `/info/${encodeURIComponent(parsed.id)}${item._source === 'mp' ? '?src=mp' : ''}`
   const hoverGrads = [
     'linear-gradient(90deg,#60a5fa,#a78bfa)',
     'linear-gradient(90deg,#34d399,#10b981)',
@@ -944,7 +942,7 @@ function SmallCard({ item }) {
   const cover = getImage(pickImage(item) || item?.info?.img)
   const title = item.title || item?.info?.title || 'Untitled'
   const parsed = parseIdTitle(item.seriesId || item.id || item.slug || item.urlId || item, title)
-  const href = `/info/${encodeURIComponent(parsed.id)}/${encodeURIComponent(sanitizeTitleId(parsed.titleId || 'title'))}`
+  const href = `/info/${encodeURIComponent(parsed.id)}`
   return (
     <a href={href} className="group block">
       <div className="relative aspect-[3/4] rounded-lg overflow-hidden bg-stone-200">

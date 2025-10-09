@@ -168,7 +168,11 @@ export const api = {
     if (source === 'mp') {
       return requestMapped(`/info/${encodeURIComponent(baseId)}`, {}, 'mp')
     }
-    return requestMapped(`/info/${encodeURIComponent(baseId)}/${encodeURIComponent(safeTitle)}`, {}, source)
+    // For GF: support both /info/:id and /info/:id/:title
+    if (safeTitle) {
+      return requestMapped(`/info/${encodeURIComponent(baseId)}/${encodeURIComponent(safeTitle)}`, {}, 'gf')
+    }
+    return requestMapped(`/info/${encodeURIComponent(baseId)}`, {}, 'gf')
   },
   chapters: (id, source) => {
     if (source === 'mp') return requestMapped(`/chapters/${id}`, {}, 'mp')

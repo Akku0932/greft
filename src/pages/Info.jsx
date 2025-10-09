@@ -26,7 +26,7 @@ export default function Info() {
     let mounted = true
     async function run() {
       try {
-        const parsed = parseIdTitle(id, titleId)
+        const parsed = parseIdTitle(id, '')
         const [infoRes, recRes] = await Promise.allSettled([
           api.info(parsed.id, parsed.titleId, source),
           api.recommendations(parsed.id, source).catch(() => ({ items: [] }))
@@ -313,7 +313,7 @@ export default function Info() {
              )})()}
           </div>
           <div className="rounded-2xl border border-stone-200 dark:border-gray-700 bg-white/60 dark:bg-gray-900/60 p-3 md:p-4">
-            <ChaptersInline seriesId={parseIdTitle(id, titleId).id} titleId={parseIdTitle(id, titleId).titleId} source={source} />
+            <ChaptersInline seriesId={parseIdTitle(id, '').id} titleId={parseIdTitle(id, '').titleId} source={source} />
           </div>
         </div>
       </section>
