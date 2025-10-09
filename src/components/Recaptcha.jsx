@@ -84,6 +84,7 @@ export default function Recaptcha({ onChange, onExpired, className }) {
   return (
     <div className={className}>
       <div ref={containerRef} />
+      {/* If needed by parent, expose a manual reset via global for debugging */}
     </div>
   )
 }

@@ -46,6 +46,8 @@ export default function Login() {
       if (!vr.ok || !vj?.success) {
         const msg = vj?.error || (Array.isArray(vj?.errorCodes) ? vj.errorCodes.join(', ') : '')
         setErr(`reCAPTCHA verification failed${msg ? ': ' + msg : ''}. Please try again.`)
+        try { if (window.grecaptcha && window.grecaptcha.reset) window.grecaptcha.reset() } catch (_) {}
+        setCaptcha('')
         return
       }
       if (mode === 'login') {
