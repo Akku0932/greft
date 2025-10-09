@@ -391,7 +391,16 @@ export function getImage(input) {
     return url
   }
   if (url.startsWith('//')) return `https:${url}`
-  if (url.startsWith('/')) return `${BASE_URL}${url}`
+  if (url.startsWith('/')) {
+    // Route MP asset paths via MP proxy; others via GF base
+    const lower = url.toLowerCase()
+    const isMpAsset = /\/(mpim|mpav|ampi|amim)\//.test(lower) || lower.startsWith('/thumb/') || lower.startsWith('/media/')
+    if (isMpAsset) {
+      const path = url.replace(/^\/+/, '')
+      return `/api/mp?p=${encodeURIComponent(path)}`
+    }
+    return `${BASE_URL}${url}`
+  }
   return url
 }
 
