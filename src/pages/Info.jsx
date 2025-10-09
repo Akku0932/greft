@@ -75,6 +75,17 @@ export default function Info() {
     genres: data?.genres || [],
     otherName: data?.otherName,
     mangazines: data?.mangazines
+  } : source === 'mp' ? {
+    title: data?.title || data?.name,
+    description: data?.description,
+    img: data?.img || data?.urlCover600 || data?.urlCoverOri,
+    status: data?.mParkUploadStatus || data?.originalPulication,
+    type: undefined,
+    author: Array.isArray(data?.search) ? data.search : [],
+    published: undefined,
+    genres: Array.isArray(data?.genres) ? data.genres.map(g => String(g).replace(/,$/, '')) : [],
+    otherName: Array.isArray(data?.otherInfo) ? data.otherInfo.join(', ') : undefined,
+    mangazines: undefined
   } : {
     title: data?.title || data?.name,
     description: data?.description,
@@ -316,7 +327,9 @@ export default function Info() {
               // Use same URL format logic as Home page
               const href = source === 'mf' 
                 ? `/info/${encodeURIComponent(parsedRec.id)}`
-                : `/info/${encodeURIComponent(parsedRec.id)}/${encodeURIComponent(sanitizeTitleId(parsedRec.titleId || 'title'))}`
+                : source === 'mp'
+                  ? `/info/${encodeURIComponent(parsedRec.id)}?src=mp`
+                  : `/info/${encodeURIComponent(parsedRec.id)}/${encodeURIComponent(sanitizeTitleId(parsedRec.titleId || 'title'))}`
               return (
                 <Link key={rec.id} to={href} className="group block">
                   <div className="relative aspect-[3/4] overflow-hidden rounded-lg bg-stone-200 dark:bg-gray-700 shadow-soft dark:shadow-soft-dark">

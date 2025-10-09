@@ -180,7 +180,7 @@ export default function Navbar() {
     // ensure state is flushed before route change
     requestAnimationFrame(() => {
       const src = String(item?._source || '').toLowerCase() === 'mp' ? 'mp' : undefined
-      const base = `/info/${encodeURIComponent(parsed.id)}/${encodeURIComponent(sanitizeTitleId(parsed.titleId || 'title'))}`
+      const base = src ? `/info/${encodeURIComponent(parsed.id)}` : `/info/${encodeURIComponent(parsed.id)}/${encodeURIComponent(sanitizeTitleId(parsed.titleId || 'title'))}`
       navigate(src ? `${base}?src=${src}` : base)
     })
   }

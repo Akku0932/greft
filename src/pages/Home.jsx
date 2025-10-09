@@ -607,7 +607,7 @@ function RecItem({ item, index }) {
   const href = item._source === 'mf'
     ? `/info/${encodeURIComponent(parsed.id)}`
     : item._source === 'mp'
-      ? `/info/${encodeURIComponent(parsed.id)}/${encodeURIComponent(sanitizeTitleId(parsed.titleId || 'title'))}?src=mp`
+      ? `/info/${encodeURIComponent(parsed.id)}?src=mp`
       : `/info/${encodeURIComponent(parsed.id)}/${encodeURIComponent(sanitizeTitleId(parsed.titleId || 'title'))}`
   const showBg = index < 3
   // gradient palette for hover title
