@@ -1,8 +1,9 @@
-import { signInWithGoogle, signInWithMagicLink, signInWithEmail, signUpWithEmail } from '../lib/authApi'
+import { signInWithGoogle, signInWithEmail, signUpWithEmail } from '../lib/authApi'
 import { useAuth } from '../hooks/useAuth'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient'
+import Recaptcha from '../components/Recaptcha'
 
 export default function Login() {
   // All hooks must be called before any conditional return
@@ -12,6 +13,7 @@ export default function Login() {
   const [confirm, setConfirm] = useState('')
   const [loading, setLoading] = useState(false)
   const [err, setErr] = useState('')
+  const [captcha, setCaptcha] = useState('')
   const { user } = useAuth()
   const navigate = useNavigate()
 
@@ -29,6 +31,21 @@ export default function Login() {
     setErr('')
     setLoading(true)
     try {
+      if (!captcha) {
+        setErr('Please verify the reCAPTCHA.')
+        return
+      }
+      // Verify reCAPTCHA token server-side before proceeding
+      const vr = await fetch('/api/verify-recaptcha', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: captcha })
+      })
+      const vj = await vr.json()
+      if (!vr.ok || !vj?.success) {
+        setErr('reCAPTCHA verification failed. Please try again.')
+        return
+      }
       if (mode === 'login') {
         await signInWithEmail(email, password)
       } else {
@@ -83,7 +100,8 @@ export default function Login() {
             </div>
           )}
           {err && <div className="text-sm text-red-600 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-2">{err}</div>}
-          <button type="submit" disabled={loading} className="w-full px-4 py-2 rounded-xl bg-stone-900 dark:bg-gray-700 text-white disabled:opacity-60">{loading ? 'Please wait…' : (mode === 'login' ? 'Sign in' : 'Sign up')}</button>
+          <Recaptcha className="mt-1" onChange={setCaptcha} onExpired={() => setCaptcha('')} />
+          <button type="submit" disabled={loading || !captcha} className="w-full px-4 py-2 rounded-xl bg-stone-900 dark:bg-gray-700 text-white disabled:opacity-60">{loading ? 'Please wait…' : (mode === 'login' ? 'Sign in' : 'Sign up')}</button>
         </form>
         <div className="flex items-center gap-2 my-5">
           <div className="h-px bg-stone-200 dark:bg-gray-700 flex-1" />
@@ -92,10 +110,6 @@ export default function Login() {
         </div>
         <div className="grid grid-cols-1 gap-3">
           <button onClick={() => signInWithGoogle()} className="w-full px-4 py-2 rounded-xl border border-stone-300 dark:border-gray-700">Google</button>
-          <button onClick={() => {
-            const emailPrompt = prompt('Enter your email for magic link:')
-            if (emailPrompt) signInWithMagicLink(emailPrompt)
-          }} className="w-full px-4 py-2 rounded-xl border border-stone-300 dark:border-gray-700">Magic link (email)</button>
         </div>
         <div className="mt-5 text-sm text-center">
           {mode === 'login' ? (
