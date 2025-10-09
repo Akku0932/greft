@@ -41,9 +41,11 @@ export default function Login() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ token: captcha })
       })
-      const vj = await vr.json()
+      let vj
+      try { vj = await vr.json() } catch (_) { vj = null }
       if (!vr.ok || !vj?.success) {
-        setErr('reCAPTCHA verification failed. Please try again.')
+        const msg = vj?.error || (Array.isArray(vj?.errorCodes) ? vj.errorCodes.join(', ') : '')
+        setErr(`reCAPTCHA verification failed${msg ? ': ' + msg : ''}. Please try again.`)
         return
       }
       if (mode === 'login') {

@@ -11,7 +11,13 @@ module.exports = async (req, res) => {
   }
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
   try {
-    const { token } = req.body || {}
+    let body = req.body
+    if (typeof body === 'string') {
+      try { body = JSON.parse(body) } catch (_) { body = {} }
+    }
+    // Also allow token via query as a fallback/debug path
+    const { token: tokenBody } = body || {}
+    const token = tokenBody || req.query?.token
     const secret = process.env.RECAPTCHA_SECRET
     if (!secret) return res.status(500).json({ error: 'Missing server secret' })
     if (!token) return res.status(400).json({ error: 'Missing token' })
@@ -25,7 +31,11 @@ module.exports = async (req, res) => {
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: params.toString(),
     })
-    const data = await r.json()
+    let data
+    try { data = await r.json() } catch (e) {
+      const text = await r.text()
+      return res.status(502).json({ error: 'invalid_google_response', detail: text?.slice(0,200) })
+    }
     if (!data.success) {
       return res.status(400).json({ success: false, errorCodes: data['error-codes'] || [] })
     }
