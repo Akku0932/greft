@@ -1,7 +1,5 @@
 // Cloudflare Turnstile verification endpoint (Node runtime)
-// Env: TURNSTILE_SECRET
-const fetch = global.fetch || require('node-fetch')
-
+// Env: TURNSTILE_SECRET, VITE_TURNSTILE_SITE_KEY (optional)
 module.exports = async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*')
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS')
@@ -10,7 +8,14 @@ module.exports = async (req, res) => {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
   try {
     let body = req.body
-    if (typeof body === 'string') { try { body = JSON.parse(body) } catch { body = {} } }
+    if (!body) {
+      // Some runtimes provide a raw stream instead of parsing JSON
+      let raw = ''
+      await new Promise(resolve => { req.on('data', c => { raw += c }); req.on('end', resolve) })
+      if (raw) { try { body = JSON.parse(raw) } catch { body = {} } }
+    } else if (typeof body === 'string') {
+      try { body = JSON.parse(body) } catch { body = {} }
+    }
     const token = body?.token || req.query?.token
     const secret = process.env.TURNSTILE_SECRET
     const sitekey = process.env.VITE_TURNSTILE_SITE_KEY || process.env.TURNSTILE_SITE_KEY
@@ -37,7 +42,12 @@ module.exports = async (req, res) => {
     if (!data.success) return res.status(400).json({ success: false, ...data, errorCodes: data['error-codes'] || [], debug: { ip, host: req.headers.host, sitekeyPresent: Boolean(sitekey) } })
     return res.status(200).json({ success: true, ...data, debug: { ip, host: req.headers.host } })
   } catch (e) {
-    return res.status(500).json({ error: 'verify_failed', detail: String(e.message || e) })
+    try {
+      return res.status(500).json({ error: 'verify_failed', detail: String(e && e.stack || e && e.message || e) })
+    } catch (_) {
+      res.statusCode = 500
+      res.end('verify_failed')
+    }
   }
 }
 
