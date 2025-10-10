@@ -210,40 +210,13 @@ export const api = {
     if (cached) return cached
     
     const query = encodeURIComponent(q.trim())
-    const gfPaths = [
-      `/search?q=${query}`,
-      `/search/${query}`,
-      `/search?query=${query}`,
-      `/search?keyword=${query}`,
-    ]
-    
-    // Run GF and MP searches in parallel with optimized timeouts
-    const settled = await Promise.allSettled([
-      ...gfPaths.map(p => requestMapped(p, { timeoutMs: 3000 }, 'gf')),
-      // MP search with fast timeout
-      requestMapped(`/search?keyword=${query}`, { timeoutMs: 3000 }, 'mp')
-        .then(v => ({ _mp: true, v }))
-    ])
-    
-    const results = []
-    for (const s of settled) {
-      if (s.status !== 'fulfilled' || !s.value) continue
-      if (s.value && s.value._mp) {
-        const payload = s.value.v
-        if (Array.isArray(payload)) {
-          results.push(payload.map(it => normalizeMpListItem(it)))
-        } else if (payload && Array.isArray(payload.items)) {
-          results.push(payload.items.map(it => normalizeMpListItem(it)))
-        } else {
-          results.push(payload)
-        }
-      } else {
-        results.push(s.value)
-      }
-    }
-    
-    // Merge arrays/items into one unique list
-    const all = results.flatMap(r => extractItems(r))
+    // MP-only search (align with word parameter)
+    const payload = await requestMapped(`/search?word=${query}`, { timeoutMs: 3000 }, 'mp')
+    const all = Array.isArray(payload)
+      ? payload.map(it => normalizeMpListItem(it))
+      : Array.isArray(payload?.items)
+        ? payload.items.map(it => normalizeMpListItem(it))
+        : []
     const seen = new Set()
     const merged = []
     for (const it of all) {
@@ -297,7 +270,7 @@ export const api = {
       return 0
     })
     
-    const finalResult = { items: deduped.map(({ _normTitle, ...rest }) => rest) }
+    const finalResult = { items: deduped.map(({ _normTitle, ...rest }) => ({ ...rest, _source: 'mp' })) }
     
     // Cache the search result
     setSearchCached(q, finalResult)
