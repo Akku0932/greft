@@ -509,15 +509,35 @@ export default function Home() {
       )}
       {!!recentReads.length && preferences.historyEnabled && (
         <section className="mb-10">
-          <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center justify-between mb-4 lg:mb-6">
             <div>
-              <h2 className="text-2xl font-bold text-stone-900 dark:text-white">Reading History</h2>
+              <h2 className="text-xl lg:text-2xl font-bold text-stone-900 dark:text-white">Reading History</h2>
               <p className="text-sm text-stone-600 dark:text-gray-400 mt-1">Jump back into what you were reading</p>
             </div>
             <a href="/history" className="text-sm text-stone-700 dark:text-gray-300 hover:underline">View all</a>
           </div>
           
-          <div className="relative">
+          {/* Mobile: Grid layout */}
+          <div className="block lg:hidden">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+              {recentReads.slice(0, 8).map((it, i) => (
+                <RecentReadCard key={(it.seriesId || i) + 'recent-m'} item={it} index={i} onRemove={removeRecentRead} />
+              ))}
+            </div>
+            {recentReads.length > 8 && (
+              <div className="mt-4 text-center">
+                <a href="/history" className="inline-flex items-center gap-2 px-4 py-2 bg-stone-100 dark:bg-gray-800 text-stone-700 dark:text-gray-300 rounded-lg hover:bg-stone-200 dark:hover:bg-gray-700 transition-colors">
+                  View all {recentReads.length} items
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </a>
+              </div>
+            )}
+          </div>
+
+          {/* Desktop: Slider layout */}
+          <div className="hidden lg:block relative">
             {/* Navigation arrows */}
             {needsSliding && showLeftArrow && (
               <button
