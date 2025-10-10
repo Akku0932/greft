@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useParams, Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { api, getImage, pickImage, parseIdTitle, sanitizeTitleId } from '../lib/api.js'
 import { useLibrary } from '../hooks/useLibrary'
@@ -13,8 +13,28 @@ export default function Info() {
   const [chapters, setChapters] = useState([])
   const [page, setPage] = useState(0)
   const [showMeta, setShowMeta] = useState(false)
-  const [adultGate, setAdultGate] = useState(false)
-  const adultCheckedRef = useRef(false)
+  const [blocked, setBlocked] = useState(false)
+
+  function readAdultPref() {
+    try {
+      const raw = localStorage.getItem('site:settings')
+      const obj = JSON.parse(raw || '{}')
+      return !!obj.adultAllowed
+    } catch { return false }
+  }
+  function writeAdultPref(val) {
+    try {
+      const raw = localStorage.getItem('site:settings')
+      const obj = JSON.parse(raw || '{}')
+      obj.adultAllowed = !!val
+      localStorage.setItem('site:settings', JSON.stringify(obj))
+    } catch {}
+  }
+  const allowKey = (sid) => `adult:allow:${sid}`
+  const hasAdultTags = (tagsArr) => {
+    const tags = (Array.isArray(tagsArr) ? tagsArr : []).map(t => String(t).toLowerCase())
+    return tags.some(t => /(adult|mature|ecchi|nsfw|sm_bdsm)/i.test(t))
+  }
 
   // Determine source based on query or ID format (support mp)
   const srcParam = (searchParams.get('src') || '').toLowerCase()
@@ -36,6 +56,12 @@ export default function Info() {
           if (mounted) {
             setData(infoData)
             setLoading(false)
+            try {
+              const genres = Array.isArray(infoData?.genres) ? infoData.genres : (Array.isArray(infoData?.otherInfo) ? infoData.otherInfo : [])
+              const seriesAllow = localStorage.getItem(allowKey(parsed.id)) === '1'
+              const globalAllow = readAdultPref()
+              if (!seriesAllow && !globalAllow && hasAdultTags(genres)) setBlocked(true)
+            } catch {}
           }
           
           // Fetch recommendations in background after info loads
@@ -66,6 +92,12 @@ export default function Info() {
                 infoData.recommendations = Array.isArray(recData) ? recData : recData.items || []
               }
               setData(infoData)
+              try {
+                const genres = Array.isArray(infoData?.genres) ? infoData.genres : (Array.isArray(infoData?.otherInfo) ? infoData.otherInfo : [])
+                const seriesAllow = localStorage.getItem(allowKey(parsed.id)) === '1'
+                const globalAllow = readAdultPref()
+                if (!seriesAllow && !globalAllow && hasAdultTags(genres)) setBlocked(true)
+              } catch {}
             }
             setLoading(false)
           }
@@ -129,7 +161,6 @@ export default function Info() {
   const bg = cover
   const authors = mappedData.author
   const tags = mappedData.genres
-  const isAdult = Array.isArray(tags) && tags.some(t => /adult|ecchi|mature|nsfw/i.test(String(t)))
   const meta = {
     Type: mappedData.type,
     Status: mappedData.status,
@@ -176,41 +207,23 @@ export default function Info() {
     } catch {}
   }
 
-  // Adult content gate: require confirmation once per series
-  useEffect(() => {
-    if (!data || adultCheckedRef.current) return
-    try {
-      const key = `adult-ok:${source}:${id}`
-      const ok = localStorage.getItem(key)
-      if (isAdult && !ok) setAdultGate(true)
-      adultCheckedRef.current = true
-    } catch {}
-  }, [data, id, source, isAdult])
-
-  function acceptAdult() {
-    try { localStorage.setItem(`adult-ok:${source}:${id}`, '1') } catch {}
-    setAdultGate(false)
-  }
-  function declineAdult() {
-    window.location.href = '/home'
-  }
-
   return (
     <div>
-      {adultGate && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70">
-          <div className="w-[92vw] max-w-md rounded-2xl bg-white dark:bg-gray-900 p-5 border border-stone-200 dark:border-gray-700 shadow-xl">
-            <div className="text-xl font-bold text-stone-900 dark:text-white">18+ content ahead</div>
-            <p className="mt-2 text-sm text-stone-700 dark:text-gray-300">This series is tagged as adult/ecchi. You must be 18+ to proceed.</p>
-            <div className="mt-4 flex gap-2 justify-end">
-              <button onClick={declineAdult} className="px-4 py-2 rounded-lg border border-stone-300 dark:border-gray-700 text-stone-700 dark:text-gray-200">Go back</button>
-              <button onClick={acceptAdult} className="px-4 py-2 rounded-lg bg-stone-900 text-white dark:bg-gray-700">I am 18+, continue</button>
+      {blocked && (
+        <div className="max-w-[95vw] mx-auto px-4 sm:px-6 py-8">
+          <div className="rounded-2xl border border-stone-300 dark:border-gray-700 bg-white dark:bg-gray-900 p-6">
+            <div className="text-xl font-bold text-stone-900 dark:text-white mb-2">18+ content ahead</div>
+            <p className="text-sm text-stone-700 dark:text-gray-300 mb-4">This series is tagged Adult/Ecchi. Continue only if you are 18+.</p>
+            <div className="flex flex-wrap gap-3">
+              <button onClick={()=>{ setBlocked(false); try { localStorage.setItem(allowKey(parseIdTitle(id,'').id), '1') } catch {} }} className="px-4 py-2 rounded-lg bg-stone-900 text-white dark:bg-gray-700">Proceed for this series</button>
+              <button onClick={()=>{ writeAdultPref(true); setBlocked(false) }} className="px-4 py-2 rounded-lg border border-stone-300 dark:border-gray-600">Allow 18+ content globally</button>
+              <a href="/home" className="px-4 py-2 rounded-lg border border-stone-300 dark:border-gray-600">Go back</a>
             </div>
           </div>
         </div>
       )}
       <section className="relative">
-        {bg && <img src={bg} alt="bg" className={`absolute inset-0 w-full h-[260px] sm:h-[320px] md:h-[480px] object-cover ${isAdult ? 'blur-sm' : ''}`} />}
+        {bg && <img src={bg} alt="bg" className="absolute inset-0 w-full h-[260px] sm:h-[320px] md:h-[480px] object-cover" style={{ filter: blocked ? 'blur(18px)' : 'none' }} />}
         <div className="absolute inset-0 h-[260px] sm:h-[320px] md:h-[480px] backdrop-blur-sm md:backdrop-blur" />
         <div className="absolute inset-0 h-[260px] sm:h-[320px] md:h-[480px] bg-gradient-to-b from-black/20 via-black/60 to-black/95" />
         <div className="absolute inset-0 h-[260px] sm:h-[320px] md:h-[480px] bg-[radial-gradient(ellipse_at_center,rgba(0,0,0,0)_55%,rgba(0,0,0,0.45)_100%)]" />
@@ -218,7 +231,8 @@ export default function Info() {
         <div className="relative max-w-[95vw] mx-auto px-4 sm:px-6 pt-6 md:pt-10 pb-24 md:pb-40">
           <div className="grid grid-cols-1 md:grid-cols-[200px_1fr] lg:grid-cols-[260px_1fr] gap-4 sm:gap-6 md:gap-10 items-start">
             <div className="relative rounded-xl sm:rounded-2xl overflow-hidden ring-1 ring-white/15 dark:ring-gray-700/40 shadow-soft dark:shadow-soft-dark bg-white/5 dark:bg-gray-800/20">
-              {cover && <img src={cover} alt={mappedData.title} className="w-full h-[240px] sm:h-[300px] object-cover md:h-[360px]" />}
+              {cover && <img src={cover} alt={mappedData.title} className="w-full h-[240px] sm:h-[300px] object-cover md:h-[360px]" style={{ filter: blocked ? 'blur(24px)' : 'none' }} />}
+              {blocked && <div className="absolute inset-0 flex items-center justify-center"><span className="px-3 py-1.5 rounded-full bg-black/70 text-white text-xs">18+ hidden</span></div>}
             </div>
             <div className="text-white">
               <div className="md:bg-transparent md:p-0 bg-black/35 backdrop-blur-sm rounded-xl p-3 -mx-2 sm:mx-0">

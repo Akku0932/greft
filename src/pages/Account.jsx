@@ -23,7 +23,6 @@ export default function Account() {
   // Site settings stored locally
   const [commentsEnabled, setCommentsEnabled] = useState(true)
   const [historyEnabled, setHistoryEnabled] = useState(true)
-  const [allowAdult, setAllowAdult] = useState(true)
 
   useEffect(() => {
     if (!user) return
@@ -39,13 +38,11 @@ export default function Account() {
       const sp = meta.preferences || {}
       if (typeof sp.commentsEnabled === 'boolean') setCommentsEnabled(sp.commentsEnabled)
       if (typeof sp.historyEnabled === 'boolean') setHistoryEnabled(sp.historyEnabled)
-      if (typeof sp.allowAdult === 'boolean') setAllowAdult(sp.allowAdult)
-      if (sp == null || (sp.commentsEnabled == null && sp.historyEnabled == null && sp.allowAdult == null)) {
+      if (sp == null || (sp.commentsEnabled == null && sp.historyEnabled == null)) {
         try {
           const s = JSON.parse(localStorage.getItem('site:settings') || '{}')
           if (typeof s.commentsEnabled === 'boolean') setCommentsEnabled(s.commentsEnabled)
           if (typeof s.historyEnabled === 'boolean') setHistoryEnabled(s.historyEnabled)
-          if (typeof s.allowAdult === 'boolean') setAllowAdult(s.allowAdult)
         } catch {}
       }
     })()
@@ -182,18 +179,8 @@ export default function Account() {
                     <div className="text-sm text-stone-600 dark:text-gray-400">Show or hide the "Reading History" section.</div>
                   </div>
                   <label className="inline-flex items-center gap-2">
-                    <input type="checkbox" checked={historyEnabled} onChange={async (e)=>{ const v=e.target.checked; setHistoryEnabled(v); localStorage.setItem('site:settings', JSON.stringify({ commentsEnabled, historyEnabled: v, allowAdult })); try { await supabase.auth.updateUser({ data: { preferences: { commentsEnabled, historyEnabled: v, allowAdult } } }) } catch {} }} />
+                    <input type="checkbox" checked={historyEnabled} onChange={async (e)=>{ const v=e.target.checked; setHistoryEnabled(v); localStorage.setItem('site:settings', JSON.stringify({ commentsEnabled, historyEnabled: v })); try { await supabase.auth.updateUser({ data: { preferences: { commentsEnabled, historyEnabled: v } } }) } catch {} }} />
                     <span>Enable</span>
-                  </label>
-                </div>
-                <div className="flex items-center justify-between py-3 border-t border-stone-200 dark:border-gray-800">
-                  <div>
-                    <div className="font-medium">Allow 18+ content</div>
-                    <div className="text-sm text-stone-600 dark:text-gray-400">If off, adult/ecchi content is blocked and blurred.</div>
-                  </div>
-                  <label className="inline-flex items-center gap-2">
-                    <input type="checkbox" checked={allowAdult} onChange={async (e)=>{ const v=e.target.checked; setAllowAdult(v); localStorage.setItem('site:settings', JSON.stringify({ commentsEnabled, historyEnabled, allowAdult: v })); try { await supabase.auth.updateUser({ data: { preferences: { commentsEnabled, historyEnabled, allowAdult: v } } }) } catch {} }} />
-                    <span>{allowAdult ? 'On' : 'Off'}</span>
                   </label>
                 </div>
                 <div className="py-3 border-t border-stone-200 dark:border-gray-800">

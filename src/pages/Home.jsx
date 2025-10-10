@@ -622,6 +622,12 @@ export default function Home() {
 }
 
 function RecItem({ item, index }) {
+  function adultAllowed() { try { const obj = JSON.parse(localStorage.getItem('site:settings')||'{}'); return !!obj.adultAllowed } catch { return false } }
+  function isAdult(it) {
+    const tags = it?.genres || it?.tags || (it?.info?.otherInfo?.tags) || []
+    const arr = Array.isArray(tags) ? tags : []
+    return arr.some(t => /adult|mature|ecchi|nsfw|sm_bdsm/i.test(String(t)))
+  }
   const cover = getImage(pickImage(item))
   const title = item.title || item.name || 'Untitled'
   const parsed = parseIdTitle(item.seriesId || item.id || item.slug || item.urlId, item.title || item.slug)
@@ -646,10 +652,11 @@ function RecItem({ item, index }) {
       )}
       <div className="relative z-10 h-full flex items-center gap-3 px-3">
         {cover ? (
-          <img src={cover} alt="" className="h-18 w-14 object-cover rounded-lg ring-1 ring-white/40 dark:ring-gray-600/40 shadow-sm transition-transform duration-300 group-hover:-translate-x-1" />
+          <img src={cover} alt="" className="h-18 w-14 object-cover rounded-lg ring-1 ring-white/40 dark:ring-gray-600/40 shadow-sm transition-transform duration-300 group-hover:-translate-x-1" style={{ filter: (!adultAllowed() && isAdult(item)) ? 'blur(16px)' : 'none' }} />
         ) : (
           <div className="h-18 w-14 bg-stone-200 dark:bg-gray-700 rounded-lg" />
         )}
+        {(!adultAllowed() && isAdult(item)) && <span className="absolute left-2 top-2 px-2 py-0.5 rounded bg-black/70 text-white text-[10px]">18+ hidden</span>}
         <div className="min-w-0 flex-1">
           <div className="font-semibold text-stone-900 dark:text-white truncate transition-colors duration-200 group-hover:text-transparent" style={{ WebkitBackgroundClip: 'text', backgroundImage: grad }}>{title}</div>
           <div className="text-xs text-stone-500 dark:text-gray-400 mt-1">Chapters • Updated</div>

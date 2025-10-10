@@ -38,6 +38,15 @@ export default function SearchResults() {
     return list
   }, [items, type, sort])
 
+  function isAdultTagged(it) {
+    const tags = (it?.genres || it?.tags || it?.otherInfo || [])
+    const arr = Array.isArray(tags) ? tags : []
+    return arr.some(t => /adult|mature|ecchi|nsfw|sm_bdsm/i.test(String(t)))
+  }
+  function adultAllowed() {
+    try { const obj = JSON.parse(localStorage.getItem('site:settings')||'{}'); return !!obj.adultAllowed } catch { return false }
+  }
+
   return (
     <div className="max-w-[120rem] mx-auto px-4 sm:px-6 py-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
@@ -86,17 +95,15 @@ export default function SearchResults() {
             const href = `/info/${encodeURIComponent(parsed.id)}?src=mp`
             const img = getImage(pickImage(it) || it.img)
             const title = it.title || it.name || 'Untitled'
-            const tags = Array.isArray(it.genres || it.tags || it.otherInfo?.tags) ? (it.genres || it.tags || it.otherInfo?.tags) : []
-            const isAdult = tags.some(t => /adult|ecchi|mature|nsfw/i.test(String(t)))
             return (
               <a key={(it.id||i)+':res'} href={href} className="group block">
                 <div className="relative aspect-[3/4] rounded-lg overflow-hidden bg-stone-200 dark:bg-gray-800">
-                  {img && <img src={img} alt="" className={`w-full h-full object-cover group-hover:scale-105 transition-transform ${isAdult ? 'blur-sm' : ''}`} />}
-                  {isAdult && (
-                    <div className="absolute inset-0 flex items-end p-2">
-                      <span className="px-2 py-1 rounded bg-black/60 text-white text-[10px]">18+</span>
-                    </div>
-                  )}
+                {img && <img src={img} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform" style={{ filter: (!adultAllowed() && isAdultTagged(it)) ? 'blur(20px)' : 'none' }} />}
+                {(!adultAllowed() && isAdultTagged(it)) && (
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <span className="px-2 py-1 rounded bg-black/70 text-white text-xs">18+ hidden</span>
+                  </div>
+                )}
                 </div>
                 <div className="mt-2 text-sm font-medium line-clamp-2 text-stone-900 dark:text-white group-hover:text-transparent" style={{ WebkitBackgroundClip: 'text', backgroundImage: 'linear-gradient(90deg,#60a5fa,#a78bfa)' }}>{title}</div>
               </a>

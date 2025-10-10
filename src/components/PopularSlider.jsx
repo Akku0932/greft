@@ -245,6 +245,14 @@ export default function PopularSlider({ items }) {
   const parsed = activeItem ? parseIdTitle(combined, activeItem?.titleId || activeItem?.slug) : { id: '', titleId: '' }
   const info = activeItem ? (activeItem.info || extra[parsed.id] || {}) : {}
   const bg = getImage(pickImage(info) || pickImage(activeItem || {}))
+  function isAdult(infoOrItem) {
+    const tags = infoOrItem?.otherInfo?.tags || infoOrItem?.tags || []
+    const arr = Array.isArray(tags) ? tags : []
+    return arr.some(t => /adult|mature|ecchi|nsfw|sm_bdsm/i.test(String(t)))
+  }
+  function adultAllowed() {
+    try { const obj = JSON.parse(localStorage.getItem('site:settings')||'{}'); return !!obj.adultAllowed } catch { return false }
+  }
 
   // random gradient per slide (deterministic by index)
   useEffect(() => {
@@ -290,7 +298,7 @@ export default function PopularSlider({ items }) {
              onMouseEnter={() => setIsHover(true)} onMouseLeave={() => setIsHover(false)}>
           {bg && (
           <>
-              <img src={bg} alt="bg" className="absolute inset-0 w-full h-full object-cover md:scale-105" loading={active===0?"eager":"lazy"} decoding="async" />
+              <img src={bg} alt="bg" className="absolute inset-0 w-full h-full object-cover md:scale-105" loading={active===0?"eager":"lazy"} decoding="async" style={{ filter: (!adultAllowed() && isAdult(info)) ? 'blur(18px)' : 'none' }} />
               <div className="absolute inset-0 backdrop-blur-none md:backdrop-blur-md" />
               {/* Mobile lighter, desktop stronger gradients */}
               <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-black/40 to-black/80 md:from-black/30 md:via-black/60 md:to-black/95" />
@@ -346,14 +354,10 @@ export default function PopularSlider({ items }) {
                 <div className="hidden md:block w-[240px] lg:w-[280px] shrink-0 mt-8 md:mt-20">
                    <div className="relative rounded-2xl overflow-hidden shadow-soft dark:shadow-soft-dark ring-1 ring-white/15 dark:ring-gray-600/30 bg-transparent">
                      <div className="absolute -inset-1 rounded-3xl bg-gradient-to-br from-white/10 dark:from-gray-700/20 to-transparent" />
-                  <div className="relative p-2">
+                     <div className="relative p-2">
                     <div className="relative aspect-[3/4] w-full rounded-xl overflow-hidden bg-black/40 flex items-center justify-center">
-                        {(() => { const tags = (info?.otherInfo?.tags || info?.tags || activeItem?.tags || []).map(String); const isAdult = tags.some(t=>/adult|ecchi|mature|nsfw/i.test(t)); return (
-                          <>
-                            <img src={getImage(pickImage(activeItem) || pickImage(info))} alt="thumb" className={`w-full h-full object-cover ${isAdult ? 'blur-sm' : ''}`} loading="eager" decoding="async" />
-                            {isAdult && <div className="absolute inset-0 flex items-end p-2"><span className="px-2 py-1 rounded bg-black/60 text-white text-[10px]">18+</span></div>}
-                          </>
-                        )})()}
+                        <img src={getImage(pickImage(activeItem) || pickImage(info))} alt="thumb" className="w-full h-full object-cover" loading="eager" decoding="async" style={{ filter: (!adultAllowed() && isAdult(info)) ? 'blur(24px)' : 'none' }} />
+                        {(!adultAllowed() && isAdult(info)) && <div className="absolute inset-0 flex items-center justify-center"><span className="px-2 py-1 rounded bg-black/70 text-white text-xs">18+ hidden</span></div>}
                         <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
                       </div>
                     </div>
