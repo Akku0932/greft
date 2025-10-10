@@ -121,6 +121,12 @@ function RecRow({ item, index }) {
   const title = item.name || item.title || 'Untitled'
   const parsed = parseIdTitle(item.id || item.seriesId || item.slug || item.urlId, title)
   const href = `/info/${encodeURIComponent(parsed.id)}?src=mp`
+  function adultAllowed() { try { const obj = JSON.parse(localStorage.getItem('site:settings')||'{}'); return !!obj.adultAllowed } catch { return false } }
+  function isAdult(it) {
+    const tags = it?.genres || it?.tags || []
+    const arr = Array.isArray(tags) ? tags : []
+    return arr.some(t => /adult|mature|ecchi|nsfw|sm_bdsm/i.test(String(t)))
+  }
   const grads = [
     'linear-gradient(90deg,#60a5fa,#a78bfa)',
     'linear-gradient(90deg,#34d399,#10b981)',
@@ -131,15 +137,16 @@ function RecRow({ item, index }) {
   return (
     <a href={href} className="group relative block h-24 rounded-xl overflow-hidden bg-transparent transition-all duration-300">
       <div className="absolute inset-0">
-        {cover && <img src={cover} alt="" className="w-full h-full object-cover filter grayscale group-hover:grayscale-0 transition duration-300 group-hover:-translate-x-1" />}
+        {cover && <img src={cover} alt="" className="w-full h-full object-cover filter grayscale group-hover:grayscale-0 transition duration-300 group-hover:-translate-x-1" style={{ filter: (!adultAllowed() && isAdult(item)) ? 'blur(16px) grayscale(100%)' : 'grayscale(100%)' }} />}
         <div className="absolute inset-0 bg-gradient-to-r from-white dark:from-gray-900 via-white/70 dark:via-gray-900/70 to-white/30 dark:to-gray-900/30" />
       </div>
       <div className="relative z-10 h-full flex items-center gap-3 px-3">
         {cover ? (
-          <img src={cover} alt="" className="h-18 w-14 object-cover rounded-lg ring-1 ring-white/40 dark:ring-gray-600/40 shadow-sm transition-transform duration-300 group-hover:-translate-x-1" />
+          <img src={cover} alt="" className="h-18 w-14 object-cover rounded-lg ring-1 ring-white/40 dark:ring-gray-600/40 shadow-sm transition-transform duration-300 group-hover:-translate-x-1" style={{ filter: (!adultAllowed() && isAdult(item)) ? 'blur(16px)' : 'none' }} />
         ) : (
           <div className="h-18 w-14 bg-stone-200 dark:bg-gray-700 rounded-lg" />
         )}
+        {(!adultAllowed() && isAdult(item)) && <span className="absolute left-2 top-2 px-2 py-0.5 rounded bg-black/70 text-white text-[10px]">18+ hidden</span>}
         <div className="min-w-0 flex-1">
           <div className="font-semibold text-stone-900 dark:text-white truncate transition-colors duration-200 group-hover:text-transparent" style={{ WebkitBackgroundClip: 'text', backgroundImage: grad }}>{title}</div>
           <div className="text-xs text-stone-500 dark:text-gray-400 mt-1">Newly added • Greft</div>

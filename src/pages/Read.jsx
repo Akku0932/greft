@@ -89,12 +89,17 @@ export default function Read() {
         const ctx = source === 'mp' ? { seriesId } : undefined
         const res = await api.read(chapterId, source, ctx)
         if (!mounted) return
-        let imgs = Array.isArray(res) ? res : (res.pages || res.images || res.items || res.data || [])
-        // Remove MP watermarked first 2 images globally
-        if (source === 'mp' && Array.isArray(imgs) && imgs.length >= 2) {
-          imgs = imgs.slice(2)
-        }
-        setPages(imgs.map(img => {
+        const imgs = Array.isArray(res) ? res : (res.pages || res.images || res.items || res.data || [])
+        // Filter out MangaPark promo pages like "Read at Mpark.com"
+        const filtered = imgs.filter((img) => {
+          const url = typeof img === 'string' ? img : (img?.img || img?.src || img)
+          const s = String(url || '').toLowerCase()
+          // Known promo markers or tiny placeholders
+          if (!url) return false
+          if (s.includes('mpark') || s.includes('mangapark') || s.includes('read at')) return false
+          return true
+        })
+        setPages(filtered.map(img => {
           // Handle MF format: {img: "url"} or GF format: "url"
           const url = typeof img === 'string' ? img : (img?.img || img?.src || img)
           return getImage(url)
