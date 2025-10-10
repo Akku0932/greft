@@ -523,7 +523,7 @@ export default function Home() {
               <button
                 onClick={() => {
                   const el = recentContainerRef.current
-                  if (el) el.scrollBy({ left: -320, behavior: 'smooth' })
+                  if (el) el.scrollBy({ left: -208, behavior: 'smooth' })
                 }}
                 className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 z-10 w-10 h-10 rounded-full bg-white dark:bg-gray-800 shadow-lg border border-stone-200 dark:border-gray-700 flex items-center justify-center text-stone-600 dark:text-gray-300 hover:bg-stone-50 dark:hover:bg-gray-700 transition-all duration-200"
                 title="Previous"
@@ -538,7 +538,7 @@ export default function Home() {
               <button
                 onClick={() => {
                   const el = recentContainerRef.current
-                  if (el) el.scrollBy({ left: 320, behavior: 'smooth' })
+                  if (el) el.scrollBy({ left: 208, behavior: 'smooth' })
                 }}
                 className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 z-10 w-10 h-10 rounded-full bg-white dark:bg-gray-800 shadow-lg border border-stone-200 dark:border-gray-700 flex items-center justify-center text-stone-600 dark:text-gray-300 hover:bg-stone-50 dark:hover:bg-gray-700 transition-all duration-200"
                 title="Next"
@@ -552,7 +552,7 @@ export default function Home() {
             {/* Slider container */}
             <div 
               ref={recentContainerRef}
-              className="overflow-x-auto no-scrollbar scroll-smooth"
+              className="overflow-x-auto no-scrollbar scroll-smooth w-full"
               onScroll={() => {
                 const el = recentContainerRef.current
                 if (!el) return
@@ -561,9 +561,9 @@ export default function Home() {
                 setShowRightArrow(el.scrollLeft < max)
               }}
             >
-              <div className="flex gap-4 pb-2">
+              <div className="flex gap-4 pb-2" style={{ width: 'max-content' }}>
                 {recentReads.map((it, i) => (
-                  <div key={(it.seriesId || i) + 'recent-slider'} className="flex-shrink-0 w-48">
+                  <div key={(it.seriesId || i) + 'recent-slider'} className="flex-shrink-0 w-48 min-w-[192px]">
                     <RecentReadCard item={it} index={i} onRemove={removeRecentRead} />
                   </div>
                 ))}
