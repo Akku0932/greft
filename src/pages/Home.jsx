@@ -422,26 +422,6 @@ export default function Home() {
                 </div>
               </section>
             )}
-            {!!recentReads.length && preferences.historyEnabled && (
-              <section className="mb-2">
-                <div className="flex items-center justify-between mb-4">
-                  <div>
-                    <h2 className="text-xl font-bold text-stone-900 dark:text-white">Reading History</h2>
-                    <p className="text-sm text-stone-600 dark:text-gray-400 mt-1">Jump back into what you were reading</p>
-                  </div>
-                  <a href="/history" className="text-sm text-stone-700 dark:text-gray-300 hover:underline">View all</a>
-                </div>
-                <div className="overflow-x-auto no-scrollbar -mx-4 px-4">
-                  <div className="flex gap-4 snap-x snap-mandatory touch-pan-x pb-2">
-                    {recentReads.map((it, i) => (
-                      <div key={(it.seriesId || i) + 'recent-m'} className="snap-start flex-shrink-0">
-                        <RecentReadCard item={it} index={i} onRemove={removeRecentRead} />
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </section>
-            )}
             {/* Removed New Release and Most Viewed sections */}
             <div className="rounded-xl border border-stone-200 dark:border-gray-700/60 bg-white/60 dark:bg-gray-900/60 p-6">
               <div className="flex items-center justify-between mb-4">
@@ -509,77 +489,89 @@ export default function Home() {
       )}
       {!!recentReads.length && preferences.historyEnabled && (
         <section className="mb-10">
-              <div className="flex items-center justify-between mb-6">
-                <div>
-                  <h2 className="text-2xl font-bold text-stone-900 dark:text-white">Reading History</h2>
-                  <p className="text-sm text-stone-600 dark:text-gray-400 mt-1">Jump back into what you were reading</p>
-                </div>
-                <a href="/history" className="text-sm text-stone-700 dark:text-gray-300 hover:underline">View all</a>
+          <div className="flex items-center justify-between mb-4 lg:mb-6">
+            <div>
+              <h2 className="text-xl lg:text-2xl font-bold text-stone-900 dark:text-white">Reading History</h2>
+              <p className="text-sm text-stone-600 dark:text-gray-400 mt-1">Jump back into what you were reading</p>
+            </div>
+            <a href="/history" className="text-sm text-stone-700 dark:text-gray-300 hover:underline">View all</a>
+          </div>
+          
+          {/* Mobile: Grid layout */}
+          <div className="block lg:hidden">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+              {recentReads.slice(0, 8).map((it, i) => (
+                <RecentReadCard key={(it.seriesId || i) + 'recent-m'} item={it} index={i} onRemove={removeRecentRead} />
+              ))}
+            </div>
+            {recentReads.length > 8 && (
+              <div className="mt-4 text-center">
+                <a href="/history" className="inline-flex items-center gap-2 px-4 py-2 bg-stone-100 dark:bg-gray-800 text-stone-700 dark:text-gray-300 rounded-lg hover:bg-stone-200 dark:hover:bg-gray-700 transition-colors">
+                  View all {recentReads.length} items
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </a>
               </div>
-              <div className="relative">
-                {/* Navigation arrows - only show on desktop when more than 8 cards */}
-                {needsSliding && showLeftArrow && (
-                  <button
-                    onClick={() => {
-                      const el = recentContainerRef.current
-                      if (el) el.scrollBy({ left: -el.clientWidth, behavior: 'smooth' })
-                    }}
-                    className="hidden lg:flex absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 z-10 w-10 h-10 rounded-full bg-white dark:bg-gray-800 shadow-lg border border-stone-200 dark:border-gray-700 items-center justify-center text-stone-600 dark:text-gray-300 hover:bg-stone-50 dark:hover:bg-gray-700 transition-all duration-200"
-                    title="Previous"
-                  >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                    </svg>
-                  </button>
-                )}
-                
-                {needsSliding && showRightArrow && (
-                  <button
-                    onClick={() => {
-                      const el = recentContainerRef.current
-                      if (el) el.scrollBy({ left: el.clientWidth, behavior: 'smooth' })
-                    }}
-                    className="hidden lg:flex absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 z-10 w-10 h-10 rounded-full bg-white dark:bg-gray-800 shadow-lg border border-stone-200 dark:border-gray-700 items-center justify-center text-stone-600 dark:text-gray-300 hover:bg-stone-50 dark:hover:bg-gray-700 transition-all duration-200"
-                    title="Next"
-                  >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                    </svg>
-                  </button>
-                )}
+            )}
+          </div>
 
-                {/* Mobile: Grid layout, Desktop: Scrollable layout */}
-                <div className="lg:hidden">
-                  <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
-                    {recentReads.slice(0, 8).map((it, i) => (
-                      <RecentReadCard key={(it.seriesId || i) + 'recent-mobile'} item={it} index={i} onRemove={removeRecentRead} />
-                    ))}
+          {/* Desktop: Horizontal scroll with arrows */}
+          <div className="hidden lg:block relative">
+            {/* Navigation arrows - only show when more than 8 cards */}
+            {needsSliding && showLeftArrow && (
+              <button
+                onClick={() => {
+                  const el = recentContainerRef.current
+                  if (el) el.scrollBy({ left: -el.clientWidth, behavior: 'smooth' })
+                }}
+                className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 z-10 w-10 h-10 rounded-full bg-white dark:bg-gray-800 shadow-lg border border-stone-200 dark:border-gray-700 flex items-center justify-center text-stone-600 dark:text-gray-300 hover:bg-stone-50 dark:hover:bg-gray-700 transition-all duration-200"
+                title="Previous"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
+              </button>
+            )}
+            
+            {needsSliding && showRightArrow && (
+              <button
+                onClick={() => {
+                  const el = recentContainerRef.current
+                  if (el) el.scrollBy({ left: el.clientWidth, behavior: 'smooth' })
+                }}
+                className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 z-10 w-10 h-10 rounded-full bg-white dark:bg-gray-800 shadow-lg border border-stone-200 dark:border-gray-700 flex items-center justify-center text-stone-600 dark:text-gray-300 hover:bg-stone-50 dark:hover:bg-gray-700 transition-all duration-200"
+                title="Next"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </button>
+            )}
+
+            {/* Scrollable snap container */}
+            <div 
+              ref={recentContainerRef}
+              className="overflow-x-auto no-scrollbar"
+              onScroll={() => {
+                const el = recentContainerRef.current
+                if (!el) return
+                const max = el.scrollWidth - el.clientWidth - 4
+                setShowLeftArrow(el.scrollLeft > 4)
+                setShowRightArrow(el.scrollLeft < max)
+              }}
+            >
+              <div className="flex gap-4 snap-x snap-mandatory pb-2">
+                {recentReads.map((it, i) => (
+                  <div key={(it.seriesId || i) + 'recent-d'} className="snap-start flex-shrink-0 w-48">
+                    <RecentReadCard item={it} index={i} onRemove={removeRecentRead} />
                   </div>
-                </div>
-                
-                {/* Desktop: Scrollable snap container */}
-                <div 
-                  ref={recentContainerRef}
-                  className={`hidden lg:block overflow-x-auto no-scrollbar ${needsSliding ? '' : ''}`}
-                  onScroll={() => {
-                    const el = recentContainerRef.current
-                    if (!el) return
-                    const max = el.scrollWidth - el.clientWidth - 4
-                    setShowLeftArrow(el.scrollLeft > 4)
-                    setShowRightArrow(el.scrollLeft < max)
-                  }}
-                >
-                  <div className="flex gap-1.5 snap-x snap-mandatory pb-2">
-                    {recentReads.map((it, i) => (
-                      <div key={(it.seriesId || i) + 'recent-d'} className="snap-start flex-shrink-0 w-[200px] min-w-[180px] max-w-[220px]">
-                        <RecentReadCard item={it} index={i} onRemove={removeRecentRead} />
-                      </div>
-                    ))}
-                  </div>
-                </div>
+                ))}
               </div>
-            </section>
-          )}
+            </div>
+          </div>
+        </section>
+      )}
           <LatestUpdates 
             items={latest} 
             loading={loading} 
@@ -740,7 +732,7 @@ function LatestUpdates({ items = [], loading, error, shown, loadingMore, hasMore
         )) : (items || []).map((it, i) => {
           const isLast = i === items.length - 1
           return (
-            <div key={(it.id || it.seriesId || it.slug || it.title || i) + 'latest'} ref={isLast ? lastElementRef : null} className="w-full min-w-0">
+            <div key={(it.id || it.seriesId || it.slug || it.title || i) + 'latest'} ref={isLast ? lastElementRef : null}>
               <LatestCard item={it} index={i} />
             </div>
           )
@@ -860,20 +852,10 @@ function LatestCard({ item, index }) {
       <div className="relative">
         <div className="relative aspect-square overflow-hidden rounded-lg">
           {cover ? (
-            <img 
-              src={cover} 
-              alt={title} 
-              className="absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:translate-y-[-6px]" 
-              style={{ filter: (!adultAllowed() && isAdult(item)) ? 'blur(18px)' : 'none' }}
-              loading="lazy"
-              decoding="async"
-              onError={(e) => {
-                e.target.style.display = 'none'
-                e.target.nextElementSibling.style.display = 'block'
-              }}
-            />
-          ) : null}
-          <div className="absolute inset-0 bg-stone-200 dark:bg-gray-800 rounded-lg" style={{ display: cover ? 'none' : 'block' }} />
+            <img src={cover} alt={title} className="absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:translate-y-[-6px]" style={{ filter: (!adultAllowed() && isAdult(item)) ? 'blur(18px)' : 'none' }} />
+          ) : (
+            <div className="absolute inset-0 bg-stone-200 dark:bg-gray-800 rounded-lg" />
+          )}
           {(!adultAllowed() && isAdult(item)) && (
             <div className="absolute inset-0 flex items-center justify-center">
               <span className="px-2 py-1 rounded bg-black/70 text-white text-xs">18+ hidden</span>
@@ -925,20 +907,25 @@ function RecentReadCard({ item, index, onRemove }) {
   }
 
   return (
-    <div className="group relative w-40 sm:w-44 lg:w-full flex-shrink-0">
+    <div className="group relative w-full flex-shrink-0">
       <a href={href} className="block">
         <div className="relative">
           {/* Anime-style card with aspect ratio 3:4 */}
-          <div className="relative aspect-square overflow-hidden rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 group-hover:scale-[1.02]">
+          <div className="relative aspect-[3/4] overflow-hidden rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 group-hover:scale-[1.02]">
             {cover ? (
               <img 
                 src={cover} 
                 alt={title} 
                 className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" 
+                loading="lazy"
+                decoding="async"
+                onError={(e) => {
+                  e.target.style.display = 'none'
+                  e.target.nextElementSibling.style.display = 'block'
+                }}
               />
-            ) : (
-              <div className="absolute inset-0 bg-gradient-to-br from-stone-200 to-stone-300 dark:from-gray-700 dark:to-gray-800 rounded-xl" />
-            )}
+            ) : null}
+            <div className="absolute inset-0 bg-gradient-to-br from-stone-200 to-stone-300 dark:from-gray-700 dark:to-gray-800 rounded-xl" style={{ display: cover ? 'none' : 'block' }} />
             
             {/* Gradient overlay for better text readability */}
             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
@@ -1009,19 +996,10 @@ function FollowedNewCard({ item }) {
     <a href={href} className="group block">
       <div className="relative aspect-square overflow-hidden rounded-lg ring-1 ring-stone-200 dark:ring-gray-800 bg-stone-200">
         {cover ? (
-          <img 
-            src={cover} 
-            alt={title} 
-            className="absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.02]" 
-            loading="lazy"
-            decoding="async"
-            onError={(e) => {
-              e.target.style.display = 'none'
-              e.target.nextElementSibling.style.display = 'block'
-            }}
-          />
-        ) : null}
-        <div className="absolute inset-0 bg-gradient-to-br from-stone-200 to-stone-300 dark:from-gray-700 dark:to-gray-800" style={{ display: cover ? 'none' : 'block' }} />
+          <img src={cover} alt={title} className="absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.02]" />
+        ) : (
+          <div className="absolute inset-0 bg-gradient-to-br from-stone-200 to-stone-300 dark:from-gray-700 dark:to-gray-800" />
+        )}
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
         <div className="absolute bottom-2 left-2 right-2">
           <div className="text-white font-semibold line-clamp-2 text-sm">{title}</div>
@@ -1052,20 +1030,7 @@ function SmallCard({ item }) {
   return (
     <a href={href} className="group block">
       <div className="relative aspect-[3/4] rounded-lg overflow-hidden bg-stone-200">
-        {cover ? (
-          <img 
-            src={cover} 
-            alt="" 
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform" 
-            loading="lazy"
-            decoding="async"
-            onError={(e) => {
-              e.target.style.display = 'none'
-            }}
-          />
-        ) : (
-          <div className="w-full h-full bg-gradient-to-br from-stone-200 to-stone-300 dark:from-gray-700 dark:to-gray-800" />
-        )}
+        {cover && <img src={cover} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />}
       </div>
       <div className="mt-2 text-sm font-medium line-clamp-2 group-hover:text-brand-600">{title}</div>
     </a>
