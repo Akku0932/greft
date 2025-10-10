@@ -813,84 +813,67 @@ function ReadingHistorySlider({ items, onRemove, isDesktop = false }) {
   const containerRef = useRef(null)
   const [showLeftArrow, setShowLeftArrow] = useState(false)
   const [showRightArrow, setShowRightArrow] = useState(true)
-  const [currentPage, setCurrentPage] = useState(0)
   
-  // Calculate items per page based on screen size
-  const getItemsPerPage = () => {
+  // Calculate responsive card width based on screen size
+  const getCardWidth = () => {
     if (isDesktop) {
-      return 5 // Desktop: 5 items per page
+      return 'calc(20% - 6px)' // Desktop: 5 items per row
     }
-    // Mobile: responsive based on screen width
+    // Mobile: responsive card sizes
     if (typeof window !== 'undefined') {
       const width = window.innerWidth
-      if (width < 480) return 2 // Very small screens
-      if (width < 640) return 3 // Small screens
-      return 4 // Medium screens
+      if (width < 480) return '140px' // Very small screens
+      if (width < 640) return '160px' // Small screens  
+      if (width < 768) return '180px' // Medium screens
+      return '200px' // Large mobile screens
     }
-    return 3 // Default fallback
+    return '160px' // Default fallback
   }
   
-  const itemsPerPage = getItemsPerPage()
-  const totalPages = Math.ceil(items.length / itemsPerPage)
-  const needsSliding = items.length > itemsPerPage
+  const needsSliding = items.length > (isDesktop ? 5 : 3)
   
-  // Update arrow visibility
+  // Update arrow visibility based on scroll position
   useEffect(() => {
-    setShowLeftArrow(currentPage > 0)
-    setShowRightArrow(currentPage < totalPages - 1)
-  }, [currentPage, totalPages])
+    const el = containerRef.current
+    if (!el) return
+    const max = el.scrollWidth - el.clientWidth - 4
+    setShowLeftArrow(el.scrollLeft > 4)
+    setShowRightArrow(el.scrollLeft < max)
+  }, [items])
   
-  const scrollToPage = (page) => {
-    if (!containerRef.current) return
-    const container = containerRef.current
-    const itemWidth = container.scrollWidth / items.length
-    const scrollLeft = page * (itemWidth * itemsPerPage)
-    container.scrollTo({ left: scrollLeft, behavior: 'smooth' })
-    setCurrentPage(page)
-  }
-  
-  const nextPage = () => {
-    if (currentPage < totalPages - 1) {
-      scrollToPage(currentPage + 1)
+  const scrollLeft = () => {
+    const el = containerRef.current
+    if (el) {
+      const cardWidth = isDesktop ? el.clientWidth / 5 : 180 // Approximate card width
+      el.scrollBy({ left: -cardWidth, behavior: 'smooth' })
     }
   }
   
-  const prevPage = () => {
-    if (currentPage > 0) {
-      scrollToPage(currentPage - 1)
+  const scrollRight = () => {
+    const el = containerRef.current
+    if (el) {
+      const cardWidth = isDesktop ? el.clientWidth / 5 : 180 // Approximate card width
+      el.scrollBy({ left: cardWidth, behavior: 'smooth' })
     }
   }
   
-  // Handle scroll events to update current page
   const handleScroll = () => {
-    if (!containerRef.current) return
-    const container = containerRef.current
-    const itemWidth = container.scrollWidth / items.length
-    const currentScrollLeft = container.scrollLeft
-    const newPage = Math.round(currentScrollLeft / (itemWidth * itemsPerPage))
-    setCurrentPage(Math.min(newPage, totalPages - 1))
+    const el = containerRef.current
+    if (!el) return
+    const max = el.scrollWidth - el.clientWidth - 4
+    setShowLeftArrow(el.scrollLeft > 4)
+    setShowRightArrow(el.scrollLeft < max)
   }
-  
-  // Auto-scroll on window resize to maintain current page
-  useEffect(() => {
-    const handleResize = () => {
-      if (containerRef.current) {
-        scrollToPage(currentPage)
-      }
-    }
-    window.addEventListener('resize', handleResize)
-    return () => window.removeEventListener('resize', handleResize)
-  }, [currentPage])
   
   if (!items.length) return null
   
   return (
     <div className="relative">
-      {/* Navigation arrows for desktop */}
-      {isDesktop && needsSliding && showLeftArrow && (
+      {/* Navigation arrows - only show when more items than visible */}
+      {needsSliding && showLeftArrow && (
         <button
-          onClick={prevPage}
-          className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 z-10 w-10 h-10 rounded-full bg-white dark:bg-gray-800 shadow-lg border border-stone-200 dark:border-gray-700 flex items-center justify-center text-stone-600 dark:text-gray-300 hover:bg-stone-50 dark:hover:bg-gray-700 transition-all duration-200"
+          onClick={scrollLeft}
+          className={`absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 z-10 w-10 h-10 rounded-full bg-white dark:bg-gray-800 shadow-lg border border-stone-200 dark:border-gray-700 flex items-center justify-center text-stone-600 dark:text-gray-300 hover:bg-stone-50 dark:hover:bg-gray-700 transition-all duration-200 ${isDesktop ? '' : 'hidden'}`}
           title="Previous"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -899,10 +882,10 @@ function ReadingHistorySlider({ items, onRemove, isDesktop = false }) {
         </button>
       )}
       
-      {isDesktop && needsSliding && showRightArrow && (
+      {needsSliding && showRightArrow && (
         <button
-          onClick={nextPage}
-          className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 z-10 w-10 h-10 rounded-full bg-white dark:bg-gray-800 shadow-lg border border-stone-200 dark:border-gray-700 flex items-center justify-center text-stone-600 dark:text-gray-300 hover:bg-stone-50 dark:hover:bg-gray-700 transition-all duration-200"
+          onClick={scrollRight}
+          className={`absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 z-10 w-10 h-10 rounded-full bg-white dark:bg-gray-800 shadow-lg border border-stone-200 dark:border-gray-700 flex items-center justify-center text-stone-600 dark:text-gray-300 hover:bg-stone-50 dark:hover:bg-gray-700 transition-all duration-200 ${isDesktop ? '' : 'hidden'}`}
           title="Next"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -911,41 +894,24 @@ function ReadingHistorySlider({ items, onRemove, isDesktop = false }) {
         </button>
       )}
       
-      {/* Grid container */}
+      {/* Horizontal scroll container */}
       <div 
         ref={containerRef}
         className={`overflow-x-auto no-scrollbar ${isDesktop ? '' : '-mx-4 px-4'}`}
         onScroll={handleScroll}
       >
-        <div className={`${isDesktop ? 'flex gap-1.5 snap-x snap-mandatory pb-2' : 'grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4'}`}>
+        <div className="flex gap-4 snap-x snap-mandatory touch-pan-x pb-2">
           {items.map((item, index) => (
             <div 
               key={(item.seriesId || index) + 'recent-slider'} 
-              className={`${isDesktop ? 'snap-start flex-shrink-0' : ''}`}
-              style={isDesktop ? { width: `calc(${100/itemsPerPage}% - 6px)` } : {}}
+              className="snap-start flex-shrink-0"
+              style={{ width: getCardWidth() }}
             >
               <RecentReadCard item={item} index={index} onRemove={onRemove} />
             </div>
           ))}
         </div>
       </div>
-      
-      {/* Page indicators for desktop */}
-      {isDesktop && needsSliding && totalPages > 1 && (
-        <div className="flex justify-center mt-4 gap-2">
-          {Array.from({ length: totalPages }).map((_, index) => (
-            <button
-              key={index}
-              onClick={() => scrollToPage(index)}
-              className={`w-2 h-2 rounded-full transition-all duration-200 ${
-                index === currentPage 
-                  ? 'bg-stone-900 dark:bg-white' 
-                  : 'bg-stone-300 dark:bg-gray-600 hover:bg-stone-400 dark:hover:bg-gray-500'
-              }`}
-            />
-          ))}
-        </div>
-      )}
     </div>
   )
 }
@@ -975,11 +941,11 @@ function RecentReadCard({ item, index, onRemove }) {
   }
 
   return (
-    <div className="group relative w-40 sm:w-44 lg:w-full flex-shrink-0">
+    <div className="group relative flex-shrink-0">
       <a href={href} className="block">
         <div className="relative">
-          {/* Anime-style card with aspect ratio 3:4 */}
-          <div className="relative aspect-square overflow-hidden rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 group-hover:scale-[1.02]">
+          {/* Compact anime-style card with smaller aspect ratio */}
+          <div className="relative aspect-[3/4] overflow-hidden rounded-lg shadow-md hover:shadow-lg transition-all duration-300 group-hover:scale-[1.02]">
             {cover ? (
               <img 
                 src={cover} 
@@ -987,22 +953,22 @@ function RecentReadCard({ item, index, onRemove }) {
                 className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" 
               />
             ) : (
-              <div className="absolute inset-0 bg-gradient-to-br from-stone-200 to-stone-300 dark:from-gray-700 dark:to-gray-800 rounded-xl" />
+              <div className="absolute inset-0 bg-gradient-to-br from-stone-200 to-stone-300 dark:from-gray-700 dark:to-gray-800 rounded-lg" />
             )}
             
             {/* Gradient overlay for better text readability */}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
             
-            {/* Chapter badge */}
-            <div className="absolute top-2 left-2">
-              <span className="px-2 py-1 bg-white/90 dark:bg-gray-900/90 text-black dark:text-white text-xs font-bold rounded-full shadow-md">
-                Ch. {Math.max(1, (item.lastChapterIndex || 0) + 1)}
+            {/* Chapter badge - smaller */}
+            <div className="absolute top-1 left-1">
+              <span className="px-1.5 py-0.5 bg-white/90 dark:bg-gray-900/90 text-black dark:text-white text-[10px] font-bold rounded-full shadow-sm">
+                Ch.{Math.max(1, (item.lastChapterIndex || 0) + 1)}
               </span>
             </div>
             
-            {/* Source badge */}
-            <div className="absolute top-2 right-2">
-              <span className={`px-2 py-1 text-xs font-bold rounded-full shadow-md ${
+            {/* Source badge - smaller */}
+            <div className="absolute top-1 right-1">
+              <span className={`px-1.5 py-0.5 text-[10px] font-bold rounded-full shadow-sm ${
                 isMF 
                   ? 'bg-blue-500/90 text-white' 
                   : 'bg-green-500/90 text-white'
@@ -1011,19 +977,19 @@ function RecentReadCard({ item, index, onRemove }) {
               </span>
             </div>
             
-            {/* Remove button */}
+            {/* Remove button - smaller */}
             <button
               onClick={handleRemove}
-              className="absolute top-2 right-2 w-6 h-6 rounded-full bg-red-500/90 hover:bg-red-600 text-white flex items-center justify-center text-xs font-bold opacity-0 group-hover:opacity-100 transition-all duration-200 z-10 shadow-lg"
+              className="absolute top-1 right-1 w-5 h-5 rounded-full bg-red-500/90 hover:bg-red-600 text-white flex items-center justify-center text-[10px] font-bold opacity-0 group-hover:opacity-100 transition-all duration-200 z-10 shadow-sm"
               title="Remove from recent reads"
             >
               ×
             </button>
           </div>
           
-          {/* Title with anime-style typography */}
-          <div className="mt-2 px-0">
-            <h3 className="text-sm font-semibold text-stone-900 dark:text-white line-clamp-2 leading-snug group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-blue-500 group-hover:to-purple-600 transition-all duration-300">
+          {/* Compact title */}
+          <div className="mt-1.5 px-0">
+            <h3 className="text-xs font-semibold text-stone-900 dark:text-white line-clamp-2 leading-tight group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-blue-500 group-hover:to-purple-600 transition-all duration-300">
               {title}
             </h3>
           </div>
