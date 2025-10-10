@@ -44,10 +44,15 @@ export default function Read() {
 
   const seriesId = useMemo(() => {
     if (seriesParam) return seriesParam
-    // try to derive from id if in the form series/xxx
     const raw = String(id || '')
-    const maybe = raw.includes('/') ? raw.split('/')[0] : ''
-    return maybe
+    const cleaned = raw.replace(/^\/+/, '')
+    // Handle MP style: /title/:series/:chapter
+    if (cleaned.startsWith('title/')) {
+      const parts = cleaned.split('/')
+      return parts[1] || ''
+    }
+    // Handle seriesId/chapterId
+    return cleaned.includes('/') ? cleaned.split('/')[0] : ''
   }, [id, seriesParam])
 
   const titleId = useMemo(() => sanitizeTitleId(titleParam || ''), [titleParam])
@@ -65,7 +70,21 @@ export default function Read() {
       try {
         // For MF, the id is the chapter ID directly (e.g., "5284492")
         // For GF, it might be a path that needs processing
-        const chapterId = source === 'mf' ? id : decodeURIComponent(id)
+        let chapterId
+        if (source === 'mf') {
+          chapterId = id
+        } else if (source === 'mp') {
+          const rawId = String(id || '')
+          const cleaned = rawId.replace(/^\/+/, '')
+          if (cleaned.startsWith('title/')) {
+            const parts = cleaned.split('/')
+            chapterId = parts[2] || cleaned
+          } else {
+            chapterId = decodeURIComponent(cleaned.split('/').pop() || cleaned)
+          }
+        } else {
+          chapterId = decodeURIComponent(id)
+        }
         
         const ctx = source === 'mp' ? { seriesId } : undefined
         const res = await api.read(chapterId, source, ctx)
