@@ -16,7 +16,14 @@ export default function NewlyAdded() {
       const res = await fetch(`/api/mp?p=newly-added${p>1?`?page=${p}`:''}`)
       const json = await res.json()
       const list = extractItems(json)
-      setItems(list)
+      // Flatten into comics: each item is an mplist; use its comicNodes
+      const comics = list.flatMap((row) => {
+        const d = row?.data || row
+        const avatar = d?.userNode?.data?.avatarUrl || d?.userNode?.avatarUrl || d?.avatarUrl
+        const nodes = Array.isArray(d?.comicNodes) ? d.comicNodes : []
+        return nodes.map((n) => ({ ...(n?.data || n || {}), _fallbackAvatar: avatar }))
+      })
+      setItems(comics)
       const pages = json?.paging?.pages || 1
       const current = json?.paging?.page || p
       setTotalPages(Math.max(1, Number(pages)))
@@ -81,7 +88,9 @@ export default function NewlyAdded() {
 }
 
 function RecRow({ item, index }) {
-  const cover = getImage(pickImage({ ...item, img: item.urlCover600 || item.urlCoverOri || item.img }))
+  const primary = item.urlCover600 || item.urlCoverOri || item.img || item.cover
+  const fallback = item._fallbackAvatar
+  const cover = getImage(pickImage({ ...item, img: primary || fallback }))
   const title = item.name || item.title || 'Untitled'
   const parsed = parseIdTitle(item.id || item.seriesId || item.slug || item.urlId, title)
   const href = `/info/${encodeURIComponent(parsed.id)}?src=mp`
