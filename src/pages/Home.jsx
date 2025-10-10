@@ -508,7 +508,7 @@ export default function Home() {
         </section>
       )}
       {!!recentReads.length && preferences.historyEnabled && (
-        <section className="mb-10 hidden lg:block">
+        <section className="mb-10">
               <div className="flex items-center justify-between mb-6">
                 <div>
                   <h2 className="text-2xl font-bold text-stone-900 dark:text-white">Reading History</h2>
@@ -517,14 +517,14 @@ export default function Home() {
                 <a href="/history" className="text-sm text-stone-700 dark:text-gray-300 hover:underline">View all</a>
               </div>
               <div className="relative">
-                {/* Navigation arrows - only show when more than 8 cards */}
+                {/* Navigation arrows - only show on desktop when more than 8 cards */}
                 {needsSliding && showLeftArrow && (
                   <button
                     onClick={() => {
                       const el = recentContainerRef.current
                       if (el) el.scrollBy({ left: -el.clientWidth, behavior: 'smooth' })
                     }}
-                    className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 z-10 w-10 h-10 rounded-full bg-white dark:bg-gray-800 shadow-lg border border-stone-200 dark:border-gray-700 flex items-center justify-center text-stone-600 dark:text-gray-300 hover:bg-stone-50 dark:hover:bg-gray-700 transition-all duration-200"
+                    className="hidden lg:flex absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 z-10 w-10 h-10 rounded-full bg-white dark:bg-gray-800 shadow-lg border border-stone-200 dark:border-gray-700 items-center justify-center text-stone-600 dark:text-gray-300 hover:bg-stone-50 dark:hover:bg-gray-700 transition-all duration-200"
                     title="Previous"
                   >
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -539,7 +539,7 @@ export default function Home() {
                       const el = recentContainerRef.current
                       if (el) el.scrollBy({ left: el.clientWidth, behavior: 'smooth' })
                     }}
-                    className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 z-10 w-10 h-10 rounded-full bg-white dark:bg-gray-800 shadow-lg border border-stone-200 dark:border-gray-700 flex items-center justify-center text-stone-600 dark:text-gray-300 hover:bg-stone-50 dark:hover:bg-gray-700 transition-all duration-200"
+                    className="hidden lg:flex absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 z-10 w-10 h-10 rounded-full bg-white dark:bg-gray-800 shadow-lg border border-stone-200 dark:border-gray-700 items-center justify-center text-stone-600 dark:text-gray-300 hover:bg-stone-50 dark:hover:bg-gray-700 transition-all duration-200"
                     title="Next"
                   >
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -548,10 +548,19 @@ export default function Home() {
                   </button>
                 )}
 
-                {/* Scrollable snap container */}
+                {/* Mobile: Grid layout, Desktop: Scrollable layout */}
+                <div className="lg:hidden">
+                  <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
+                    {recentReads.slice(0, 8).map((it, i) => (
+                      <RecentReadCard key={(it.seriesId || i) + 'recent-mobile'} item={it} index={i} onRemove={removeRecentRead} />
+                    ))}
+                  </div>
+                </div>
+                
+                {/* Desktop: Scrollable snap container */}
                 <div 
                   ref={recentContainerRef}
-                  className={`overflow-x-auto no-scrollbar ${needsSliding ? '' : ''}`}
+                  className={`hidden lg:block overflow-x-auto no-scrollbar ${needsSliding ? '' : ''}`}
                   onScroll={() => {
                     const el = recentContainerRef.current
                     if (!el) return
@@ -562,7 +571,7 @@ export default function Home() {
                 >
                   <div className="flex gap-1.5 snap-x snap-mandatory pb-2">
                     {recentReads.map((it, i) => (
-                      <div key={(it.seriesId || i) + 'recent-d'} className="snap-start flex-shrink-0" style={{ width: 'calc(20% - 6px)' }}>
+                      <div key={(it.seriesId || i) + 'recent-d'} className="snap-start flex-shrink-0 w-[200px] min-w-[180px] max-w-[220px]">
                         <RecentReadCard item={it} index={i} onRemove={removeRecentRead} />
                       </div>
                     ))}
