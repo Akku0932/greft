@@ -370,7 +370,7 @@ export default function Home() {
     setLoadingMore(true)
     try {
       const nextPage = latestPage + 1
-      const res = await api.combined.latestUpdates(nextPage)
+      const res = await fetch(`/api/mp?p=latest-releases&page=${nextPage}`).then(r => r.json()).catch(() => ({ items: [] }))
       const nextItems = extractItems(res)
       if (nextItems.length === 0) {
         setHasMore(false)

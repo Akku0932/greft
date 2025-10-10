@@ -17,7 +17,7 @@ export async function saveSeries({ seriesId, source, title, cover, status = 'pla
   const row = { user_id: user.id, series_id: String(seriesId), source: safeSource, title: String(title || ''), cover: String(cover || ''), status: String(status || 'planning'), has_updates: false }
   const { error } = await supabase
     .from('library')
-    .upsert(row, { onConflict: 'user_id,series_id' })
+    .upsert(row, { onConflict: 'user_id,series_id,source' })
   if (error) throw error
 }
 

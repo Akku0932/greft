@@ -45,14 +45,14 @@ export async function fetchRecentReads() {
   }))
 }
 
-export async function deleteRecentRead(seriesId) {
+export async function deleteRecentRead(seriesId, source) {
   const { data: auth } = await supabase.auth.getUser()
   const user = auth?.user
   if (!user) return
   const { error } = await supabase
     .from('recent_reads')
     .delete()
-    .match({ user_id: user.id, series_id: seriesId })
+    .match({ user_id: user.id, series_id: seriesId, source: source || 'mp' })
   if (error) throw error
 }
 
