@@ -13,6 +13,7 @@ export default function Info() {
   const [chapters, setChapters] = useState([])
   const [page, setPage] = useState(0)
   const [showMeta, setShowMeta] = useState(false)
+  const [adultGate, setAdultGate] = useState(false)
 
   // Determine source based on query or ID format (support mp)
   const srcParam = (searchParams.get('src') || '').toLowerCase()
@@ -127,6 +128,7 @@ export default function Info() {
   const bg = cover
   const authors = mappedData.author
   const tags = mappedData.genres
+  const isAdult = Array.isArray(tags) && tags.some(t => /adult|ecchi|mature|nsfw/i.test(String(t)))
   const meta = {
     Type: mappedData.type,
     Status: mappedData.status,
@@ -173,10 +175,39 @@ export default function Info() {
     } catch {}
   }
 
+  // Adult content gate: require confirmation once per series
+  useEffect(() => {
+    try {
+      const key = `adult-ok:${source}:${id}`
+      const ok = localStorage.getItem(key)
+      if (isAdult && !ok) setAdultGate(true)
+    } catch {}
+  }, [id, source, isAdult])
+
+  function acceptAdult() {
+    try { localStorage.setItem(`adult-ok:${source}:${id}`, '1') } catch {}
+    setAdultGate(false)
+  }
+  function declineAdult() {
+    window.location.href = '/home'
+  }
+
   return (
     <div>
+      {adultGate && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70">
+          <div className="w-[92vw] max-w-md rounded-2xl bg-white dark:bg-gray-900 p-5 border border-stone-200 dark:border-gray-700 shadow-xl">
+            <div className="text-xl font-bold text-stone-900 dark:text-white">18+ content ahead</div>
+            <p className="mt-2 text-sm text-stone-700 dark:text-gray-300">This series is tagged as adult/ecchi. You must be 18+ to proceed.</p>
+            <div className="mt-4 flex gap-2 justify-end">
+              <button onClick={declineAdult} className="px-4 py-2 rounded-lg border border-stone-300 dark:border-gray-700 text-stone-700 dark:text-gray-200">Go back</button>
+              <button onClick={acceptAdult} className="px-4 py-2 rounded-lg bg-stone-900 text-white dark:bg-gray-700">I am 18+, continue</button>
+            </div>
+          </div>
+        </div>
+      )}
       <section className="relative">
-        {bg && <img src={bg} alt="bg" className="absolute inset-0 w-full h-[260px] sm:h-[320px] md:h-[480px] object-cover" />}
+        {bg && <img src={bg} alt="bg" className={`absolute inset-0 w-full h-[260px] sm:h-[320px] md:h-[480px] object-cover ${isAdult ? 'blur-sm' : ''}`} />}
         <div className="absolute inset-0 h-[260px] sm:h-[320px] md:h-[480px] backdrop-blur-sm md:backdrop-blur" />
         <div className="absolute inset-0 h-[260px] sm:h-[320px] md:h-[480px] bg-gradient-to-b from-black/20 via-black/60 to-black/95" />
         <div className="absolute inset-0 h-[260px] sm:h-[320px] md:h-[480px] bg-[radial-gradient(ellipse_at_center,rgba(0,0,0,0)_55%,rgba(0,0,0,0.45)_100%)]" />

@@ -346,9 +346,14 @@ export default function PopularSlider({ items }) {
                 <div className="hidden md:block w-[240px] lg:w-[280px] shrink-0 mt-8 md:mt-20">
                    <div className="relative rounded-2xl overflow-hidden shadow-soft dark:shadow-soft-dark ring-1 ring-white/15 dark:ring-gray-600/30 bg-transparent">
                      <div className="absolute -inset-1 rounded-3xl bg-gradient-to-br from-white/10 dark:from-gray-700/20 to-transparent" />
-                     <div className="relative p-2">
+                  <div className="relative p-2">
                     <div className="relative aspect-[3/4] w-full rounded-xl overflow-hidden bg-black/40 flex items-center justify-center">
-                        <img src={getImage(pickImage(activeItem) || pickImage(info))} alt="thumb" className="w-full h-full object-cover" loading="eager" decoding="async" />
+                        {(() => { const tags = (info?.otherInfo?.tags || info?.tags || activeItem?.tags || []).map(String); const isAdult = tags.some(t=>/adult|ecchi|mature|nsfw/i.test(t)); return (
+                          <>
+                            <img src={getImage(pickImage(activeItem) || pickImage(info))} alt="thumb" className={`w-full h-full object-cover ${isAdult ? 'blur-sm' : ''}`} loading="eager" decoding="async" />
+                            {isAdult && <div className="absolute inset-0 flex items-end p-2"><span className="px-2 py-1 rounded bg-black/60 text-white text-[10px]">18+</span></div>}
+                          </>
+                        )})()}
                         <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
                       </div>
                     </div>

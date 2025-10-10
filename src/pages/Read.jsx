@@ -16,6 +16,7 @@ export default function Read() {
   const [error, setError] = useState(null)
   const [chapters, setChapters] = useState([])
   const [seriesInfo, setSeriesInfo] = useState(null)
+  const [adultGate, setAdultGate] = useState(false)
   // Width control (convert zoom to widening the whole container)
   const widthLevels = ['max-w-3xl','max-w-[56rem]','max-w-4xl','max-w-5xl','max-w-6xl','max-w-7xl']
   const [widthLevel, setWidthLevel] = useState(1) // Default to custom medium width (56rem)
@@ -141,6 +142,13 @@ export default function Read() {
       const info = await api.info(seriesId, titleId, source)
       if (mounted) {
         setSeriesInfo(info)
+        try {
+          const tags = (info?.genres || info?.otherInfo?.tags || info?.tags || []).map(String)
+          const isAdult = tags.some(t => /adult|ecchi|mature|nsfw/i.test(t))
+          const key = `adult-ok:${source}:${seriesId}`
+          const ok = localStorage.getItem(key)
+          if (isAdult && !ok) setAdultGate(true)
+        } catch {}
         try { localStorage.setItem(`series-info:${seriesId}:${titleId}`, JSON.stringify(info)) } catch {}
       }
       } catch (_) {}
@@ -377,6 +385,18 @@ export default function Read() {
 
   return (
     <div className="min-h-screen">
+      {adultGate && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70">
+          <div className="w-[92vw] max-w-md rounded-2xl bg-white dark:bg-gray-900 p-5 border border-stone-200 dark:border-gray-700 shadow-xl">
+            <div className="text-xl font-bold text-stone-900 dark:text-white">18+ content ahead</div>
+            <p className="mt-2 text-sm text-stone-700 dark:text-gray-300">This chapter is from a series tagged adult/ecchi. Confirm you are 18+ to continue.</p>
+            <div className="mt-4 flex gap-2 justify-end">
+              <Link to={infoHref} className="px-4 py-2 rounded-lg border border-stone-300 dark:border-gray-700 text-stone-700 dark:text-gray-200">Go back</Link>
+              <button onClick={() => { try { localStorage.setItem(`adult-ok:${source}:${seriesId}`, '1') } catch {}; setAdultGate(false) }} className="px-4 py-2 rounded-lg bg-stone-900 text-white dark:bg-gray-700">I am 18+, continue</button>
+            </div>
+          </div>
+        </div>
+      )}
       <div className={`sticky top-0 z-20 backdrop-blur supports-[backdrop-filter]:bg-white/60 dark:supports-[backdrop-filter]:bg-gray-900/60 bg-white/80 dark:bg-gray-900/80 transition-transform duration-200 ${showBar ? 'translate-y-0' : '-translate-y-full'}`}>
         <div className="max-w-[95vw] mx-auto px-4 sm:px-6 py-3">
           <div className="flex items-center justify-between">

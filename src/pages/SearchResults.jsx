@@ -86,10 +86,17 @@ export default function SearchResults() {
             const href = `/info/${encodeURIComponent(parsed.id)}?src=mp`
             const img = getImage(pickImage(it) || it.img)
             const title = it.title || it.name || 'Untitled'
+            const tags = Array.isArray(it.genres || it.tags || it.otherInfo?.tags) ? (it.genres || it.tags || it.otherInfo?.tags) : []
+            const isAdult = tags.some(t => /adult|ecchi|mature|nsfw/i.test(String(t)))
             return (
               <a key={(it.id||i)+':res'} href={href} className="group block">
                 <div className="relative aspect-[3/4] rounded-lg overflow-hidden bg-stone-200 dark:bg-gray-800">
-                  {img && <img src={img} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />}
+                  {img && <img src={img} alt="" className={`w-full h-full object-cover group-hover:scale-105 transition-transform ${isAdult ? 'blur-sm' : ''}`} />}
+                  {isAdult && (
+                    <div className="absolute inset-0 flex items-end p-2">
+                      <span className="px-2 py-1 rounded bg-black/60 text-white text-[10px]">18+</span>
+                    </div>
+                  )}
                 </div>
                 <div className="mt-2 text-sm font-medium line-clamp-2 text-stone-900 dark:text-white group-hover:text-transparent" style={{ WebkitBackgroundClip: 'text', backgroundImage: 'linear-gradient(90deg,#60a5fa,#a78bfa)' }}>{title}</div>
               </a>
