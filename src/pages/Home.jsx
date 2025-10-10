@@ -817,7 +817,7 @@ function ReadingHistorySlider({ items, onRemove, isDesktop = false }) {
   // Calculate responsive card width based on screen size
   const getCardWidth = () => {
     if (isDesktop) {
-      return 'calc(20% - 6px)' // Desktop: 5 items per row
+      return '180px' // Desktop: fixed width for smaller cards
     }
     // Mobile: responsive card sizes
     if (typeof window !== 'undefined') {
@@ -830,7 +830,7 @@ function ReadingHistorySlider({ items, onRemove, isDesktop = false }) {
     return '160px' // Default fallback
   }
   
-  const needsSliding = items.length > (isDesktop ? 5 : 3)
+  const needsSliding = items.length > (isDesktop ? 4 : 3)
   
   // Update arrow visibility based on scroll position
   useEffect(() => {
@@ -844,7 +844,7 @@ function ReadingHistorySlider({ items, onRemove, isDesktop = false }) {
   const scrollLeft = () => {
     const el = containerRef.current
     if (el) {
-      const cardWidth = isDesktop ? el.clientWidth / 5 : 180 // Approximate card width
+      const cardWidth = isDesktop ? 180 : 180 // Fixed card width
       el.scrollBy({ left: -cardWidth, behavior: 'smooth' })
     }
   }
@@ -852,7 +852,7 @@ function ReadingHistorySlider({ items, onRemove, isDesktop = false }) {
   const scrollRight = () => {
     const el = containerRef.current
     if (el) {
-      const cardWidth = isDesktop ? el.clientWidth / 5 : 180 // Approximate card width
+      const cardWidth = isDesktop ? 180 : 180 // Fixed card width
       el.scrollBy({ left: cardWidth, behavior: 'smooth' })
     }
   }
