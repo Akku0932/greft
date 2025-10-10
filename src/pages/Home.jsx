@@ -64,7 +64,7 @@ export default function Home() {
         // 2) Fetch fresh in background
         const [hot, last, newlyAdded] = await Promise.all([
           mp.popularUpdates().catch(() => ({ items: [] })),
-          fetch('/api/mp?p=latest-releases').then(r=>r.json()).catch(() => ({ items: [] })),
+          api.combined.latestUpdates(1).catch(() => []),
           mp.newlyAdded ? mp.newlyAdded().catch(() => ({ items: [] })) : fetch('/api/mp?p=newly-added').then(r=>r.json()).catch(()=>({ items: [] })),
         ])
         if (!mounted) return
@@ -90,27 +90,8 @@ export default function Home() {
         }))
         setPopular(withInfo)
         writeCache('home-popular', withInfo)
-        // Process MP latest-releases response structure
-        const latestItemsRaw = last?.items || []
-        const latestItems = latestItemsRaw.map((row) => {
-          const d = row?.data || row
-          const id = String(d?.id || row?.id || '')
-          const title = d?.name || row?.name || 'Untitled'
-          const rawImg = d?.urlCover600 || d?.urlCoverOri || ''
-          const img = rawImg ? `/api/mp?p=${encodeURIComponent((rawImg.startsWith('/') ? rawImg.slice(1) : rawImg))}` : ''
-          const lastChapter = Array.isArray(d?.last_chapterNodes) && d.last_chapterNodes.length ? d.last_chapterNodes[0]?.data : null
-          const tag = lastChapter?.dname || ''
-          const updatedAt = lastChapter?.dateCreate || null
-          return { 
-            id, 
-            seriesId: id, 
-            title, 
-            img, 
-            tag,
-            updatedAt,
-            _source: 'mp' 
-          }
-        })
+        // api.combined.latestUpdates returns already processed items
+        const latestItems = Array.isArray(last) ? last : []
         setLatest(latestItems)
         writeCache('home-latest', latestItems)
         setHasMore(latestItems.length > 12)
@@ -383,29 +364,7 @@ export default function Home() {
     setLoadingMore(true)
     try {
       const nextPage = latestPage + 1
-      const res = await fetch(`/api/mp?p=latest-releases&page=${nextPage}`).then(r => r.json()).catch(() => ({ items: [] }))
-      
-      // Process MP latest-releases response structure
-      const nextItemsRaw = res?.items || []
-      const nextItems = nextItemsRaw.map((row) => {
-        const d = row?.data || row
-        const id = String(d?.id || row?.id || '')
-        const title = d?.name || row?.name || 'Untitled'
-        const rawImg = d?.urlCover600 || d?.urlCoverOri || ''
-        const img = rawImg ? `/api/mp?p=${encodeURIComponent((rawImg.startsWith('/') ? rawImg.slice(1) : rawImg))}` : ''
-        const lastChapter = Array.isArray(d?.last_chapterNodes) && d.last_chapterNodes.length ? d.last_chapterNodes[0]?.data : null
-        const tag = lastChapter?.dname || ''
-        const updatedAt = lastChapter?.dateCreate || null
-        return { 
-          id, 
-          seriesId: id, 
-          title, 
-          img, 
-          tag,
-          updatedAt,
-          _source: 'mp' 
-        }
-      })
+      const nextItems = await api.combined.latestUpdates(nextPage).catch(() => [])
       
       if (nextItems.length === 0) {
         setHasMore(false)
