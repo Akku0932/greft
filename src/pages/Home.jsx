@@ -813,6 +813,9 @@ function DesktopReadingHistory({ items, onRemove }) {
   const [currentPage, setCurrentPage] = useState(0)
   const [touchStart, setTouchStart] = useState(null)
   const [touchEnd, setTouchEnd] = useState(null)
+  const [isDragging, setIsDragging] = useState(false)
+  const [dragStart, setDragStart] = useState(null)
+  const [dragCurrent, setDragCurrent] = useState(null)
   const [itemsPerPage, setItemsPerPage] = useState(7)
   
   // Calculate responsive items per page based on screen size
@@ -860,14 +863,20 @@ function DesktopReadingHistory({ items, onRemove }) {
   const handleTouchStart = (e) => {
     setTouchEnd(null)
     setTouchStart(e.targetTouches[0].clientX)
+    setIsDragging(true)
+    setDragStart(e.targetTouches[0].clientX)
   }
   
   const handleTouchMove = (e) => {
     setTouchEnd(e.targetTouches[0].clientX)
+    setDragCurrent(e.targetTouches[0].clientX)
   }
   
   const handleTouchEnd = () => {
-    if (!touchStart || !touchEnd) return
+    if (!touchStart || !touchEnd) {
+      setIsDragging(false)
+      return
+    }
     
     const distance = touchStart - touchEnd
     const isLeftSwipe = distance > 50
@@ -879,25 +888,30 @@ function DesktopReadingHistory({ items, onRemove }) {
     if (isRightSwipe && currentPage > 0) {
       goToPreviousPage()
     }
+    
+    setIsDragging(false)
   }
   
   // Mouse drag handlers
-  const [mouseStart, setMouseStart] = useState(null)
-  const [mouseEnd, setMouseEnd] = useState(null)
-  
   const handleMouseDown = (e) => {
-    setMouseEnd(null)
-    setMouseStart(e.clientX)
+    setIsDragging(true)
+    setDragStart(e.clientX)
+    setDragCurrent(e.clientX)
   }
   
   const handleMouseMove = (e) => {
-    setMouseEnd(e.clientX)
+    if (isDragging) {
+      setDragCurrent(e.clientX)
+    }
   }
   
   const handleMouseUp = () => {
-    if (!mouseStart || !mouseEnd) return
+    if (!isDragging || !dragStart || !dragCurrent) {
+      setIsDragging(false)
+      return
+    }
     
-    const distance = mouseStart - mouseEnd
+    const distance = dragStart - dragCurrent
     const isLeftSwipe = distance > 50
     const isRightSwipe = distance < -50
     
@@ -907,6 +921,8 @@ function DesktopReadingHistory({ items, onRemove }) {
     if (isRightSwipe && currentPage > 0) {
       goToPreviousPage()
     }
+    
+    setIsDragging(false)
   }
   
   // Show arrows only when there are more items than can fit on screen
@@ -941,9 +957,9 @@ function DesktopReadingHistory({ items, onRemove }) {
         </button>
       )}
       
-      {/* Responsive cards with swipe support - contained like Latest Updates */}
+      {/* Responsive cards with drag support - contained like Latest Updates */}
       <div 
-        className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8 gap-3 sm:gap-4 select-none"
+        className={`grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8 gap-3 sm:gap-4 select-none ${isDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
@@ -1005,12 +1021,6 @@ function DesktopHistoryCard({ item, index, onRemove }) {
               <div className="absolute inset-0 bg-gradient-to-br from-stone-200 to-stone-300 dark:from-gray-700 dark:to-gray-800 rounded-lg" />
             )}
             
-            {/* Red numbered badge - exactly like the image */}
-            <div className="absolute top-2 left-2">
-              <span className="w-6 h-6 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center shadow-sm">
-                {index + 1}
-              </span>
-            </div>
             
             {/* Green GF badge - exactly like the image */}
             <div className="absolute top-2 right-2">
