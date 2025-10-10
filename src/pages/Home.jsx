@@ -814,6 +814,9 @@ function DesktopReadingHistory({ items, onRemove }) {
   const [showLeftArrow, setShowLeftArrow] = useState(false)
   const [showRightArrow, setShowRightArrow] = useState(true)
   
+  // Show arrows only when there are more than 6 items
+  const needsArrows = items.length > 6
+  
   // Update arrow visibility based on scroll position
   useEffect(() => {
     const el = containerRef.current
@@ -826,14 +829,14 @@ function DesktopReadingHistory({ items, onRemove }) {
   const scrollLeft = () => {
     const el = containerRef.current
     if (el) {
-      el.scrollBy({ left: -200, behavior: 'smooth' }) // Scroll by 1 card width
+      el.scrollBy({ left: -1080, behavior: 'smooth' }) // Scroll by 6 cards width (6 * 180px)
     }
   }
   
   const scrollRight = () => {
     const el = containerRef.current
     if (el) {
-      el.scrollBy({ left: 200, behavior: 'smooth' }) // Scroll by 1 card width
+      el.scrollBy({ left: 1080, behavior: 'smooth' }) // Scroll by 6 cards width (6 * 180px)
     }
   }
   
@@ -849,8 +852,8 @@ function DesktopReadingHistory({ items, onRemove }) {
   
   return (
     <div className="relative">
-      {/* Navigation arrows */}
-      {showLeftArrow && (
+      {/* Navigation arrows - only show when more than 6 items */}
+      {needsArrows && showLeftArrow && (
         <button
           onClick={scrollLeft}
           className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 z-10 w-10 h-10 rounded-full bg-white dark:bg-gray-800 shadow-lg border border-stone-200 dark:border-gray-700 flex items-center justify-center text-stone-600 dark:text-gray-300 hover:bg-stone-50 dark:hover:bg-gray-700 transition-all duration-200"
@@ -862,7 +865,7 @@ function DesktopReadingHistory({ items, onRemove }) {
         </button>
       )}
       
-      {showRightArrow && (
+      {needsArrows && showRightArrow && (
         <button
           onClick={scrollRight}
           className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 z-10 w-10 h-10 rounded-full bg-white dark:bg-gray-800 shadow-lg border border-stone-200 dark:border-gray-700 flex items-center justify-center text-stone-600 dark:text-gray-300 hover:bg-stone-50 dark:hover:bg-gray-700 transition-all duration-200"
@@ -874,7 +877,7 @@ function DesktopReadingHistory({ items, onRemove }) {
         </button>
       )}
       
-      {/* Horizontal scroll container - exactly like the image */}
+      {/* Horizontal scroll container - show exactly 6 cards */}
       <div 
         ref={containerRef}
         className="overflow-x-auto no-scrollbar"
@@ -885,7 +888,7 @@ function DesktopReadingHistory({ items, onRemove }) {
             <div 
               key={(item.seriesId || index) + 'desktop-history'} 
               className="flex-shrink-0"
-              style={{ width: '180px' }} // Slightly wider to match image
+              style={{ width: '180px' }} // Fixed width for consistent layout
             >
               <DesktopHistoryCard item={item} index={index} onRemove={onRemove} />
             </div>
