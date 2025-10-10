@@ -560,9 +560,9 @@ export default function Home() {
                     setShowRightArrow(el.scrollLeft < max)
                   }}
                 >
-                  <div className="flex gap-1.5 snap-x snap-mandatory pb-2">
+                  <div className="flex gap-4 snap-x snap-mandatory pb-2">
                     {recentReads.map((it, i) => (
-                      <div key={(it.seriesId || i) + 'recent-d'} className="snap-start flex-shrink-0" style={{ width: 'calc(20% - 6px)' }}>
+                      <div key={(it.seriesId || i) + 'recent-d'} className="snap-start flex-shrink-0 w-48">
                         <RecentReadCard item={it} index={i} onRemove={removeRecentRead} />
                       </div>
                     ))}
@@ -906,7 +906,7 @@ function RecentReadCard({ item, index, onRemove }) {
   }
 
   return (
-    <div className="group relative w-40 sm:w-44 lg:w-full flex-shrink-0">
+    <div className="group relative w-full flex-shrink-0">
       <a href={href} className="block">
         <div className="relative">
           {/* Anime-style card with aspect ratio 3:4 */}
