@@ -181,19 +181,25 @@ export default function Info() {
         <div className="absolute inset-0 h-[260px] sm:h-[320px] md:h-[480px] bg-gradient-to-b from-black/20 via-black/60 to-black/95" />
         <div className="absolute inset-0 h-[260px] sm:h-[320px] md:h-[480px] bg-[radial-gradient(ellipse_at_center,rgba(0,0,0,0)_55%,rgba(0,0,0,0.45)_100%)]" />
         <div className="absolute inset-0 h-[260px] sm:h-[320px] md:h-[480px] bg-gradient-to-r from-black/10 via-transparent to-black/10" />
-        <div className="relative max-w-[95vw] mx-auto px-4 sm:px-6 pt-6 md:pt-10 pb-24 md:pb-40">
+        <div className="relative max-w-[95vw] mx-auto px-4 sm:px-6 pt-6 md:pt-10 pb-28 md:pb-40">
           <div className="grid grid-cols-1 md:grid-cols-[200px_1fr] lg:grid-cols-[260px_1fr] gap-4 sm:gap-6 md:gap-10 items-start">
             <div className="relative rounded-xl sm:rounded-2xl overflow-hidden ring-1 ring-white/15 dark:ring-gray-700/40 shadow-soft dark:shadow-soft-dark bg-white/5 dark:bg-gray-800/20">
               {cover && <img src={cover} alt={mappedData.title} className="w-full h-[240px] sm:h-[300px] object-cover md:h-[360px]" />}
+              <div className="absolute top-2 left-2 flex items-center gap-1.5">
+                <span className="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-white/20 backdrop-blur ring-1 ring-white/30 text-white">{source.toUpperCase()}</span>
+                {mappedData.status && (
+                  <span className="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-emerald-500/90 text-white ring-1 ring-emerald-400/70">{String(mappedData.status).slice(0,20)}</span>
+                )}
+              </div>
             </div>
             <div className="text-white">
-              <h1 className="text-xl sm:text-3xl md:text-5xl font-extrabold leading-tight">{mappedData.title}</h1>
+              <h1 className="text-[20px] sm:text-3xl md:text-5xl font-extrabold leading-tight tracking-tight">{mappedData.title}</h1>
               {source === 'mf' && mappedData.otherName && (
                 <p className="mt-2 text-white/80 text-sm md:text-base italic">{mappedData.otherName}</p>
               )}
               {!!authors.length && (
                 <div className="mt-2 flex flex-wrap gap-2">
-                  {authors.slice(0, 12).map(a => (
+                  {authors.slice(0, 10).map(a => (
                     <span key={a} className="px-2 py-0.5 rounded-full text-[10px] sm:text-xs bg-white/15 ring-1 ring-white/20">{a}</span>
                   ))}
                 </div>
@@ -203,9 +209,12 @@ export default function Info() {
                   <span key={t} className="px-2 py-0.5 rounded-full text-[10px] sm:text-xs bg-white/15">{t}</span>
                 ))}
               </div>
-              <p className="mt-2 md:mt-4 max-w-2xl md:max-w-3xl text-white/90 text-sm md:text-base leading-relaxed line-clamp-none">{mappedData.description || data.summary}</p>
+              <p className="mt-2 md:mt-4 max-w-2xl md:max-w-3xl text-white/90 text-[13px] sm:text-sm md:text-base leading-relaxed line-clamp-none">{mappedData.description || data.summary}</p>
               <div className="mt-4 md:mt-6 flex flex-wrap gap-2 md:gap-3 items-center">
-                <button onClick={onReadFirst} className="px-3 md:px-5 py-2.5 md:py-3 rounded-lg bg-white/15 hover:bg-white/25 text-white border border-white/20 transition-colors">Read First</button>
+                <button onClick={onReadFirst} className="px-3 md:px-5 py-2.5 md:py-3 rounded-lg bg-white/15 hover:bg-white/25 text-white border border-white/20 transition-colors inline-flex items-center gap-2">
+                  <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="M12 5l7 7-7 7"/></svg>
+                  <span>Read First</span>
+                </button>
                 {/* Save button - only enabled when logged in */}
                 <button
                   onClick={async () => {
@@ -217,9 +226,10 @@ export default function Info() {
                       await add(payload)
                     } catch {}
                   }}
-                  className="px-3 md:px-5 py-2.5 md:py-3 rounded-lg border border-white/20 text-white hover:bg-white/20 transition-colors"
+                  className="px-3 md:px-5 py-2.5 md:py-3 rounded-lg border border-white/20 text-white hover:bg-white/20 transition-colors inline-flex items-center gap-2"
                 >
-                  {isSaved(parseIdTitle(id, titleId).id, source) ? 'In My List' : 'Add to List'}
+                  <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z"/></svg>
+                  <span>{isSaved(parseIdTitle(id, titleId).id, source) ? 'In My List' : 'Add to List'}</span>
                 </button>
                 {user && isSaved(parseIdTitle(id, titleId).id, source) && (
                   <div className="flex items-center gap-2">
@@ -249,12 +259,12 @@ export default function Info() {
       </section>
 
       <section className="max-w-[95vw] mx-auto px-4 sm:px-6 -mt-10 md:-mt-20 lg:-mt-24 relative">
-        <div className="grid grid-cols-1 lg:grid-cols-[minmax(360px,520px)_1fr] gap-6 lg:gap-8 items-start">
-          <div className="rounded-2xl border border-stone-200 dark:border-gray-700/60 bg-white/60 dark:bg-gray-900/60 shadow-soft dark:shadow-soft-dark p-6 md:p-8">
+        <div className="grid grid-cols-1 lg:grid-cols-[minmax(360px,520px)_1fr] gap-4 sm:gap-6 lg:gap-8 items-start">
+          <div className="rounded-2xl border border-stone-200 dark:border-gray-700/60 bg-white/70 dark:bg-gray-900/60 shadow-soft dark:shadow-soft-dark p-4 sm:p-6 md:p-8">
             <button
               onClick={()=>setShowMeta(v=>!v)}
               aria-expanded={showMeta}
-              className="w-full flex items-center justify-between gap-3 rounded-xl border border-stone-200 dark:border-gray-700 bg-white/70 dark:bg-gray-800/60 px-4 py-3 text-left"
+              className="w-full flex items-center justify-between gap-3 rounded-xl border border-stone-200 dark:border-gray-700 bg-white/80 dark:bg-gray-800/60 px-4 py-3 text-left"
             >
               <span className="text-base font-semibold text-stone-900 dark:text-white">Metadata</span>
               <svg className={`h-5 w-5 text-stone-500 dark:text-gray-400 transition-transform ${showMeta ? 'rotate-180' : ''}`} viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fillRule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.24a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z" clipRule="evenodd"/></svg>
@@ -304,7 +314,7 @@ export default function Info() {
                       <div className="text-lg font-bold text-stone-900 dark:text-white">Series Details</div>
                     </div>
                   </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4 md:gap-6">
                     {entries.map((item) => (
                       <div key={item.label} className="rounded-xl backdrop-blur-sm bg-white/70 dark:bg-gray-800/50 ring-1 ring-stone-200 dark:ring-gray-700 p-4 shadow-sm hover:shadow-md transition-shadow">
                         <div className="text-xs uppercase tracking-wide text-stone-500 dark:text-gray-400">{item.label}</div>
@@ -327,7 +337,7 @@ export default function Info() {
                               ))}
                           </div>
                         ) : (
-                          <div className="text-sm font-semibold text-stone-900 dark:text-gray-100 break-words">{String(item.value ?? '—')}</div>
+                          <div className="text-[13px] sm:text-sm font-semibold text-stone-900 dark:text-gray-100 break-words">{String(item.value ?? '—')}</div>
                         )}
                       </div>
                     </div>
@@ -336,7 +346,7 @@ export default function Info() {
               </>
              )})()}
           </div>
-          <div className="rounded-2xl border border-stone-200 dark:border-gray-700 bg-white/60 dark:bg-gray-900/60 p-3 md:p-4">
+          <div className="rounded-2xl border border-stone-200 dark:border-gray-700 bg-white/70 dark:bg-gray-900/60 p-2.5 sm:p-3 md:p-4">
             <ChaptersInline seriesId={parseIdTitle(id, '').id} titleId={parseIdTitle(id, '').titleId} source={source} />
           </div>
         </div>
