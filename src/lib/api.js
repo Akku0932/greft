@@ -559,7 +559,7 @@ export const api = {
 // Dedicated MP endpoints, mirroring server routes
 export const mp = {
   base: (path) => requestMapped(path, {}, 'mp'),
-  popularUpdates: () => requestMapped('/popular-updates', {}, 'mp'),
+  popularUpdates: (page) => requestMapped(page ? `/popular-updates?page=${encodeURIComponent(page)}` : '/popular-updates', {}, 'mp'),
   memberUploads: () => requestMapped('/member-uploads', {}, 'mp'),
   latestReleases: () => requestMapped('/latest-releases', {}, 'mp'),
   randomMangas: () => requestMapped('/random', {}, 'mp'),

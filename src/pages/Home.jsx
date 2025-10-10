@@ -63,8 +63,11 @@ export default function Home() {
         if (cachedRec) setRec(cachedRec)
 
         // 2) Fetch fresh in background
+        // Randomize MP popular page for variety, based on current minute to avoid too frequent calls
+        const totalPages = 31
+        const randomPage = 1 + (Math.floor(Date.now() / 60000) % totalPages)
         const [hot, last, recommended] = await Promise.all([
-          mp.popularUpdates().catch(() => ({ items: [] })),
+          mp.popularUpdates(randomPage).catch(() => ({ items: [] })),
           api.combined.latestUpdates(1).catch(() => ({ items: [] })),
           api.recommendations(undefined, 'gf').catch(() => ({ items: [] })),
         ])

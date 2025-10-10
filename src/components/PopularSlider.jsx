@@ -25,6 +25,24 @@ export default function PopularSlider({ items }) {
   ]
   const navigate = useNavigate()
   const shownIdsRef = useRef(new Set())
+  const infoInflightRef = useRef({})
+  const chaptersInflightRef = useRef({})
+
+  // Lightweight TTL cache helpers (localStorage)
+  function readTTL(key, ttlMs) {
+    try {
+      const raw = localStorage.getItem(key)
+      if (!raw) return null
+      const { t, v } = JSON.parse(raw)
+      if (!t || (Date.now() - t) > ttlMs) { localStorage.removeItem(key); return null }
+      return v
+    } catch { return null }
+  }
+  function writeTTL(key, value) {
+    try { localStorage.setItem(key, JSON.stringify({ t: Date.now(), v: value })) } catch {}
+  }
+  const TTL_INFO = 20 * 60 * 1000
+  const TTL_CH = 20 * 60 * 1000
 
   function getItemId(it) {
     return String(it?.seriesId || it?.id || it?.slug || it?.urlId || '')
@@ -79,25 +97,30 @@ export default function PopularSlider({ items }) {
       setList(sample)
       setActive(0)
       
-      // Preload chapters for first 3 items in background
-      setTimeout(() => {
-        sample.slice(0, 3).forEach(async (item) => {
-          const combined = item.seriesId || item.id || item.slug || item.urlId
-          const { id } = parseIdTitle(combined, item.titleId || item.slug)
-          if (!id || chaptersCache[id]) return
-          
-          try {
+      // Preload chapters for first item only (reduce network burst)
+      setTimeout(async () => {
+        const first = sample[0]
+        if (!first) return
+        const combined = first.seriesId || first.id || first.slug || first.urlId
+        const { id } = parseIdTitle(combined, first.titleId || first.slug)
+        if (!id || chaptersCache[id]) return
+        const cacheKey = `mp:chapters:${id}`
+        const cached = readTTL(cacheKey, TTL_CH)
+        if (cached) { setChaptersCache(prev => ({ ...prev, [id]: cached })); return }
+        if (chaptersInflightRef.current[id]) return
+        chaptersInflightRef.current[id] = true
+        try {
           const { api } = await import('../lib/api.js')
           const res = await api.chapters(id, 'mp')
-            const list = Array.isArray(res) ? res : (res.items || [])
-            setChaptersCache(prev => ({ ...prev, [id]: list }))
-          } catch {}
-        })
+          const list = Array.isArray(res) ? res : (res.items || [])
+          writeTTL(cacheKey, list)
+          setChaptersCache(prev => ({ ...prev, [id]: list }))
+        } catch {} finally { delete chaptersInflightRef.current[id] }
       }, 100)
     }
   }, [items])
 
-  // Fetch missing info for visible list to ensure genres/description are available
+  // Fetch missing info for visible list to ensure genres/description are available (with TTL + dedupe)
   useEffect(() => {
     if (!list || list.length === 0) return
     let cancelled = false
@@ -111,13 +134,19 @@ export default function PopularSlider({ items }) {
         const { id, titleId } = parseIdTitle(combined, it.titleId || it.slug)
         if (!id) return
         if (it.info || extra[id]) return
+        const cacheKey = `mp:info:${id}`
+        const cached = readTTL(cacheKey, TTL_INFO)
+        if (cached && !cancelled) { setExtra((m) => ({ ...m, [id]: cached })); return }
+        if (infoInflightRef.current[id]) return
+        infoInflightRef.current[id] = true
         try {
           const { api } = await import('../lib/api.js')
           const info = await api.info(id, titleId, 'mp')
           if (!cancelled && info) {
+            writeTTL(cacheKey, info)
             setExtra((m) => ({ ...m, [id]: info }))
           }
-        } catch (_) {}
+        } catch (_) {} finally { delete infoInflightRef.current[id] }
       })
       await Promise.allSettled(tasks)
     })()
@@ -177,14 +206,29 @@ export default function PopularSlider({ items }) {
     setActive((a) => Math.max(0, a - 1))
   }
 
-  // auto-advance to the right
+  // auto-advance to the right (pause when tab hidden or hover or reduced-motion)
   useEffect(() => {
     if (!list || list.length <= 1) return
     if (isHover) return
+    if (typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
     timerRef.current && clearInterval(timerRef.current)
     timerRef.current = setInterval(() => { nextSlide() }, 5000)
     return () => timerRef.current && clearInterval(timerRef.current)
   }, [list, isHover, active])
+
+  // Pause autoplay when tab is hidden
+  useEffect(() => {
+    function onVisibility() {
+      if (document.hidden && timerRef.current) {
+        clearInterval(timerRef.current)
+        timerRef.current = null
+      } else if (!document.hidden && !timerRef.current && list && list.length > 1 && !isHover) {
+        timerRef.current = setInterval(() => { nextSlide() }, 5000)
+      }
+    }
+    document.addEventListener('visibilitychange', onVisibility)
+    return () => document.removeEventListener('visibilitychange', onVisibility)
+  }, [list, isHover])
 
   // keyboard navigation
   useEffect(() => {
@@ -246,7 +290,7 @@ export default function PopularSlider({ items }) {
              onMouseEnter={() => setIsHover(true)} onMouseLeave={() => setIsHover(false)}>
           {bg && (
           <>
-              <img src={bg} alt="bg" className="absolute inset-0 w-full h-full object-cover md:scale-105" loading="eager" decoding="async" />
+              <img src={bg} alt="bg" className="absolute inset-0 w-full h-full object-cover md:scale-105" loading={active===0?"eager":"lazy"} decoding="async" />
               <div className="absolute inset-0 backdrop-blur-none md:backdrop-blur-md" />
               {/* Mobile lighter, desktop stronger gradients */}
               <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-black/40 to-black/80 md:from-black/30 md:via-black/60 md:to-black/95" />
