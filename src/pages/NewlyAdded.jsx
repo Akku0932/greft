@@ -7,13 +7,38 @@ export default function NewlyAdded() {
   const [totalPages, setTotalPages] = useState(1)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const TTL = 15 * 60 * 1000
+
+  function readTTL(key, ttlMs) {
+    try {
+      const raw = localStorage.getItem(key)
+      if (!raw) return null
+      const { t, v } = JSON.parse(raw)
+      if (!t || (Date.now() - t) > ttlMs) { localStorage.removeItem(key); return null }
+      return v
+    } catch { return null }
+  }
+  function writeTTL(key, value) {
+    try { localStorage.setItem(key, JSON.stringify({ t: Date.now(), v: value })) } catch {}
+  }
 
   const load = useCallback(async (p = 1) => {
     setLoading(true)
     setError(null)
     try {
+      const cacheKey = `na:page:${p}`
+      const cached = readTTL(cacheKey, TTL)
+      if (cached) {
+        setItems(cached.items || [])
+        setTotalPages(cached.totalPages || 1)
+        setPage(cached.page || p)
+        setLoading(false)
+        // still refresh in background
+      }
       // Prefer mp.newlyAdded if exposed; fallback to proxy path
-      const res = await fetch(`/api/mp?p=newly-added${p>1?`?page=${p}`:''}`)
+      const controller = new AbortController()
+      const t = setTimeout(() => controller.abort(), 5000)
+      const res = await fetch(`/api/mp?p=newly-added${p>1?`?page=${p}`:''}`, { signal: controller.signal })
       const json = await res.json()
       const list = extractItems(json)
       // Flatten into comics: each item is an mplist; use its comicNodes
@@ -28,6 +53,8 @@ export default function NewlyAdded() {
       const current = json?.paging?.page || p
       setTotalPages(Math.max(1, Number(pages)))
       setPage(Math.max(1, Number(current)))
+      writeTTL(cacheKey, { items: comics, totalPages: Math.max(1, Number(pages)), page: Math.max(1, Number(current)) })
+      clearTimeout(t)
     } catch (e) {
       setError(e)
       setItems([])
@@ -42,8 +69,8 @@ export default function NewlyAdded() {
     <div className="max-w-none w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-stone-900 dark:text-white">Newly Added</h1>
-          <p className="text-sm text-stone-600 dark:text-gray-400 mt-1">Freshly added series from MangaPark</p>
+          <h1 className="text-2xl font-bold text-stone-900 dark:text-white">Newly Added Greft</h1>
+          <p className="text-sm text-stone-600 dark:text-gray-400 mt-1">Freshly added series</p>
         </div>
         <div className="text-sm text-stone-600 dark:text-gray-400">Page {page} of {totalPages}</div>
       </div>
@@ -115,7 +142,7 @@ function RecRow({ item, index }) {
         )}
         <div className="min-w-0 flex-1">
           <div className="font-semibold text-stone-900 dark:text-white truncate transition-colors duration-200 group-hover:text-transparent" style={{ WebkitBackgroundClip: 'text', backgroundImage: grad }}>{title}</div>
-          <div className="text-xs text-stone-500 dark:text-gray-400 mt-1">Newly added • MP</div>
+          <div className="text-xs text-stone-500 dark:text-gray-400 mt-1">Newly added • Greft</div>
         </div>
         <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200">
           <svg className="w-4 h-4 text-stone-400 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">

@@ -107,6 +107,11 @@ export default function Home() {
         })
         setNewly(flattenedNewly)
         writeCache('home-newly', flattenedNewly)
+        // Prewarm NewlyAdded TTL cache (used by /newly-added page) for instant load on localhost
+        try {
+          const ttlPayload = { t: Date.now(), v: { items: flattenedNewly, totalPages: Number(newlyAdded?.paging?.pages || 1), page: Number(newlyAdded?.paging?.page || 1) } }
+          localStorage.setItem('na:page:1', JSON.stringify(ttlPayload))
+        } catch {}
       } catch (e) {
         if (mounted) setError(e)
       } finally {
