@@ -489,16 +489,16 @@ export default function Home() {
       )}
       {!!recentReads.length && preferences.historyEnabled && (
         <section className="mb-10 hidden lg:block">
-              <div className="flex items-center justify-between mb-6">
-                <div>
-                  <h2 className="text-2xl font-bold text-stone-900 dark:text-white">Reading History</h2>
-                  <p className="text-sm text-stone-600 dark:text-gray-400 mt-1">Jump back into what you were reading</p>
-                </div>
-                <a href="/history" className="text-sm text-stone-700 dark:text-gray-300 hover:underline">View all</a>
-              </div>
-              <ReadingHistorySlider items={recentReads} onRemove={removeRecentRead} isDesktop={true} />
-            </section>
-          )}
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h2 className="text-2xl font-bold text-stone-900 dark:text-white">Reading History</h2>
+              <p className="text-sm text-stone-600 dark:text-gray-400 mt-1">Jump back into what you were reading</p>
+            </div>
+            <a href="/history" className="text-sm text-stone-700 dark:text-gray-300 hover:underline">View all</a>
+          </div>
+          <DesktopReadingHistory items={recentReads} onRemove={removeRecentRead} />
+        </section>
+      )}
           <LatestUpdates 
             items={latest} 
             loading={loading} 
@@ -806,6 +806,173 @@ function LatestCard({ item, index }) {
         </div>
       </div>
     </a>
+  )
+}
+
+function DesktopReadingHistory({ items, onRemove }) {
+  const containerRef = useRef(null)
+  const [showLeftArrow, setShowLeftArrow] = useState(false)
+  const [showRightArrow, setShowRightArrow] = useState(true)
+  
+  // Update arrow visibility based on scroll position
+  useEffect(() => {
+    const el = containerRef.current
+    if (!el) return
+    const max = el.scrollWidth - el.clientWidth - 4
+    setShowLeftArrow(el.scrollLeft > 4)
+    setShowRightArrow(el.scrollLeft < max)
+  }, [items])
+  
+  const scrollLeft = () => {
+    const el = containerRef.current
+    if (el) {
+      el.scrollBy({ left: -320, behavior: 'smooth' }) // Scroll by 2 cards width
+    }
+  }
+  
+  const scrollRight = () => {
+    const el = containerRef.current
+    if (el) {
+      el.scrollBy({ left: 320, behavior: 'smooth' }) // Scroll by 2 cards width
+    }
+  }
+  
+  const handleScroll = () => {
+    const el = containerRef.current
+    if (!el) return
+    const max = el.scrollWidth - el.clientWidth - 4
+    setShowLeftArrow(el.scrollLeft > 4)
+    setShowRightArrow(el.scrollLeft < max)
+  }
+  
+  if (!items.length) return null
+  
+  return (
+    <div className="relative">
+      {/* Navigation arrows */}
+      {showLeftArrow && (
+        <button
+          onClick={scrollLeft}
+          className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 z-10 w-10 h-10 rounded-full bg-white dark:bg-gray-800 shadow-lg border border-stone-200 dark:border-gray-700 flex items-center justify-center text-stone-600 dark:text-gray-300 hover:bg-stone-50 dark:hover:bg-gray-700 transition-all duration-200"
+          title="Previous"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          </svg>
+        </button>
+      )}
+      
+      {showRightArrow && (
+        <button
+          onClick={scrollRight}
+          className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 z-10 w-10 h-10 rounded-full bg-white dark:bg-gray-800 shadow-lg border border-stone-200 dark:border-gray-700 flex items-center justify-center text-stone-600 dark:text-gray-300 hover:bg-stone-50 dark:hover:bg-gray-700 transition-all duration-200"
+          title="Next"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          </svg>
+        </button>
+      )}
+      
+      {/* Horizontal scroll container */}
+      <div 
+        ref={containerRef}
+        className="overflow-x-auto no-scrollbar"
+        onScroll={handleScroll}
+      >
+        <div className="flex gap-4 snap-x snap-mandatory pb-2">
+          {items.map((item, index) => (
+            <div 
+              key={(item.seriesId || index) + 'desktop-history'} 
+              className="snap-start flex-shrink-0"
+              style={{ width: '160px' }} // Fixed width like in the image
+            >
+              <DesktopHistoryCard item={item} index={index} onRemove={onRemove} />
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function DesktopHistoryCard({ item, index, onRemove }) {
+  const cover = item.cover || ''
+  const title = item.title || 'Untitled'
+  // Determine source based on series ID format
+  const isMF = item.seriesId && item.seriesId.includes('.') && !item.seriesId.includes('/')
+  const isMP = String(item.source || '').toLowerCase() === 'mp'
+  const src = isMP ? (isMF ? '&src=mp' : '&src=mp') : ''
+  const infoSrc = isMP ? '?src=mp' : ''
+  const href = item.lastChapterId
+    ? (isMF 
+        ? `/read/chapter/${item.lastChapterId}?series=${encodeURIComponent(item.seriesId)}&title=${encodeURIComponent(sanitizeTitleId(item.titleId || 'title'))}${src}`
+        : `/read/${encodeURIComponent(item.lastChapterId)}?series=${encodeURIComponent(item.seriesId)}&title=${encodeURIComponent(sanitizeTitleId(item.titleId || 'title'))}${src}`)
+    : (isMF 
+        ? `/info/${encodeURIComponent(item.seriesId)}${infoSrc}`
+        : `/info/${encodeURIComponent(item.seriesId)}/${encodeURIComponent(sanitizeTitleId(item.titleId || 'title'))}${infoSrc}`)
+  
+  const handleRemove = (e) => {
+    e.preventDefault()
+    e.stopPropagation()
+    if (onRemove && item.seriesId) {
+      onRemove(item.seriesId, title)
+    }
+  }
+
+  return (
+    <div className="group relative flex-shrink-0">
+      <a href={href} className="block">
+        <div className="relative">
+          {/* Compact card matching the image style */}
+          <div className="relative aspect-[3/4] overflow-hidden rounded-lg shadow-md hover:shadow-lg transition-all duration-300 group-hover:scale-[1.02]">
+            {cover ? (
+              <img 
+                src={cover} 
+                alt={title} 
+                className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" 
+              />
+            ) : (
+              <div className="absolute inset-0 bg-gradient-to-br from-stone-200 to-stone-300 dark:from-gray-700 dark:to-gray-800 rounded-lg" />
+            )}
+            
+            {/* Chapter badge - positioned like in the image */}
+            <div className="absolute top-2 left-2">
+              <span className="px-2 py-1 bg-red-500 text-white text-xs font-bold rounded-full shadow-sm">
+                {index + 1}
+              </span>
+            </div>
+            
+            {/* Source badge */}
+            <div className="absolute top-2 right-2">
+              <span className={`px-2 py-1 text-xs font-bold rounded-full shadow-sm ${
+                isMF 
+                  ? 'bg-blue-500 text-white' 
+                  : 'bg-green-500 text-white'
+              }`}>
+                {isMF ? 'MF' : 'GF'}
+              </span>
+            </div>
+            
+            {/* Remove button */}
+            <button
+              onClick={handleRemove}
+              className="absolute top-2 right-2 w-5 h-5 rounded-full bg-red-500/90 hover:bg-red-600 text-white flex items-center justify-center text-[10px] font-bold opacity-0 group-hover:opacity-100 transition-all duration-200 z-10 shadow-sm"
+              title="Remove from recent reads"
+            >
+              ×
+            </button>
+          </div>
+          
+          {/* Title matching the image style */}
+          <div className="mt-2 px-0">
+            <h3 className="text-sm font-semibold text-stone-900 dark:text-white line-clamp-2 leading-tight group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-blue-500 group-hover:to-purple-600 transition-all duration-300">
+              {title}
+            </h3>
+          </div>
+        </div>
+      </a>
+    </div>
   )
 }
 
