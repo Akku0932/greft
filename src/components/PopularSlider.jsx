@@ -191,7 +191,7 @@ export default function PopularSlider({ items }) {
           setTimeout(async () => {
             try {
               const { api } = await import('../lib/api.js')
-              const res = await api.chapters(id)
+              const res = await api.chapters(id, 'mp')
               const list = Array.isArray(res) ? res : (res.items || [])
               setChaptersCache(prev => ({ ...prev, [id]: list }))
             } catch {}
@@ -281,7 +281,7 @@ export default function PopularSlider({ items }) {
       // Check cache first
       let list = chaptersCache[id]
       if (!list) {
-        const res = await (await import('../lib/api.js')).api.chapters(id)
+        const res = await (await import('../lib/api.js')).api.chapters(id, 'mp')
         list = Array.isArray(res) ? res : (res.items || [])
         // Cache the chapters
         setChaptersCache(prev => ({ ...prev, [id]: list }))

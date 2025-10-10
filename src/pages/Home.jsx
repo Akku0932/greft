@@ -344,7 +344,7 @@ export default function Home() {
         const enriched = await Promise.all(shuffledOnce.slice(0, 20).map(async (it) => {
           try {
             const parsed = parseIdTitle(it.seriesId || it.id || it.slug || it.urlId || it, it.title)
-            const info = await api.info(parsed.id, parsed.titleId)
+            const info = await api.info(parsed.id, parsed.titleId, 'mp')
             return { ...it, info }
           } catch {
             return it

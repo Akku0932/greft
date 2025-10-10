@@ -274,7 +274,10 @@ export const api = {
   },
   info: async (id, titleId, source) => {
     const { id: baseId, titleId: safeTitle } = parseIdTitle(id, titleId)
-    if (source === 'mp') {
+    // Default to MP if no source specified or unknown source
+    const safeSource = source || 'mp'
+    
+    if (safeSource === 'mp') {
       const cacheKey = `mp-info-${baseId}`
       const cached = getCached(cacheKey)
       if (cached) return cached
@@ -285,7 +288,7 @@ export const api = {
       return result
     }
     // For GF: support both /info/:id and /info/:id/:title with caching
-    if (source === 'gf') {
+    if (safeSource === 'gf') {
       const cacheKey = `gf-info-${baseId}${safeTitle ? `-${safeTitle}` : ''}`
       const cached = getCached(cacheKey, 'gf')
       if (cached) return cached
@@ -298,14 +301,20 @@ export const api = {
       return result
     }
     
-    // For other sources
-    if (safeTitle) {
-      return requestMapped(`/info/${encodeURIComponent(baseId)}/${encodeURIComponent(safeTitle)}`, {}, source)
-    }
-    return requestMapped(`/info/${encodeURIComponent(baseId)}`, {}, source)
+    // For any other source, default to MP
+    const cacheKey = `mp-info-${baseId}`
+    const cached = getCached(cacheKey)
+    if (cached) return cached
+    
+    const result = await requestMapped(`/info/${encodeURIComponent(baseId)}`, { timeoutMs: 1000 }, 'mp')
+    setCached(cacheKey, result)
+    return result
   },
   chapters: async (id, source) => {
-    if (source === 'mp') {
+    // Default to MP if no source specified or unknown source
+    const safeSource = source || 'mp'
+    
+    if (safeSource === 'mp') {
       const cacheKey = `mp-chapters-${id}`
       const cached = getCached(cacheKey)
       if (cached) return cached
@@ -316,7 +325,7 @@ export const api = {
       return result
     }
     
-    if (source === 'gf') {
+    if (safeSource === 'gf') {
       const cacheKey = `gf-chapters-${id}`
       const cached = getCached(cacheKey, 'gf')
       if (cached) return cached
@@ -327,7 +336,14 @@ export const api = {
       return result
     }
     
-    return requestMapped(`/chapters/${id}`, {}, source)
+    // For any other source, default to MP
+    const cacheKey = `mp-chapters-${id}`
+    const cached = getCached(cacheKey)
+    if (cached) return cached
+    
+    const result = await requestMapped(`/chapters/${id}`, { timeoutMs: 1000 }, 'mp')
+    setCached(cacheKey, result)
+    return result
   },
   // For MP, ctx should include { seriesId }
   read: (id, source, ctx = {}) => {
