@@ -1,15 +1,14 @@
 // Use Vercel edge function proxy in production to avoid mixed content
-const EDGE_BASE = '/api/gf'
-const PLAIN_BASE = '/api/gf'
+const EDGE_BASE = '/api/mp'
+const PLAIN_BASE = '/api/mp'
 const IS_BROWSER = typeof window !== 'undefined'
 const IS_HTTPS = IS_BROWSER && window.location?.protocol === 'https:'
 const HOST = IS_BROWSER ? (window.location?.host || '') : ''
 const IS_LOCAL = /localhost|127\.0\.0\.1/i.test(HOST)
 const BASE_URL = IS_HTTPS ? EDGE_BASE : PLAIN_BASE
 
-// Lightning-fast in-memory cache for MP and GF data
+// Lightning-fast in-memory cache for MP data
 const mpCache = new Map()
-const gfCache = new Map()
 const searchCache = new Map()
 const CACHE_TTL = 20 * 60 * 1000 // 20 minutes (maximum cache for instant performance)
 const SEARCH_CACHE_TTL = 5 * 60 * 1000 // 5 minutes for search results
@@ -28,25 +27,17 @@ const warmCache = async (id) => {
   preloadQueue.delete(id)
 }
 
-// Cache warming for popular GF content
-const warmGfCache = async (id) => {
-  // GF API disabled - no longer preloading GF content
-  return Promise.resolve()
-}
-
 function getCached(key, source = 'mp') {
-  const cache = source === 'gf' ? gfCache : mpCache
-  const cached = cache.get(key)
+  const cached = mpCache.get(key)
   if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
     return cached.data
   }
-  cache.delete(key)
+  mpCache.delete(key)
   return null
 }
 
 function setCached(key, data, source = 'mp') {
-  const cache = source === 'gf' ? gfCache : mpCache
-  cache.set(key, { data, timestamp: Date.now() })
+  mpCache.set(key, { data, timestamp: Date.now() })
 }
 
 function getSearchCached(query) {
@@ -133,13 +124,12 @@ async function fastGfFetch(url, options = {}, maxRetries = 1) {
 }
 
 function getBaseFor(source) {
-  if (source === 'mp') return '/api/mp'
-  return BASE_URL
+  // Always use MP API
+  return '/api/mp'
 }
 
 function withSource(path, source) {
-  // Always use query form for both MF and GF so our edge functions receive ?p=...
-  const isMF = source === 'mf'
+  // Always use query form for MP API
   return `?p=${encodeURIComponent(path)}`
 }
 
@@ -148,9 +138,9 @@ async function request(path, options = {}, source) {
   const suffix = withSource(path, source)
   const url = suffix.startsWith('?') ? `${base}${suffix}` : `${base}${suffix}`;
   
-  // Use lightning-fast fetch for MP requests, fast fetch for GF
-  const fetchFn = source === 'mp' ? fastFetch : (source === 'gf' ? fastGfFetch : fetchWithTimeout)
-  const defaultTimeout = source === 'mp' ? 1000 : (source === 'gf' ? 2000 : 12000)
+  // Always use fast MP fetch
+  const fetchFn = fastFetch
+  const defaultTimeout = 1000
   
   let response
   try {
@@ -187,15 +177,15 @@ async function requestMapped(path, options = {}, source) {
 }
 
 export const api = {
-  hotUpdates: (source) => requestMapped('/hot-updates', {}, 'gf'),
-  latestUpdates: (page, source) => page ? requestMapped(`/latest-updates?page=${encodeURIComponent(page)}`, {}, 'gf') : requestMapped('/latest-updates', {}, 'gf'),
+  hotUpdates: (source) => requestMapped('/popular-updates', {}, 'mp'),
+  latestUpdates: (page, source) => page ? requestMapped(`/latest-releases?page=${encodeURIComponent(page)}`, {}, 'mp') : requestMapped('/latest-releases', {}, 'mp'),
   recommendations: (id, source) => {
-    // Disabled GF recommendations - return empty result
+    // Disabled recommendations - return empty result
     return Promise.resolve({ items: [] })
   },
-  hotSeries: (range = 'weekly_views', source) => request(`/hot-series/${range}`, {}, 'gf'),
-  recentlyAdded: (source) => request('/recently-added', {}, source),
-  random: (source) => request('/random', {}, source),
+  hotSeries: (range = 'weekly_views', source) => requestMapped('/popular-updates', {}, 'mp'),
+  recentlyAdded: (source) => requestMapped('/newly-added', {}, 'mp'),
+  random: (source) => requestMapped('/random', {}, 'mp'),
   // Removed MF-only endpoints: mostViewed and newRelease
   search: async (q, source) => {
     if (!q || q.trim().length < 2) return { items: [] }
@@ -274,84 +264,30 @@ export const api = {
   },
   info: async (id, titleId, source) => {
     const { id: baseId, titleId: safeTitle } = parseIdTitle(id, titleId)
-    // Default to MP if no source specified or unknown source
-    const safeSource = source || 'mp'
     
-    if (safeSource === 'mp') {
-      const cacheKey = `mp-info-${baseId}`
-      const cached = getCached(cacheKey)
-      if (cached) return cached
-      
-      // Use fast timeout for first load
-      const result = await requestMapped(`/info/${encodeURIComponent(baseId)}`, { timeoutMs: 1000 }, 'mp')
-      setCached(cacheKey, result)
-      return result
-    }
-    // For GF: support both /info/:id and /info/:id/:title with caching
-    if (safeSource === 'gf') {
-      const cacheKey = `gf-info-${baseId}${safeTitle ? `-${safeTitle}` : ''}`
-      const cached = getCached(cacheKey, 'gf')
-      if (cached) return cached
-      
-      const result = safeTitle 
-        ? await requestMapped(`/info/${encodeURIComponent(baseId)}/${encodeURIComponent(safeTitle)}`, { timeoutMs: 2000 }, 'gf')
-        : await requestMapped(`/info/${encodeURIComponent(baseId)}`, { timeoutMs: 2000 }, 'gf')
-      
-      setCached(cacheKey, result, 'gf')
-      return result
-    }
-    
-    // For any other source, default to MP
     const cacheKey = `mp-info-${baseId}`
     const cached = getCached(cacheKey)
     if (cached) return cached
     
+    // Always use MP API
     const result = await requestMapped(`/info/${encodeURIComponent(baseId)}`, { timeoutMs: 1000 }, 'mp')
     setCached(cacheKey, result)
     return result
   },
   chapters: async (id, source) => {
-    // Default to MP if no source specified or unknown source
-    const safeSource = source || 'mp'
-    
-    if (safeSource === 'mp') {
-      const cacheKey = `mp-chapters-${id}`
-      const cached = getCached(cacheKey)
-      if (cached) return cached
-      
-      // Use fast timeout for first load
-      const result = await requestMapped(`/chapters/${id}`, { timeoutMs: 1000 }, 'mp')
-      setCached(cacheKey, result)
-      return result
-    }
-    
-    if (safeSource === 'gf') {
-      const cacheKey = `gf-chapters-${id}`
-      const cached = getCached(cacheKey, 'gf')
-      if (cached) return cached
-      
-      // Use fast timeout for GF chapters
-      const result = await requestMapped(`/chapters/${id}`, { timeoutMs: 2000 }, 'gf')
-      setCached(cacheKey, result, 'gf')
-      return result
-    }
-    
-    // For any other source, default to MP
     const cacheKey = `mp-chapters-${id}`
     const cached = getCached(cacheKey)
     if (cached) return cached
     
+    // Always use MP API
     const result = await requestMapped(`/chapters/${id}`, { timeoutMs: 1000 }, 'mp')
     setCached(cacheKey, result)
     return result
   },
-  // For MP, ctx should include { seriesId }
+  // Always use MP images API
   read: (id, source, ctx = {}) => {
-    if (source === 'mp') {
-      const seriesId = ctx.seriesId || ''
-      return requestMapped(`/images/${encodeURIComponent(seriesId)}/${encodeURIComponent(id)}`, {}, 'mp')
-    }
-    return requestMapped(`/read/${id}`, {}, source)
+    const seriesId = ctx.seriesId || ''
+    return requestMapped(`/images/${encodeURIComponent(seriesId)}/${encodeURIComponent(id)}`, {}, 'mp')
   },
 
   // Combined helpers
