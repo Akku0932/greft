@@ -13,7 +13,8 @@ export async function saveSeries({ seriesId, source, title, cover, status = 'pla
   const { data: auth } = await supabase.auth.getUser()
   const user = auth?.user
   if (!user) throw new Error('Not authenticated')
-  const row = { user_id: user.id, series_id: seriesId, source, title, cover, status, has_updates: false }
+  const safeSource = (source || 'mp').toLowerCase()
+  const row = { user_id: user.id, series_id: String(seriesId), source: safeSource, title: String(title || ''), cover: String(cover || ''), status: String(status || 'planning'), has_updates: false }
   const { error } = await supabase
     .from('library')
     .upsert(row, { onConflict: 'user_id,series_id' })

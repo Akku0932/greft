@@ -64,7 +64,7 @@ export default function Home() {
         // 2) Fetch fresh in background
         const [hot, last, newlyAdded] = await Promise.all([
           mp.popularUpdates().catch(() => ({ items: [] })),
-          api.combined.latestUpdates(1).catch(() => ({ items: [] })),
+          fetch('/api/mp?p=latest-releases').then(r=>r.json()).catch(() => ({ items: [] })),
           mp.newlyAdded ? mp.newlyAdded().catch(() => ({ items: [] })) : fetch('/api/mp?p=newly-added').then(r=>r.json()).catch(()=>({ items: [] })),
         ])
         if (!mounted) return
@@ -90,7 +90,14 @@ export default function Home() {
         }))
         setPopular(withInfo)
         writeCache('home-popular', withInfo)
-        const latestItems = extractItems(last)
+        const latestItemsRaw = extractItems(last)
+        const latestItems = latestItemsRaw.map((row) => {
+          const d = row?.data || row
+          const id = String(d?.id || row?.id || row?.seriesId || '')
+          const title = d?.name || row?.name || row?.title || 'Untitled'
+          const img = d?.img || d?.urlCover600 || d?.urlCoverOri || row?.img
+          return { ...row, id, title, img, _source: 'mp' }
+        })
         setLatest(latestItems)
         writeCache('home-latest', latestItems)
         setHasMore(latestItems.length > 12)
@@ -886,13 +893,16 @@ function RecentReadCard({ item, index, onRemove }) {
   const title = item.title || 'Untitled'
   // Determine source based on series ID format
   const isMF = item.seriesId && item.seriesId.includes('.') && !item.seriesId.includes('/')
+  const isMP = String(item.source || '').toLowerCase() === 'mp'
+  const src = isMP ? (isMF ? '&src=mp' : '&src=mp') : ''
+  const infoSrc = isMP ? '?src=mp' : ''
   const href = item.lastChapterId
     ? (isMF 
-        ? `/read/chapter/${item.lastChapterId}?series=${encodeURIComponent(item.seriesId)}&title=${encodeURIComponent(sanitizeTitleId(item.titleId || 'title'))}`
-        : `/read/${encodeURIComponent(item.lastChapterId)}?series=${encodeURIComponent(item.seriesId)}&title=${encodeURIComponent(sanitizeTitleId(item.titleId || 'title'))}`)
+        ? `/read/chapter/${item.lastChapterId}?series=${encodeURIComponent(item.seriesId)}&title=${encodeURIComponent(sanitizeTitleId(item.titleId || 'title'))}${src}`
+        : `/read/${encodeURIComponent(item.lastChapterId)}?series=${encodeURIComponent(item.seriesId)}&title=${encodeURIComponent(sanitizeTitleId(item.titleId || 'title'))}${src}`)
     : (isMF 
-        ? `/info/${encodeURIComponent(item.seriesId)}`
-        : `/info/${encodeURIComponent(item.seriesId)}/${encodeURIComponent(sanitizeTitleId(item.titleId || 'title'))}`)
+        ? `/info/${encodeURIComponent(item.seriesId)}${infoSrc}`
+        : `/info/${encodeURIComponent(item.seriesId)}/${encodeURIComponent(sanitizeTitleId(item.titleId || 'title'))}${infoSrc}`)
   
   const handleRemove = (e) => {
     e.preventDefault()
