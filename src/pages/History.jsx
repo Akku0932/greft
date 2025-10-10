@@ -12,7 +12,19 @@ export default function History() {
     try {
       const raw = localStorage.getItem('recent-reads')
       const list = Array.isArray(JSON.parse(raw)) ? JSON.parse(raw) : []
-      setItems(list)
+      // Backfill source for entries missing it using cached series-info
+      const fixed = list.map((it) => {
+        if (it && !it.source && it.seriesId) {
+          try {
+            const keys = Object.keys(localStorage)
+            const hasMp = keys.some((k) => k.startsWith(`mp:info:${it.seriesId}`) || k === `series-info:${it.seriesId}:${it.titleId || ''}`)
+            if (hasMp) return { ...it, source: 'mp' }
+          } catch {}
+        }
+        return it
+      })
+      setItems(fixed)
+      try { localStorage.setItem('recent-reads', JSON.stringify(fixed)) } catch {}
     } catch {
       setItems([])
     }

@@ -246,7 +246,19 @@ export default function PopularSlider({ items }) {
   const info = activeItem ? (activeItem.info || extra[parsed.id] || {}) : {}
   const bg = getImage(pickImage(info) || pickImage(activeItem || {}))
   function isAdult(infoOrItem) {
-    const tags = infoOrItem?.otherInfo?.tags || infoOrItem?.tags || []
+    let tags = infoOrItem?.otherInfo?.tags || infoOrItem?.tags
+    if (!Array.isArray(tags)) {
+      try {
+        const combined = activeItem ? (activeItem.seriesId || activeItem.id || activeItem.slug || activeItem.urlId) : ''
+        const { id } = activeItem ? parseIdTitle(combined, activeItem.titleId || activeItem.slug) : { id: '' }
+        const key = id ? `mp:info:${id}` : ''
+        if (key) {
+          const cached = localStorage.getItem(key)
+          const inf = cached ? JSON.parse(cached) : null
+          tags = inf?.otherInfo?.tags || inf?.tags || inf?.genres
+        }
+      } catch {}
+    }
     const arr = Array.isArray(tags) ? tags : []
     return arr.some(t => /adult|ecchi/i.test(String(t)))
   }

@@ -123,7 +123,16 @@ function RecRow({ item, index }) {
   const href = `/info/${encodeURIComponent(parsed.id)}?src=mp`
   function adultAllowed() { try { const obj = JSON.parse(localStorage.getItem('site:settings')||'{}'); return !!obj.adultAllowed } catch { return false } }
   function isAdult(it) {
-    const tags = it?.genres || it?.tags || []
+    let tags = it?.genres || it?.tags || []
+    if (!Array.isArray(tags)) {
+      try {
+        const parsed = parseIdTitle(it.id || it.seriesId || it.slug || it.urlId, it.title || it.name)
+        const key = `mp:info:${parsed.id}`
+        const cached = localStorage.getItem(key)
+        const inf = cached ? JSON.parse(cached) : null
+        tags = inf?.otherInfo?.tags || inf?.genres || []
+      } catch {}
+    }
     const arr = Array.isArray(tags) ? tags : []
     return arr.some(t => /adult|ecchi/i.test(String(t)))
   }

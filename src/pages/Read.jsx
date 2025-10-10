@@ -350,6 +350,7 @@ export default function Read() {
         titleId,
         title,
         cover,
+        source,
         lastChapterId: String(orderedChapterIds[currentIndex] || id || ''),
         lastChapterIndex: currentIndex,
         updatedAt: Date.now()

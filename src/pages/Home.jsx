@@ -624,7 +624,18 @@ export default function Home() {
 function RecItem({ item, index }) {
   function adultAllowed() { try { const obj = JSON.parse(localStorage.getItem('site:settings')||'{}'); return !!obj.adultAllowed } catch { return false } }
   function isAdult(it) {
-    const tags = it?.genres || it?.tags || (it?.info?.otherInfo?.tags) || []
+    // Fallback to cached mp:info when tags not present on list item
+    let tags = it?.genres || it?.tags || (it?.info?.otherInfo?.tags)
+    if (!Array.isArray(tags)) {
+      try {
+        const parsed = parseIdTitle(it.seriesId || it.id || it.slug || it.urlId, it.title || it.slug)
+        const key = `mp:info:${parsed.id}`
+        const cached = localStorage.getItem(key)
+        const inf = cached ? JSON.parse(cached) : null
+        tags = inf?.otherInfo?.tags || inf?.genres
+      } catch {}
+    }
+    const arr = Array.isArray(tags) ? tags : []
     const arr = Array.isArray(tags) ? tags : []
     return arr.some(t => /adult|ecchi/i.test(String(t)))
   }
@@ -735,7 +746,17 @@ function LatestUpdates({ items = [], loading, error, shown, loadingMore, hasMore
 function LatestCard({ item, index }) {
   function adultAllowed() { try { const obj = JSON.parse(localStorage.getItem('site:settings')||'{}'); return !!obj.adultAllowed } catch { return false } }
   function isAdult(it) {
-    const tags = it?.genres || it?.tags || (it?.info?.otherInfo?.tags) || []
+    // Fallback to cached mp:info when tags not present on list item
+    let tags = it?.genres || it?.tags || (it?.info?.otherInfo?.tags)
+    if (!Array.isArray(tags)) {
+      try {
+        const parsed = parseIdTitle(it.seriesId || it.id || it.slug || it.urlId, it.title || it.slug)
+        const key = `mp:info:${parsed.id}`
+        const cached = localStorage.getItem(key)
+        const inf = cached ? JSON.parse(cached) : null
+        tags = inf?.otherInfo?.tags || inf?.genres
+      } catch {}
+    }
     const arr = Array.isArray(tags) ? tags : []
     return arr.some(t => /adult|ecchi/i.test(String(t)))
   }
