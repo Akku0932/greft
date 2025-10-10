@@ -23,9 +23,6 @@ export default function Home() {
   const [hotItems, setHotItems] = useState([])
   const [hotLoading, setHotLoading] = useState(false)
   // Removed MF sections: Most Viewed and New Release
-  const [showLeftArrow, setShowLeftArrow] = useState(false)
-  const [showRightArrow, setShowRightArrow] = useState(true)
-  const recentContainerRef = useRef(null)
   const [followedTick, setFollowedTick] = useState(0)
   const [savedLocal, setSavedLocal] = useState([])
   const [preferences, setPreferences] = useState({ commentsEnabled: true, historyEnabled: true })
@@ -313,15 +310,6 @@ export default function Home() {
     }
   }
 
-  // Sliding state helpers
-  const needsSliding = recentReads.length > 5
-  useEffect(() => {
-    const el = recentContainerRef.current
-    if (!el) return
-    const max = el.scrollWidth - el.clientWidth - 4
-    setShowLeftArrow(false)
-    setShowRightArrow(needsSliding && el.scrollLeft < max)
-  }, [recentReads, needsSliding])
 
   useEffect(() => {
     let mounted = true
@@ -431,15 +419,7 @@ export default function Home() {
                   </div>
                   <a href="/history" className="text-sm text-stone-700 dark:text-gray-300 hover:underline">View all</a>
                 </div>
-                <div className="overflow-x-auto no-scrollbar -mx-4 px-4">
-                  <div className="flex gap-4 snap-x snap-mandatory touch-pan-x pb-2">
-                    {recentReads.map((it, i) => (
-                      <div key={(it.seriesId || i) + 'recent-m'} className="snap-start flex-shrink-0">
-                        <RecentReadCard item={it} index={i} onRemove={removeRecentRead} />
-                      </div>
-                    ))}
-                  </div>
-                </div>
+                <ReadingHistorySlider items={recentReads} onRemove={removeRecentRead} />
               </section>
             )}
             {/* Removed New Release and Most Viewed sections */}
@@ -516,59 +496,7 @@ export default function Home() {
                 </div>
                 <a href="/history" className="text-sm text-stone-700 dark:text-gray-300 hover:underline">View all</a>
               </div>
-              <div className="relative">
-                {/* Navigation arrows - only show when more than 8 cards */}
-                {needsSliding && showLeftArrow && (
-                  <button
-                    onClick={() => {
-                      const el = recentContainerRef.current
-                      if (el) el.scrollBy({ left: -el.clientWidth, behavior: 'smooth' })
-                    }}
-                    className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 z-10 w-10 h-10 rounded-full bg-white dark:bg-gray-800 shadow-lg border border-stone-200 dark:border-gray-700 flex items-center justify-center text-stone-600 dark:text-gray-300 hover:bg-stone-50 dark:hover:bg-gray-700 transition-all duration-200"
-                    title="Previous"
-                  >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                    </svg>
-                  </button>
-                )}
-                
-                {needsSliding && showRightArrow && (
-                  <button
-                    onClick={() => {
-                      const el = recentContainerRef.current
-                      if (el) el.scrollBy({ left: el.clientWidth, behavior: 'smooth' })
-                    }}
-                    className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 z-10 w-10 h-10 rounded-full bg-white dark:bg-gray-800 shadow-lg border border-stone-200 dark:border-gray-700 flex items-center justify-center text-stone-600 dark:text-gray-300 hover:bg-stone-50 dark:hover:bg-gray-700 transition-all duration-200"
-                    title="Next"
-                  >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                    </svg>
-                  </button>
-                )}
-
-                {/* Scrollable snap container */}
-                <div 
-                  ref={recentContainerRef}
-                  className={`overflow-x-auto no-scrollbar ${needsSliding ? '' : ''}`}
-                  onScroll={() => {
-                    const el = recentContainerRef.current
-                    if (!el) return
-                    const max = el.scrollWidth - el.clientWidth - 4
-                    setShowLeftArrow(el.scrollLeft > 4)
-                    setShowRightArrow(el.scrollLeft < max)
-                  }}
-                >
-                  <div className="flex gap-1.5 snap-x snap-mandatory pb-2">
-                    {recentReads.map((it, i) => (
-                      <div key={(it.seriesId || i) + 'recent-d'} className="snap-start flex-shrink-0" style={{ width: 'calc(20% - 6px)' }}>
-                        <RecentReadCard item={it} index={i} onRemove={removeRecentRead} />
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
+              <ReadingHistorySlider items={recentReads} onRemove={removeRecentRead} isDesktop={true} />
             </section>
           )}
           <LatestUpdates 
@@ -878,6 +806,147 @@ function LatestCard({ item, index }) {
         </div>
       </div>
     </a>
+  )
+}
+
+function ReadingHistorySlider({ items, onRemove, isDesktop = false }) {
+  const containerRef = useRef(null)
+  const [showLeftArrow, setShowLeftArrow] = useState(false)
+  const [showRightArrow, setShowRightArrow] = useState(true)
+  const [currentPage, setCurrentPage] = useState(0)
+  
+  // Calculate items per page based on screen size
+  const getItemsPerPage = () => {
+    if (isDesktop) {
+      return 5 // Desktop: 5 items per page
+    }
+    // Mobile: responsive based on screen width
+    if (typeof window !== 'undefined') {
+      const width = window.innerWidth
+      if (width < 480) return 2 // Very small screens
+      if (width < 640) return 3 // Small screens
+      return 4 // Medium screens
+    }
+    return 3 // Default fallback
+  }
+  
+  const itemsPerPage = getItemsPerPage()
+  const totalPages = Math.ceil(items.length / itemsPerPage)
+  const needsSliding = items.length > itemsPerPage
+  
+  // Update arrow visibility
+  useEffect(() => {
+    setShowLeftArrow(currentPage > 0)
+    setShowRightArrow(currentPage < totalPages - 1)
+  }, [currentPage, totalPages])
+  
+  const scrollToPage = (page) => {
+    if (!containerRef.current) return
+    const container = containerRef.current
+    const itemWidth = container.scrollWidth / items.length
+    const scrollLeft = page * (itemWidth * itemsPerPage)
+    container.scrollTo({ left: scrollLeft, behavior: 'smooth' })
+    setCurrentPage(page)
+  }
+  
+  const nextPage = () => {
+    if (currentPage < totalPages - 1) {
+      scrollToPage(currentPage + 1)
+    }
+  }
+  
+  const prevPage = () => {
+    if (currentPage > 0) {
+      scrollToPage(currentPage - 1)
+    }
+  }
+  
+  // Handle scroll events to update current page
+  const handleScroll = () => {
+    if (!containerRef.current) return
+    const container = containerRef.current
+    const itemWidth = container.scrollWidth / items.length
+    const currentScrollLeft = container.scrollLeft
+    const newPage = Math.round(currentScrollLeft / (itemWidth * itemsPerPage))
+    setCurrentPage(Math.min(newPage, totalPages - 1))
+  }
+  
+  // Auto-scroll on window resize to maintain current page
+  useEffect(() => {
+    const handleResize = () => {
+      if (containerRef.current) {
+        scrollToPage(currentPage)
+      }
+    }
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [currentPage])
+  
+  if (!items.length) return null
+  
+  return (
+    <div className="relative">
+      {/* Navigation arrows for desktop */}
+      {isDesktop && needsSliding && showLeftArrow && (
+        <button
+          onClick={prevPage}
+          className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 z-10 w-10 h-10 rounded-full bg-white dark:bg-gray-800 shadow-lg border border-stone-200 dark:border-gray-700 flex items-center justify-center text-stone-600 dark:text-gray-300 hover:bg-stone-50 dark:hover:bg-gray-700 transition-all duration-200"
+          title="Previous"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          </svg>
+        </button>
+      )}
+      
+      {isDesktop && needsSliding && showRightArrow && (
+        <button
+          onClick={nextPage}
+          className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 z-10 w-10 h-10 rounded-full bg-white dark:bg-gray-800 shadow-lg border border-stone-200 dark:border-gray-700 flex items-center justify-center text-stone-600 dark:text-gray-300 hover:bg-stone-50 dark:hover:bg-gray-700 transition-all duration-200"
+          title="Next"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          </svg>
+        </button>
+      )}
+      
+      {/* Grid container */}
+      <div 
+        ref={containerRef}
+        className={`overflow-x-auto no-scrollbar ${isDesktop ? '' : '-mx-4 px-4'}`}
+        onScroll={handleScroll}
+      >
+        <div className={`${isDesktop ? 'flex gap-1.5 snap-x snap-mandatory pb-2' : 'grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4'}`}>
+          {items.map((item, index) => (
+            <div 
+              key={(item.seriesId || index) + 'recent-slider'} 
+              className={`${isDesktop ? 'snap-start flex-shrink-0' : ''}`}
+              style={isDesktop ? { width: `calc(${100/itemsPerPage}% - 6px)` } : {}}
+            >
+              <RecentReadCard item={item} index={index} onRemove={onRemove} />
+            </div>
+          ))}
+        </div>
+      </div>
+      
+      {/* Page indicators for desktop */}
+      {isDesktop && needsSliding && totalPages > 1 && (
+        <div className="flex justify-center mt-4 gap-2">
+          {Array.from({ length: totalPages }).map((_, index) => (
+            <button
+              key={index}
+              onClick={() => scrollToPage(index)}
+              className={`w-2 h-2 rounded-full transition-all duration-200 ${
+                index === currentPage 
+                  ? 'bg-stone-900 dark:bg-white' 
+                  : 'bg-stone-300 dark:bg-gray-600 hover:bg-stone-400 dark:hover:bg-gray-500'
+              }`}
+            />
+          ))}
+        </div>
+      )}
+    </div>
   )
 }
 
