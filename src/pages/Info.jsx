@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useParams, Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { api, getImage, pickImage, parseIdTitle, sanitizeTitleId } from '../lib/api.js'
 import { useLibrary } from '../hooks/useLibrary'
@@ -14,6 +14,7 @@ export default function Info() {
   const [page, setPage] = useState(0)
   const [showMeta, setShowMeta] = useState(false)
   const [adultGate, setAdultGate] = useState(false)
+  const adultCheckedRef = useRef(false)
 
   // Determine source based on query or ID format (support mp)
   const srcParam = (searchParams.get('src') || '').toLowerCase()
@@ -177,12 +178,14 @@ export default function Info() {
 
   // Adult content gate: require confirmation once per series
   useEffect(() => {
+    if (!data || adultCheckedRef.current) return
     try {
       const key = `adult-ok:${source}:${id}`
       const ok = localStorage.getItem(key)
       if (isAdult && !ok) setAdultGate(true)
+      adultCheckedRef.current = true
     } catch {}
-  }, [id, source, isAdult])
+  }, [data, id, source, isAdult])
 
   function acceptAdult() {
     try { localStorage.setItem(`adult-ok:${source}:${id}`, '1') } catch {}
