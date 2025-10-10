@@ -83,7 +83,7 @@ export default function SearchResults() {
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-8 gap-3">
           {filtered.slice(0, pageSize).map((it, i) => {
             const parsed = parseIdTitle(it.seriesId || it.id || it.slug || it.urlId, it.title || it.name)
-            const href = `/info/${encodeURIComponent(parsed.id)}/${encodeURIComponent(sanitizeTitleId(parsed.titleId || 'title'))}`
+            const href = `/info/${encodeURIComponent(parsed.id)}?src=mp`
             const img = getImage(pickImage(it) || it.img)
             const title = it.title || it.name || 'Untitled'
             return (
