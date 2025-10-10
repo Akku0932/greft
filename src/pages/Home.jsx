@@ -508,90 +508,69 @@ export default function Home() {
         </section>
       )}
       {!!recentReads.length && preferences.historyEnabled && (
-        <section className="mb-10">
-          <div className="flex items-center justify-between mb-4 lg:mb-6">
-            <div>
-              <h2 className="text-xl lg:text-2xl font-bold text-stone-900 dark:text-white">Reading History</h2>
-              <p className="text-sm text-stone-600 dark:text-gray-400 mt-1">Jump back into what you were reading</p>
-            </div>
-            <a href="/history" className="text-sm text-stone-700 dark:text-gray-300 hover:underline">View all</a>
-          </div>
-          
-          {/* Mobile: Grid layout */}
-          <div className="block lg:hidden">
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-              {recentReads.slice(0, 8).map((it, i) => (
-                <RecentReadCard key={(it.seriesId || i) + 'recent-m'} item={it} index={i} onRemove={removeRecentRead} />
-              ))}
-            </div>
-            {recentReads.length > 8 && (
-              <div className="mt-4 text-center">
-                <a href="/history" className="inline-flex items-center gap-2 px-4 py-2 bg-stone-100 dark:bg-gray-800 text-stone-700 dark:text-gray-300 rounded-lg hover:bg-stone-200 dark:hover:bg-gray-700 transition-colors">
-                  View all {recentReads.length} items
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
-                </a>
+        <section className="mb-10 hidden lg:block">
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h2 className="text-2xl font-bold text-stone-900 dark:text-white">Reading History</h2>
+                  <p className="text-sm text-stone-600 dark:text-gray-400 mt-1">Jump back into what you were reading</p>
+                </div>
+                <a href="/history" className="text-sm text-stone-700 dark:text-gray-300 hover:underline">View all</a>
               </div>
-            )}
-          </div>
+              <div className="relative">
+                {/* Navigation arrows - only show when more than 8 cards */}
+                {needsSliding && showLeftArrow && (
+                  <button
+                    onClick={() => {
+                      const el = recentContainerRef.current
+                      if (el) el.scrollBy({ left: -el.clientWidth, behavior: 'smooth' })
+                    }}
+                    className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 z-10 w-10 h-10 rounded-full bg-white dark:bg-gray-800 shadow-lg border border-stone-200 dark:border-gray-700 flex items-center justify-center text-stone-600 dark:text-gray-300 hover:bg-stone-50 dark:hover:bg-gray-700 transition-all duration-200"
+                    title="Previous"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                    </svg>
+                  </button>
+                )}
+                
+                {needsSliding && showRightArrow && (
+                  <button
+                    onClick={() => {
+                      const el = recentContainerRef.current
+                      if (el) el.scrollBy({ left: el.clientWidth, behavior: 'smooth' })
+                    }}
+                    className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 z-10 w-10 h-10 rounded-full bg-white dark:bg-gray-800 shadow-lg border border-stone-200 dark:border-gray-700 flex items-center justify-center text-stone-600 dark:text-gray-300 hover:bg-stone-50 dark:hover:bg-gray-700 transition-all duration-200"
+                    title="Next"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                  </button>
+                )}
 
-          {/* Desktop: Slider layout */}
-          <div className="hidden lg:block relative">
-            {/* Navigation arrows */}
-            {needsSliding && showLeftArrow && (
-              <button
-                onClick={() => {
-                  const el = recentContainerRef.current
-                  if (el) el.scrollBy({ left: -208, behavior: 'smooth' })
-                }}
-                className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 z-10 w-10 h-10 rounded-full bg-white dark:bg-gray-800 shadow-lg border border-stone-200 dark:border-gray-700 flex items-center justify-center text-stone-600 dark:text-gray-300 hover:bg-stone-50 dark:hover:bg-gray-700 transition-all duration-200"
-                title="Previous"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                </svg>
-              </button>
-            )}
-            
-            {needsSliding && showRightArrow && (
-              <button
-                onClick={() => {
-                  const el = recentContainerRef.current
-                  if (el) el.scrollBy({ left: 208, behavior: 'smooth' })
-                }}
-                className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 z-10 w-10 h-10 rounded-full bg-white dark:bg-gray-800 shadow-lg border border-stone-200 dark:border-gray-700 flex items-center justify-center text-stone-600 dark:text-gray-300 hover:bg-stone-50 dark:hover:bg-gray-700 transition-all duration-200"
-                title="Next"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
-              </button>
-            )}
-
-            {/* Slider container */}
-            <div 
-              ref={recentContainerRef}
-              className="overflow-x-auto no-scrollbar scroll-smooth w-full"
-              onScroll={() => {
-                const el = recentContainerRef.current
-                if (!el) return
-                const max = el.scrollWidth - el.clientWidth - 4
-                setShowLeftArrow(el.scrollLeft > 4)
-                setShowRightArrow(el.scrollLeft < max)
-              }}
-            >
-              <div className="flex gap-4 pb-2" style={{ width: 'max-content' }}>
-                {recentReads.map((it, i) => (
-                  <div key={(it.seriesId || i) + 'recent-slider'} className="flex-shrink-0 w-48 min-w-[192px]">
-                    <RecentReadCard item={it} index={i} onRemove={removeRecentRead} />
+                {/* Scrollable snap container */}
+                <div 
+                  ref={recentContainerRef}
+                  className={`overflow-x-auto no-scrollbar ${needsSliding ? '' : ''}`}
+                  onScroll={() => {
+                    const el = recentContainerRef.current
+                    if (!el) return
+                    const max = el.scrollWidth - el.clientWidth - 4
+                    setShowLeftArrow(el.scrollLeft > 4)
+                    setShowRightArrow(el.scrollLeft < max)
+                  }}
+                >
+                  <div className="flex gap-1.5 snap-x snap-mandatory pb-2">
+                    {recentReads.map((it, i) => (
+                      <div key={(it.seriesId || i) + 'recent-d'} className="snap-start flex-shrink-0" style={{ width: 'calc(20% - 6px)' }}>
+                        <RecentReadCard item={it} index={i} onRemove={removeRecentRead} />
+                      </div>
+                    ))}
                   </div>
-                ))}
+                </div>
               </div>
-            </div>
-          </div>
-        </section>
-      )}
+            </section>
+          )}
           <LatestUpdates 
             items={latest} 
             loading={loading} 
@@ -927,25 +906,20 @@ function RecentReadCard({ item, index, onRemove }) {
   }
 
   return (
-    <div className="group relative w-full">
+    <div className="group relative w-40 sm:w-44 lg:w-full flex-shrink-0">
       <a href={href} className="block">
         <div className="relative">
-          {/* Card with 3:4 aspect ratio */}
-          <div className="relative aspect-[3/4] overflow-hidden rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 group-hover:scale-[1.02]">
+          {/* Anime-style card with aspect ratio 3:4 */}
+          <div className="relative aspect-square overflow-hidden rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 group-hover:scale-[1.02]">
             {cover ? (
               <img 
                 src={cover} 
                 alt={title} 
                 className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" 
-                loading="lazy"
-                decoding="async"
-                onError={(e) => {
-                  e.target.style.display = 'none'
-                  e.target.nextElementSibling.style.display = 'block'
-                }}
               />
-            ) : null}
-            <div className="absolute inset-0 bg-gradient-to-br from-stone-200 to-stone-300 dark:from-gray-700 dark:to-gray-800 rounded-xl" style={{ display: cover ? 'none' : 'block' }} />
+            ) : (
+              <div className="absolute inset-0 bg-gradient-to-br from-stone-200 to-stone-300 dark:from-gray-700 dark:to-gray-800 rounded-xl" />
+            )}
             
             {/* Gradient overlay for better text readability */}
             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
