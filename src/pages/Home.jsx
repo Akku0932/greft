@@ -731,7 +731,7 @@ function LatestUpdates({ items = [], loading, error, shown, loadingMore, hasMore
         )) : (items || []).map((it, i) => {
           const isLast = i === items.length - 1
           return (
-            <div key={(it.id || it.seriesId || it.slug || it.title || i) + 'latest'} ref={isLast ? lastElementRef : null}>
+            <div key={(it.id || it.seriesId || it.slug || it.title || i) + 'latest'} ref={isLast ? lastElementRef : null} className="w-full min-w-0">
               <LatestCard item={it} index={i} />
             </div>
           )
@@ -851,10 +851,20 @@ function LatestCard({ item, index }) {
       <div className="relative">
         <div className="relative aspect-square overflow-hidden rounded-lg">
           {cover ? (
-            <img src={cover} alt={title} className="absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:translate-y-[-6px]" style={{ filter: (!adultAllowed() && isAdult(item)) ? 'blur(18px)' : 'none' }} />
-          ) : (
-            <div className="absolute inset-0 bg-stone-200 dark:bg-gray-800 rounded-lg" />
-          )}
+            <img 
+              src={cover} 
+              alt={title} 
+              className="absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:translate-y-[-6px]" 
+              style={{ filter: (!adultAllowed() && isAdult(item)) ? 'blur(18px)' : 'none' }}
+              loading="lazy"
+              decoding="async"
+              onError={(e) => {
+                e.target.style.display = 'none'
+                e.target.nextElementSibling.style.display = 'block'
+              }}
+            />
+          ) : null}
+          <div className="absolute inset-0 bg-stone-200 dark:bg-gray-800 rounded-lg" style={{ display: cover ? 'none' : 'block' }} />
           {(!adultAllowed() && isAdult(item)) && (
             <div className="absolute inset-0 flex items-center justify-center">
               <span className="px-2 py-1 rounded bg-black/70 text-white text-xs">18+ hidden</span>
@@ -990,10 +1000,19 @@ function FollowedNewCard({ item }) {
     <a href={href} className="group block">
       <div className="relative aspect-square overflow-hidden rounded-lg ring-1 ring-stone-200 dark:ring-gray-800 bg-stone-200">
         {cover ? (
-          <img src={cover} alt={title} className="absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.02]" />
-        ) : (
-          <div className="absolute inset-0 bg-gradient-to-br from-stone-200 to-stone-300 dark:from-gray-700 dark:to-gray-800" />
-        )}
+          <img 
+            src={cover} 
+            alt={title} 
+            className="absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.02]" 
+            loading="lazy"
+            decoding="async"
+            onError={(e) => {
+              e.target.style.display = 'none'
+              e.target.nextElementSibling.style.display = 'block'
+            }}
+          />
+        ) : null}
+        <div className="absolute inset-0 bg-gradient-to-br from-stone-200 to-stone-300 dark:from-gray-700 dark:to-gray-800" style={{ display: cover ? 'none' : 'block' }} />
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
         <div className="absolute bottom-2 left-2 right-2">
           <div className="text-white font-semibold line-clamp-2 text-sm">{title}</div>
@@ -1024,7 +1043,20 @@ function SmallCard({ item }) {
   return (
     <a href={href} className="group block">
       <div className="relative aspect-[3/4] rounded-lg overflow-hidden bg-stone-200">
-        {cover && <img src={cover} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />}
+        {cover ? (
+          <img 
+            src={cover} 
+            alt="" 
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform" 
+            loading="lazy"
+            decoding="async"
+            onError={(e) => {
+              e.target.style.display = 'none'
+            }}
+          />
+        ) : (
+          <div className="w-full h-full bg-gradient-to-br from-stone-200 to-stone-300 dark:from-gray-700 dark:to-gray-800" />
+        )}
       </div>
       <div className="mt-2 text-sm font-medium line-clamp-2 group-hover:text-brand-600">{title}</div>
     </a>

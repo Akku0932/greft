@@ -310,7 +310,17 @@ export default function PopularSlider({ items }) {
              onMouseEnter={() => setIsHover(true)} onMouseLeave={() => setIsHover(false)}>
           {bg && (
           <>
-              <img src={bg} alt="bg" className="absolute inset-0 w-full h-full object-cover md:scale-105" loading={active===0?"eager":"lazy"} decoding="async" style={{ filter: (!adultAllowed() && isAdult(info)) ? 'blur(18px)' : 'none' }} />
+              <img 
+                src={bg} 
+                alt="bg" 
+                className="absolute inset-0 w-full h-full object-cover md:scale-105" 
+                loading={active===0?"eager":"lazy"} 
+                decoding="async" 
+                style={{ filter: (!adultAllowed() && isAdult(info)) ? 'blur(18px)' : 'none' }}
+                onError={(e) => {
+                  e.target.style.display = 'none'
+                }}
+              />
               <div className="absolute inset-0 backdrop-blur-none md:backdrop-blur-md" />
               {/* Mobile lighter, desktop stronger gradients */}
               <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-black/40 to-black/80 md:from-black/30 md:via-black/60 md:to-black/95" />
@@ -368,7 +378,17 @@ export default function PopularSlider({ items }) {
                      <div className="absolute -inset-1 rounded-3xl bg-gradient-to-br from-white/10 dark:from-gray-700/20 to-transparent" />
                      <div className="relative p-2">
                     <div className="relative aspect-[3/4] w-full rounded-xl overflow-hidden bg-black/40 flex items-center justify-center">
-                        <img src={getImage(pickImage(activeItem) || pickImage(info))} alt="thumb" className="w-full h-full object-cover" loading="eager" decoding="async" style={{ filter: (!adultAllowed() && isAdult(info)) ? 'blur(24px)' : 'none' }} />
+                        <img 
+                          src={getImage(pickImage(activeItem) || pickImage(info))} 
+                          alt="thumb" 
+                          className="w-full h-full object-cover" 
+                          loading="eager" 
+                          decoding="async" 
+                          style={{ filter: (!adultAllowed() && isAdult(info)) ? 'blur(24px)' : 'none' }}
+                          onError={(e) => {
+                            e.target.style.display = 'none'
+                          }}
+                        />
                         {(!adultAllowed() && isAdult(info)) && <div className="absolute inset-0 flex items-center justify-center"><span className="px-2 py-1 rounded bg-black/70 text-white text-xs">18+ hidden</span></div>}
                         <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
                       </div>

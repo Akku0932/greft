@@ -86,7 +86,21 @@ export default function History() {
             return (
               <a key={(it.seriesId || i) + 'h'} href={href} className="group relative">
                 <div className="relative aspect-[3/4] rounded-lg sm:rounded-xl overflow-hidden ring-1 ring-stone-200 dark:ring-gray-800 bg-stone-200">
-                  {it.cover && <img src={it.cover} alt="" className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.04]" loading="lazy" decoding="async" referrerPolicy="no-referrer" />}
+                  {it.cover ? (
+                    <img 
+                      src={it.cover} 
+                      alt="" 
+                      className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.04]" 
+                      loading="lazy" 
+                      decoding="async" 
+                      referrerPolicy="no-referrer"
+                      onError={(e) => {
+                        e.target.style.display = 'none'
+                      }}
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-gradient-to-br from-stone-200 to-stone-300 dark:from-gray-700 dark:to-gray-800" />
+                  )}
                   <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent opacity-90" />
                   {isMP && (
                     <span className="absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded-md text-[10px] font-semibold bg-green-500/90 text-white shadow">MP</span>
