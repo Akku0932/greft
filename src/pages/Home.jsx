@@ -810,52 +810,35 @@ function LatestCard({ item, index }) {
 }
 
 function DesktopReadingHistory({ items, onRemove }) {
-  const containerRef = useRef(null)
-  const [showLeftArrow, setShowLeftArrow] = useState(false)
-  const [showRightArrow, setShowRightArrow] = useState(true)
+  const [currentPage, setCurrentPage] = useState(0)
+  const itemsPerPage = 6
+  
+  // Calculate pagination
+  const totalPages = Math.ceil(items.length / itemsPerPage)
+  const startIndex = currentPage * itemsPerPage
+  const endIndex = startIndex + itemsPerPage
+  const currentItems = items.slice(startIndex, endIndex)
+  
+  // Navigation functions
+  const goToPreviousPage = () => {
+    setCurrentPage(prev => Math.max(0, prev - 1))
+  }
+  
+  const goToNextPage = () => {
+    setCurrentPage(prev => Math.min(totalPages - 1, prev + 1))
+  }
   
   // Show arrows only when there are more than 6 items
   const needsArrows = items.length > 6
-  
-  // Update arrow visibility based on scroll position
-  useEffect(() => {
-    const el = containerRef.current
-    if (!el) return
-    const max = el.scrollWidth - el.clientWidth - 4
-    setShowLeftArrow(el.scrollLeft > 4)
-    setShowRightArrow(el.scrollLeft < max)
-  }, [items])
-  
-  const scrollLeft = () => {
-    const el = containerRef.current
-    if (el) {
-      el.scrollBy({ left: -1080, behavior: 'smooth' }) // Scroll by 6 cards width (6 * 180px)
-    }
-  }
-  
-  const scrollRight = () => {
-    const el = containerRef.current
-    if (el) {
-      el.scrollBy({ left: 1080, behavior: 'smooth' }) // Scroll by 6 cards width (6 * 180px)
-    }
-  }
-  
-  const handleScroll = () => {
-    const el = containerRef.current
-    if (!el) return
-    const max = el.scrollWidth - el.clientWidth - 4
-    setShowLeftArrow(el.scrollLeft > 4)
-    setShowRightArrow(el.scrollLeft < max)
-  }
   
   if (!items.length) return null
   
   return (
     <div className="relative">
       {/* Navigation arrows - only show when more than 6 items */}
-      {needsArrows && showLeftArrow && (
+      {needsArrows && currentPage > 0 && (
         <button
-          onClick={scrollLeft}
+          onClick={goToPreviousPage}
           className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 z-10 w-10 h-10 rounded-full bg-white dark:bg-gray-800 shadow-lg border border-stone-200 dark:border-gray-700 flex items-center justify-center text-stone-600 dark:text-gray-300 hover:bg-stone-50 dark:hover:bg-gray-700 transition-all duration-200"
           title="Previous"
         >
@@ -865,9 +848,9 @@ function DesktopReadingHistory({ items, onRemove }) {
         </button>
       )}
       
-      {needsArrows && showRightArrow && (
+      {needsArrows && currentPage < totalPages - 1 && (
         <button
-          onClick={scrollRight}
+          onClick={goToNextPage}
           className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 z-10 w-10 h-10 rounded-full bg-white dark:bg-gray-800 shadow-lg border border-stone-200 dark:border-gray-700 flex items-center justify-center text-stone-600 dark:text-gray-300 hover:bg-stone-50 dark:hover:bg-gray-700 transition-all duration-200"
           title="Next"
         >
@@ -877,23 +860,17 @@ function DesktopReadingHistory({ items, onRemove }) {
         </button>
       )}
       
-      {/* Horizontal scroll container - show exactly 6 cards */}
-      <div 
-        ref={containerRef}
-        className="overflow-x-auto no-scrollbar"
-        onScroll={handleScroll}
-      >
-        <div className="flex gap-3 pb-2">
-          {items.map((item, index) => (
-            <div 
-              key={(item.seriesId || index) + 'desktop-history'} 
-              className="flex-shrink-0"
-              style={{ width: '180px' }} // Fixed width for consistent layout
-            >
-              <DesktopHistoryCard item={item} index={index} onRemove={onRemove} />
-            </div>
-          ))}
-        </div>
+      {/* Show only 6 cards at a time */}
+      <div className="flex gap-3 pb-2">
+        {currentItems.map((item, index) => (
+          <div 
+            key={(item.seriesId || index) + 'desktop-history'} 
+            className="flex-shrink-0"
+            style={{ width: '180px' }} // Fixed width for consistent layout
+          >
+            <DesktopHistoryCard item={item} index={startIndex + index} onRemove={onRemove} />
+          </div>
+        ))}
       </div>
     </div>
   )
