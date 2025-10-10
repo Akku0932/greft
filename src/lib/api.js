@@ -327,12 +327,13 @@ export const api = {
       let mpItems = []
       try {
         const mpRaw = await requestMapped(`/latest-releases?page=${encodeURIComponent(page)}`, {}, 'mp')
-        const mpArr = extractItems(mpRaw)
+        // MP API returns { items: [...] } structure
+        const mpArr = mpRaw?.items || []
         mpItems = (mpArr || []).map(row => {
           const d = row?.data || {}
           const last = Array.isArray(d.last_chapterNodes) && d.last_chapterNodes.length ? d.last_chapterNodes[0]?.data : null
           const updatedAt = last?.dateCreate || null
-          const rawImg = d.urlCover600 || d.urlCoverOri || d.urlCover || ''
+          const rawImg = d.urlCover600 || d.urlCoverOri || ''
           const img = rawImg ? `/api/mp?p=${encodeURIComponent((rawImg.startsWith('/') ? rawImg.slice(1) : rawImg))}` : ''
           const id = String(d.id || row.id || '')
           

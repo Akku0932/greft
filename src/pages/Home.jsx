@@ -90,13 +90,26 @@ export default function Home() {
         }))
         setPopular(withInfo)
         writeCache('home-popular', withInfo)
-        const latestItemsRaw = extractItems(last)
+        // Process MP latest-releases response structure
+        const latestItemsRaw = last?.items || []
         const latestItems = latestItemsRaw.map((row) => {
           const d = row?.data || row
-          const id = String(d?.id || row?.id || row?.seriesId || '')
-          const title = d?.name || row?.name || row?.title || 'Untitled'
-          const img = d?.img || d?.urlCover600 || d?.urlCoverOri || row?.img
-          return { ...row, id, title, img, _source: 'mp' }
+          const id = String(d?.id || row?.id || '')
+          const title = d?.name || row?.name || 'Untitled'
+          const rawImg = d?.urlCover600 || d?.urlCoverOri || ''
+          const img = rawImg ? `/api/mp?p=${encodeURIComponent((rawImg.startsWith('/') ? rawImg.slice(1) : rawImg))}` : ''
+          const lastChapter = Array.isArray(d?.last_chapterNodes) && d.last_chapterNodes.length ? d.last_chapterNodes[0]?.data : null
+          const tag = lastChapter?.dname || ''
+          const updatedAt = lastChapter?.dateCreate || null
+          return { 
+            id, 
+            seriesId: id, 
+            title, 
+            img, 
+            tag,
+            updatedAt,
+            _source: 'mp' 
+          }
         })
         setLatest(latestItems)
         writeCache('home-latest', latestItems)
@@ -371,7 +384,29 @@ export default function Home() {
     try {
       const nextPage = latestPage + 1
       const res = await fetch(`/api/mp?p=latest-releases&page=${nextPage}`).then(r => r.json()).catch(() => ({ items: [] }))
-      const nextItems = extractItems(res)
+      
+      // Process MP latest-releases response structure
+      const nextItemsRaw = res?.items || []
+      const nextItems = nextItemsRaw.map((row) => {
+        const d = row?.data || row
+        const id = String(d?.id || row?.id || '')
+        const title = d?.name || row?.name || 'Untitled'
+        const rawImg = d?.urlCover600 || d?.urlCoverOri || ''
+        const img = rawImg ? `/api/mp?p=${encodeURIComponent((rawImg.startsWith('/') ? rawImg.slice(1) : rawImg))}` : ''
+        const lastChapter = Array.isArray(d?.last_chapterNodes) && d.last_chapterNodes.length ? d.last_chapterNodes[0]?.data : null
+        const tag = lastChapter?.dname || ''
+        const updatedAt = lastChapter?.dateCreate || null
+        return { 
+          id, 
+          seriesId: id, 
+          title, 
+          img, 
+          tag,
+          updatedAt,
+          _source: 'mp' 
+        }
+      })
+      
       if (nextItems.length === 0) {
         setHasMore(false)
       } else {
