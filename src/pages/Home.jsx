@@ -657,7 +657,6 @@ function RecItem({ item, index }) {
       } catch {}
     }
     const arr = Array.isArray(tags) ? tags : []
-    const arr = Array.isArray(tags) ? tags : []
     return arr.some(t => /adult|ecchi/i.test(String(t)))
   }
   const cover = getImage(pickImage(item))
