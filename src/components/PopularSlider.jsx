@@ -87,8 +87,8 @@ export default function PopularSlider({ items }) {
           if (!id || chaptersCache[id]) return
           
           try {
-            const { api } = await import('../lib/api.js')
-            const res = await api.chapters(id)
+          const { api } = await import('../lib/api.js')
+          const res = await api.chapters(id, 'mp')
             const list = Array.isArray(res) ? res : (res.items || [])
             setChaptersCache(prev => ({ ...prev, [id]: list }))
           } catch {}
@@ -113,7 +113,7 @@ export default function PopularSlider({ items }) {
         if (it.info || extra[id]) return
         try {
           const { api } = await import('../lib/api.js')
-          const info = await api.info(id, titleId)
+          const info = await api.info(id, titleId, 'mp')
           if (!cancelled && info) {
             setExtra((m) => ({ ...m, [id]: info }))
           }
@@ -142,8 +142,8 @@ export default function PopularSlider({ items }) {
           if (!id || chaptersCache[id]) return
           
           try {
-            const { api } = await import('../lib/api.js')
-            const res = await api.chapters(id)
+          const { api } = await import('../lib/api.js')
+          const res = await api.chapters(id, 'mp')
             const list = Array.isArray(res) ? res : (res.items || [])
             setChaptersCache(prev => ({ ...prev, [id]: list }))
           } catch {}
@@ -231,7 +231,7 @@ export default function PopularSlider({ items }) {
         const isMF = id && id.includes('.') && !id.includes('/')
         const url = isMF 
           ? `/read/chapter/${chapterId}?series=${encodeURIComponent(id)}&title=${encodeURIComponent(titleId)}`
-          : `/read/${encodeURIComponent(chapterId)}?series=${encodeURIComponent(id)}&title=${encodeURIComponent(titleId)}`
+          : `/read/${encodeURIComponent(chapterId)}?series=${encodeURIComponent(id)}&title=${encodeURIComponent(titleId)}&src=mp`
         navigate(url)
       }
     } catch (_) {
@@ -285,7 +285,7 @@ export default function PopularSlider({ items }) {
                   </div>
                    <div className="mt-4 md:mt-6 flex flex-wrap justify-center md:justify-start gap-2 md:gap-3">
                     <Link
-                      to={`/info/${encodeURIComponent(parsed.id)}/${encodeURIComponent(sanitizeTitleId(parsed.titleId || 'title'))}`}
+                      to={`/info/${encodeURIComponent(parsed.id)}?src=mp`}
                        className="px-5 sm:px-6 py-2.5 sm:py-3 rounded-full bg-white/10 dark:bg-gray-800/30 text-white hover:bg-white/20 dark:hover:bg-gray-700/40 backdrop-blur-sm border border-white/20 dark:border-gray-600/30 transition-all duration-200 font-medium"
                     >
                       Details

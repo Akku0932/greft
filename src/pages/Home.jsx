@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef, useCallback } from 'react'
 import { useTheme } from '../contexts/ThemeContext.jsx'
 import { supabase } from '../lib/supabaseClient'
-import { api, extractItems, getImage, pickImage, parseIdTitle, sanitizeTitleId } from '../lib/api.js'
+import { api, mp, extractItems, getImage, pickImage, parseIdTitle, sanitizeTitleId } from '../lib/api.js'
 import PopularSlider from '../components/PopularSlider.jsx'
 import Section from '../components/Section.jsx'
 import { useLibrary } from '../hooks/useLibrary.js'
@@ -64,18 +64,26 @@ export default function Home() {
 
         // 2) Fetch fresh in background
         const [hot, last, recommended] = await Promise.all([
-          api.combined.hotUpdates().catch(() => ({ items: [] })),
+          mp.popularUpdates().catch(() => ({ items: [] })),
           api.combined.latestUpdates(1).catch(() => ({ items: [] })),
           api.recommendations(undefined, 'gf').catch(() => ({ items: [] })),
         ])
         if (!mounted) return
         // Prepare a pool (up to 60) and preload info details for each
         const rawPopular = extractItems(hot)
-        const pool = [...rawPopular].slice(0, 60)
+        // Normalize MP items for the slider
+        const normalizedPopular = rawPopular.map((row) => {
+          const d = row?.data || row
+          const id = String(d?.id || row?.id || '')
+          const img = d?.urlCover600 || d?.urlCoverOri || d?.img || ''
+          const title = d?.name || row?.name || row?.title || 'Untitled'
+          return { id, seriesId: id, title, img, _source: 'mp' }
+        })
+        const pool = [...normalizedPopular].slice(0, 60)
         const withInfo = await Promise.all(pool.map(async (it) => {
           try {
             const parsed = parseIdTitle(it.seriesId || it.id || it.slug || it.urlId, it.title || it.slug)
-            const info = await api.info(parsed.id, parsed.titleId)
+            const info = await api.info(parsed.id, parsed.titleId, 'mp')
             return { ...it, info }
           } catch {
             return it
