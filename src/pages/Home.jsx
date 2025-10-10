@@ -826,14 +826,14 @@ function DesktopReadingHistory({ items, onRemove }) {
   const scrollLeft = () => {
     const el = containerRef.current
     if (el) {
-      el.scrollBy({ left: -320, behavior: 'smooth' }) // Scroll by 2 cards width
+      el.scrollBy({ left: -200, behavior: 'smooth' }) // Scroll by 1 card width
     }
   }
   
   const scrollRight = () => {
     const el = containerRef.current
     if (el) {
-      el.scrollBy({ left: 320, behavior: 'smooth' }) // Scroll by 2 cards width
+      el.scrollBy({ left: 200, behavior: 'smooth' }) // Scroll by 1 card width
     }
   }
   
@@ -874,18 +874,18 @@ function DesktopReadingHistory({ items, onRemove }) {
         </button>
       )}
       
-      {/* Horizontal scroll container */}
+      {/* Horizontal scroll container - exactly like the image */}
       <div 
         ref={containerRef}
         className="overflow-x-auto no-scrollbar"
         onScroll={handleScroll}
       >
-        <div className="flex gap-4 snap-x snap-mandatory pb-2">
+        <div className="flex gap-3 pb-2">
           {items.map((item, index) => (
             <div 
               key={(item.seriesId || index) + 'desktop-history'} 
-              className="snap-start flex-shrink-0"
-              style={{ width: '160px' }} // Fixed width like in the image
+              className="flex-shrink-0"
+              style={{ width: '180px' }} // Slightly wider to match image
             >
               <DesktopHistoryCard item={item} index={index} onRemove={onRemove} />
             </div>
@@ -924,37 +924,33 @@ function DesktopHistoryCard({ item, index, onRemove }) {
     <div className="group relative flex-shrink-0">
       <a href={href} className="block">
         <div className="relative">
-          {/* Compact card matching the image style */}
-          <div className="relative aspect-[3/4] overflow-hidden rounded-lg shadow-md hover:shadow-lg transition-all duration-300 group-hover:scale-[1.02]">
+          {/* Card exactly like the image */}
+          <div className="relative aspect-[3/4] overflow-hidden rounded-lg shadow-sm hover:shadow-md transition-all duration-300">
             {cover ? (
               <img 
                 src={cover} 
                 alt={title} 
-                className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" 
+                className="absolute inset-0 w-full h-full object-cover" 
               />
             ) : (
               <div className="absolute inset-0 bg-gradient-to-br from-stone-200 to-stone-300 dark:from-gray-700 dark:to-gray-800 rounded-lg" />
             )}
             
-            {/* Chapter badge - positioned like in the image */}
+            {/* Red numbered badge - exactly like the image */}
             <div className="absolute top-2 left-2">
-              <span className="px-2 py-1 bg-red-500 text-white text-xs font-bold rounded-full shadow-sm">
+              <span className="w-6 h-6 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center shadow-sm">
                 {index + 1}
               </span>
             </div>
             
-            {/* Source badge */}
+            {/* Green GF badge - exactly like the image */}
             <div className="absolute top-2 right-2">
-              <span className={`px-2 py-1 text-xs font-bold rounded-full shadow-sm ${
-                isMF 
-                  ? 'bg-blue-500 text-white' 
-                  : 'bg-green-500 text-white'
-              }`}>
-                {isMF ? 'MF' : 'GF'}
+              <span className="px-2 py-1 bg-green-500 text-white text-xs font-bold rounded-full shadow-sm">
+                GF
               </span>
             </div>
             
-            {/* Remove button */}
+            {/* Remove button - hidden by default */}
             <button
               onClick={handleRemove}
               className="absolute top-2 right-2 w-5 h-5 rounded-full bg-red-500/90 hover:bg-red-600 text-white flex items-center justify-center text-[10px] font-bold opacity-0 group-hover:opacity-100 transition-all duration-200 z-10 shadow-sm"
@@ -964,9 +960,9 @@ function DesktopHistoryCard({ item, index, onRemove }) {
             </button>
           </div>
           
-          {/* Title matching the image style */}
-          <div className="mt-2 px-0">
-            <h3 className="text-sm font-semibold text-stone-900 dark:text-white line-clamp-2 leading-tight group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-blue-500 group-hover:to-purple-600 transition-all duration-300">
+          {/* Title exactly like the image */}
+          <div className="mt-2">
+            <h3 className="text-sm font-medium text-stone-900 dark:text-white line-clamp-2 leading-tight">
               {title}
             </h3>
           </div>
