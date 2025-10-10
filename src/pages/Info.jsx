@@ -64,18 +64,7 @@ export default function Info() {
             } catch {}
           }
           
-          // Fetch recommendations in background after info loads
-          if (mounted) {
-            try {
-              const recData = await api.recommendations(parsed.id, source)
-              if (mounted && recData && (recData.items || Array.isArray(recData))) {
-                setData(prev => ({
-                  ...prev,
-                  recommendations: Array.isArray(recData) ? recData : recData.items || []
-                }))
-              }
-            } catch {}
-          }
+          // Recommendations disabled for MP - no background fetch needed
         } else {
           // For GF/MF, fetch both in parallel as before
           const [infoRes, recRes] = await Promise.allSettled([

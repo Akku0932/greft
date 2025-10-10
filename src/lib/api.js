@@ -30,13 +30,8 @@ const warmCache = async (id) => {
 
 // Cache warming for popular GF content
 const warmGfCache = async (id) => {
-  if (preloadQueue.has(`gf-${id}`)) return
-  preloadQueue.add(`gf-${id}`)
-  try {
-    await api.info(id, '', 'gf')
-    await api.chapters(id, 'gf')
-  } catch {}
-  preloadQueue.delete(`gf-${id}`)
+  // GF API disabled - no longer preloading GF content
+  return Promise.resolve()
 }
 
 function getCached(key, source = 'mp') {
@@ -195,8 +190,8 @@ export const api = {
   hotUpdates: (source) => requestMapped('/hot-updates', {}, 'gf'),
   latestUpdates: (page, source) => page ? requestMapped(`/latest-updates?page=${encodeURIComponent(page)}`, {}, 'gf') : requestMapped('/latest-updates', {}, 'gf'),
   recommendations: (id, source) => {
-    const path = id ? `/recommendations/${encodeURIComponent(id)}` : '/recommendations'
-    return requestMapped(path, {}, 'gf')
+    // Disabled GF recommendations - return empty result
+    return Promise.resolve({ items: [] })
   },
   hotSeries: (range = 'weekly_views', source) => request(`/hot-series/${range}`, {}, 'gf'),
   recentlyAdded: (source) => request('/recently-added', {}, source),
@@ -363,12 +358,6 @@ export const api = {
       return merged
     },
     latestUpdates: async (page = 1) => {
-      const normalizeTitleKey = (s) => String((s || '').toLowerCase())
-        .replace(/[^a-z0-9]+/g, ' ')
-        .replace(/\b(the|a|an)\b/g, ' ')
-        .replace(/\s+/g, ' ')
-        .trim()
-
       const toTimestamp = (value) => {
         if (!value) return 0
         if (typeof value === 'number') return value < 1e12 ? value * 1000 : value
@@ -382,28 +371,7 @@ export const api = {
         return Number.isNaN(parsed) ? 0 : parsed
       }
 
-      // Fetch GF latest through our proxy
-      let gfRes
-      try {
-        const raw = await api.latestUpdates(page)
-        gfRes = { status: 'fulfilled', value: raw }
-      } catch (e) {
-        gfRes = { status: 'rejected', reason: e }
-      }
-
-      const gfItems = gfRes && gfRes.status === 'fulfilled' ? extractItems(gfRes.value).map(it => {
-        const id = it.id || it.seriesId || it.slug || it.urlId
-        // Warm cache for popular GF content in background
-        if (id) warmGfCache(id)
-        
-        return {
-          ...it,
-          _source: 'greft',
-          uploadTime: toTimestamp(it.updatedAt || it.time || it.date || it.updated || it.lastUpdate)
-        }
-      }) : []
-
-      // Fetch MP latest-releases with pagination
+      // Fetch MP latest-releases with pagination only
       let mpItems = []
       try {
         const mpRaw = await requestMapped(`/latest-releases?page=${encodeURIComponent(page)}`, {}, 'mp')
@@ -432,52 +400,7 @@ export const api = {
         })
       } catch {}
 
-      // Merge and de-duplicate by ID first, then by normalized title
-      const byId = new Map()
-      const byTitle = new Map()
-      
-      const consider = (arr) => {
-        for (const it of arr) {
-          const id = it.id || it.seriesId
-          const titleKey = normalizeTitleKey(it.title || it.name)
-          
-          // Prefer by ID first (exact match)
-          if (id && byId.has(id)) {
-            const current = byId.get(id)
-            const curTime = current.uploadTime || 0
-            const newTime = it.uploadTime || 0
-            if (newTime > curTime) {
-              byId.set(id, it)
-            }
-            continue
-          }
-          
-          if (id) {
-            byId.set(id, it)
-            continue
-          }
-          
-          // Fallback to title-based deduplication
-          if (!titleKey) continue
-          const current = byTitle.get(titleKey)
-          if (!current) {
-            byTitle.set(titleKey, it)
-            continue
-          }
-          const curTime = current.uploadTime || 0
-          const newTime = it.uploadTime || 0
-          if (newTime > curTime) {
-            byTitle.set(titleKey, it)
-          }
-        }
-      }
-      
-      consider(gfItems)
-      consider(mpItems)
-
-      // Combine results, preferring ID-based matches
-      const combined = [...byId.values(), ...byTitle.values()]
-      return combined.sort((a, b) => (b.uploadTime || 0) - (a.uploadTime || 0))
+      return mpItems.sort((a, b) => (b.uploadTime || 0) - (a.uploadTime || 0))
     },
     hotUpdates: async () => {
       // Use top-trending for MF hot updates
