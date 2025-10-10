@@ -272,7 +272,6 @@ export default function Navbar() {
             <Link to="/home#categories" className="hover:text-stone-900 dark:hover:text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-stone-400 dark:focus:ring-gray-600 rounded-md px-1">Categories</Link>
             <Link to="/search" className="hover:text-stone-900 dark:hover:text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-stone-400 dark:focus:ring-gray-600 rounded-md px-1">Search</Link>
             <Link to="/saved" className="hover:text-stone-900 dark:hover:text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-stone-400 dark:focus:ring-gray-600 rounded-md px-1">My List</Link>
-            <Link to="/settings" className="hover:text-stone-900 dark:hover:text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-stone-400 dark:focus:ring-gray-600 rounded-md px-1">Settings</Link>
           </div>
           
           {/* Theme Toggle */}
