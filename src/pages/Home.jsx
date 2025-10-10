@@ -95,8 +95,18 @@ export default function Home() {
         writeCache('home-latest', latestItems)
         setHasMore(latestItems.length > 12)
         const newlyItems = extractItems(newlyAdded)
-        setNewly(newlyItems)
-        writeCache('home-newly', newlyItems)
+        const flattenedNewly = newlyItems.flatMap((row) => {
+          const d = row?.data || row
+          const avatar = d?.userNode?.data?.avatarUrl || d?.userNode?.avatarUrl || d?.avatarUrl || ''
+          const nodes = Array.isArray(d?.comicNodes) ? d.comicNodes : []
+          return nodes.map((n) => {
+            const nd = n?.data || n || {}
+            const img = nd.urlCover600 || nd.urlCoverOri || avatar || nd.img
+            return { ...nd, img, _source: 'mp' }
+          })
+        })
+        setNewly(flattenedNewly)
+        writeCache('home-newly', flattenedNewly)
       } catch (e) {
         if (mounted) setError(e)
       } finally {
