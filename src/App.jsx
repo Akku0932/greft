@@ -13,6 +13,7 @@ import Saved from './pages/Saved.jsx'
 import Login from './pages/Login.jsx'
 import Account from './pages/Account.jsx'
 import History from './pages/History.jsx'
+import NewlyAdded from './pages/NewlyAdded.jsx'
 
 export default function App() {
   return (
@@ -34,6 +35,7 @@ export default function App() {
               <Route path="/history" element={<History />} />
               <Route path="/login" element={<Login />} />
               <Route path="/account" element={<Account />} />
+              <Route path="/newly-added" element={<NewlyAdded />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </div>

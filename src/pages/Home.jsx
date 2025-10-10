@@ -16,8 +16,7 @@ export default function Home() {
   const [followedNew, setFollowedNew] = useState([])
   const [latest, setLatest] = useState([])
   const [latestPage, setLatestPage] = useState(1)
-  const [rec, setRec] = useState([])
-  const [recShown, setRecShown] = useState(4)
+  const [newly, setNewly] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [hotRange, setHotRange] = useState('weekly')
@@ -57,19 +56,16 @@ export default function Home() {
         // 1) Hydrate from cache immediately for instant UI
         const cachedPopular = readCache('home-popular')
         const cachedLatest = readCache('home-latest')
-        const cachedRec = readCache('home-rec')
+        const cachedNewly = readCache('home-newly')
         if (cachedPopular) setPopular(cachedPopular)
         if (cachedLatest) { setLatest(cachedLatest.items || cachedLatest); if ((cachedLatest.items || cachedLatest).length > 12) setHasMore(true) }
-        if (cachedRec) setRec(cachedRec)
+        if (cachedNewly) setNewly(cachedNewly)
 
         // 2) Fetch fresh in background
-        // Randomize MP popular page for variety, based on current minute to avoid too frequent calls
-        const totalPages = 31
-        const randomPage = 1 + (Math.floor(Date.now() / 60000) % totalPages)
-        const [hot, last, recommended] = await Promise.all([
-          mp.popularUpdates(randomPage).catch(() => ({ items: [] })),
+        const [hot, last, newlyAdded] = await Promise.all([
+          mp.popularUpdates().catch(() => ({ items: [] })),
           api.combined.latestUpdates(1).catch(() => ({ items: [] })),
-          api.recommendations(undefined, 'gf').catch(() => ({ items: [] })),
+          mp.newlyAdded ? mp.newlyAdded().catch(() => ({ items: [] })) : fetch('/api/mp?p=newly-added').then(r=>r.json()).catch(()=>({ items: [] })),
         ])
         if (!mounted) return
         // Prepare a pool (up to 60) and preload info details for each
@@ -98,9 +94,9 @@ export default function Home() {
         setLatest(latestItems)
         writeCache('home-latest', latestItems)
         setHasMore(latestItems.length > 12)
-        const recItems = extractItems(recommended)
-        setRec(recItems)
-        writeCache('home-rec', recItems)
+        const newlyItems = extractItems(newlyAdded)
+        setNewly(newlyItems)
+        writeCache('home-newly', newlyItems)
       } catch (e) {
         if (mounted) setError(e)
       } finally {
@@ -374,7 +370,7 @@ export default function Home() {
       <PopularSlider items={popular} />
       <div className="max-w-none w-full mx-auto grid grid-cols-1 lg:grid-cols-[1fr_520px] gap-10">
         <div>
-          {/* Move sections above Latest Updates on mobile: Recent Reads first, then Popular and Recommendations */}
+          {/* Move sections above Latest Updates on mobile: Recent Reads first, then Popular and Newly Added */}
           <div className="lg:hidden space-y-8 pt-6">
             {!!followedNew.length && (
               <section className="mb-2">
@@ -445,22 +441,22 @@ export default function Home() {
               </div>
             </div>
             <div className="rounded-xl border border-stone-200 dark:border-gray-700/60 bg-white/60 dark:bg-gray-900/60 p-6">
-              <h3 className="text-xl font-bold text-stone-900 dark:text-white mb-4">Recommendations</h3>
+              <h3 className="text-xl font-bold text-stone-900 dark:text-white mb-4">Newly Added</h3>
               <div className="space-y-4">
                 {loading ? Array.from({ length: 4 }).map((_, i) => (
                   <div key={i} className="animate-pulse h-24 rounded-xl bg-stone-200 dark:bg-gray-800" />
-                )) : rec.slice(0, recShown).map((item, idx) => (
-                  <RecItem key={(item.id || item.seriesId || item.slug || item.title) + 'm' + idx} item={item} index={idx} />
+                )) : newly.slice(0, 6).map((item, idx) => (
+                  <RecItem key={(item.id || item.seriesId || item.slug || item.title) + 'nm' + idx} item={{ ...(item?.data || item), _source: 'mp' }} index={idx} />
                 ))}
               </div>
-              {!loading && recShown < rec.length && (
+              {!loading && newly.length > 6 && (
                 <div className="mt-4">
-                  <button 
-                    onClick={() => setRecShown((n)=>Math.min(n+4, rec.length))} 
-                    className="w-full px-4 py-3 text-sm font-medium rounded-xl border border-stone-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-stone-700 dark:text-gray-300 hover:bg-stone-50 dark:hover:bg-gray-700 transition-colors duration-200"
+                  <a 
+                    href="/newly-added" 
+                    className="w-full inline-flex items-center justify-center gap-2 px-4 py-3 text-sm font-medium rounded-xl border border-stone-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-stone-700 dark:text-gray-300 hover:bg-stone-50 dark:hover:bg-gray-700 transition-colors duration-200"
                   >
-                    Load more recommendations
-                  </button>
+                    Show more
+                  </a>
                 </div>
               )}
             </div>
@@ -585,22 +581,22 @@ export default function Home() {
             </div>
           </div>
           <div className="rounded-xl border border-stone-200 dark:border-gray-700/60 bg-white/60 dark:bg-gray-900/60 p-6">
-            <h3 className="text-xl font-bold text-stone-900 dark:text-white mb-4">Recommendations</h3>
+            <h3 className="text-xl font-bold text-stone-900 dark:text-white mb-4">Newly Added</h3>
             <div className="space-y-4">
               {loading ? Array.from({ length: 4 }).map((_, i) => (
                 <div key={i} className="animate-pulse h-24 rounded-xl bg-stone-200 dark:bg-gray-800" />
-              )) : rec.slice(0, recShown).map((item, idx) => (
-                <RecItem key={(item.id || item.seriesId || item.slug || item.title) + idx} item={item} index={idx} />
+              )) : newly.slice(0, 8).map((item, idx) => (
+                <RecItem key={(item.id || item.seriesId || item.slug || item.title) + 'nd' + idx} item={{ ...(item?.data || item), _source: 'mp' }} index={idx} />
               ))}
             </div>
-            {!loading && recShown < rec.length && (
+            {!loading && newly.length > 8 && (
               <div className="mt-4">
-                <button 
-                  onClick={() => setRecShown((n)=>Math.min(n+4, rec.length))} 
-                  className="w-full px-4 py-3 text-sm font-medium rounded-xl border border-stone-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-stone-700 dark:text-gray-300 hover:bg-stone-50 dark:hover:bg-gray-700 transition-colors duration-200"
+                <a 
+                  href="/newly-added" 
+                  className="w-full inline-flex items-center justify-center gap-2 px-4 py-3 text-sm font-medium rounded-xl border border-stone-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-stone-700 dark:text-gray-300 hover:bg-stone-50 dark:hover:bg-gray-700 transition-colors duration-200"
                 >
-                  Load more recommendations
-                </button>
+                  Show more
+                </a>
               </div>
             )}
           </div>
