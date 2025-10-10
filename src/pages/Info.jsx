@@ -176,18 +176,18 @@ export default function Info() {
   return (
     <div>
       <section className="relative">
-        {bg && <img src={bg} alt="bg" className="absolute inset-0 w-full h-[320px] md:h-[480px] object-cover" />}
-        <div className="absolute inset-0 h-[320px] md:h-[480px] backdrop-blur-sm md:backdrop-blur" />
-        <div className="absolute inset-0 h-[320px] md:h-[480px] bg-gradient-to-b from-black/20 via-black/60 to-black/95" />
-        <div className="absolute inset-0 h-[320px] md:h-[480px] bg-[radial-gradient(ellipse_at_center,rgba(0,0,0,0)_55%,rgba(0,0,0,0.45)_100%)]" />
-        <div className="absolute inset-0 h-[320px] md:h-[480px] bg-gradient-to-r from-black/10 via-transparent to-black/10" />
-        <div className="relative max-w-[95vw] mx-auto px-4 sm:px-6 pt-8 md:pt-10 pb-24 md:pb-40">
-          <div className="grid grid-cols-1 md:grid-cols-[220px_1fr] lg:grid-cols-[260px_1fr] gap-6 md:gap-10 items-start">
-            <div className="relative rounded-2xl overflow-hidden ring-1 ring-white/15 dark:ring-gray-700/40 shadow-soft dark:shadow-soft-dark bg-white/5 dark:bg-gray-800/20">
-              {cover && <img src={cover} alt={mappedData.title} className="w-full h-[300px] object-cover md:h-[360px]" />}
+        {bg && <img src={bg} alt="bg" className="absolute inset-0 w-full h-[260px] sm:h-[320px] md:h-[480px] object-cover" />}
+        <div className="absolute inset-0 h-[260px] sm:h-[320px] md:h-[480px] backdrop-blur-sm md:backdrop-blur" />
+        <div className="absolute inset-0 h-[260px] sm:h-[320px] md:h-[480px] bg-gradient-to-b from-black/20 via-black/60 to-black/95" />
+        <div className="absolute inset-0 h-[260px] sm:h-[320px] md:h-[480px] bg-[radial-gradient(ellipse_at_center,rgba(0,0,0,0)_55%,rgba(0,0,0,0.45)_100%)]" />
+        <div className="absolute inset-0 h-[260px] sm:h-[320px] md:h-[480px] bg-gradient-to-r from-black/10 via-transparent to-black/10" />
+        <div className="relative max-w-[95vw] mx-auto px-4 sm:px-6 pt-6 md:pt-10 pb-24 md:pb-40">
+          <div className="grid grid-cols-1 md:grid-cols-[200px_1fr] lg:grid-cols-[260px_1fr] gap-4 sm:gap-6 md:gap-10 items-start">
+            <div className="relative rounded-xl sm:rounded-2xl overflow-hidden ring-1 ring-white/15 dark:ring-gray-700/40 shadow-soft dark:shadow-soft-dark bg-white/5 dark:bg-gray-800/20">
+              {cover && <img src={cover} alt={mappedData.title} className="w-full h-[240px] sm:h-[300px] object-cover md:h-[360px]" />}
             </div>
             <div className="text-white">
-              <h1 className="text-2xl sm:text-3xl md:text-5xl font-extrabold leading-tight">{mappedData.title}</h1>
+              <h1 className="text-xl sm:text-3xl md:text-5xl font-extrabold leading-tight">{mappedData.title}</h1>
               {source === 'mf' && mappedData.otherName && (
                 <p className="mt-2 text-white/80 text-sm md:text-base italic">{mappedData.otherName}</p>
               )}
@@ -198,14 +198,14 @@ export default function Info() {
                   ))}
                 </div>
               )}
-              <div className="mt-3 md:mt-4 flex flex-wrap gap-2">
+              <div className="mt-2 md:mt-4 flex flex-wrap gap-2">
                 {tags.slice(0, 12).map((t) => (
                   <span key={t} className="px-2 py-0.5 rounded-full text-[10px] sm:text-xs bg-white/15">{t}</span>
                 ))}
               </div>
-              <p className="mt-3 md:mt-4 max-w-2xl md:max-w-3xl text-white/90 text-sm md:text-base leading-relaxed line-clamp-none">{mappedData.description || data.summary}</p>
-              <div className="mt-5 md:mt-6 flex flex-wrap gap-2 md:gap-3 items-center">
-                <button onClick={onReadFirst} className="px-4 md:px-5 py-2.5 md:py-3 rounded-lg bg-white/15 hover:bg-white/25 text-white border border-white/20 transition-colors">Read First</button>
+              <p className="mt-2 md:mt-4 max-w-2xl md:max-w-3xl text-white/90 text-sm md:text-base leading-relaxed line-clamp-none">{mappedData.description || data.summary}</p>
+              <div className="mt-4 md:mt-6 flex flex-wrap gap-2 md:gap-3 items-center">
+                <button onClick={onReadFirst} className="px-3 md:px-5 py-2.5 md:py-3 rounded-lg bg-white/15 hover:bg-white/25 text-white border border-white/20 transition-colors">Read First</button>
                 {/* Save button - only enabled when logged in */}
                 <button
                   onClick={async () => {
@@ -217,7 +217,7 @@ export default function Info() {
                       await add(payload)
                     } catch {}
                   }}
-                  className="px-4 md:px-5 py-2.5 md:py-3 rounded-lg border border-white/20 text-white hover:bg-white/20 transition-colors"
+                  className="px-3 md:px-5 py-2.5 md:py-3 rounded-lg border border-white/20 text-white hover:bg-white/20 transition-colors"
                 >
                   {isSaved(parseIdTitle(id, titleId).id, source) ? 'In My List' : 'Add to List'}
                 </button>

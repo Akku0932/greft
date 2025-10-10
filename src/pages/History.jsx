@@ -58,24 +58,30 @@ export default function History() {
           <div className="text-stone-600 dark:text-gray-300 text-sm">Start reading to build your history.</div>
         </div>
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-5">
+        <div className="grid grid-cols-3 xs:grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-3 sm:gap-5">
           {pageItems.map((it, i) => {
             const isMF = it.seriesId && it.seriesId.includes('.') && !it.seriesId.includes('/')
+            const isMP = String(it.source || '').toLowerCase() === 'mp'
+            const srcParam = isMP ? (isMF ? '&src=mp' : '&src=mp') : ''
+            const infoSrc = isMP ? '?src=mp' : ''
             const href = it.lastChapterId
               ? (isMF
-                  ? `/read/chapter/${it.lastChapterId}?series=${encodeURIComponent(it.seriesId)}&title=${encodeURIComponent(sanitizeTitleId(it.titleId || 'title'))}`
-                  : `/read/${encodeURIComponent(it.lastChapterId)}?series=${encodeURIComponent(it.seriesId)}&title=${encodeURIComponent(sanitizeTitleId(it.titleId || 'title'))}`)
+                  ? `/read/chapter/${it.lastChapterId}?series=${encodeURIComponent(it.seriesId)}&title=${encodeURIComponent(sanitizeTitleId(it.titleId || 'title'))}${srcParam}`
+                  : `/read/${encodeURIComponent(it.lastChapterId)}?series=${encodeURIComponent(it.seriesId)}&title=${encodeURIComponent(sanitizeTitleId(it.titleId || 'title'))}${srcParam}`)
               : (isMF
-                  ? `/info/${encodeURIComponent(it.seriesId)}`
-                  : `/info/${encodeURIComponent(it.seriesId)}/${encodeURIComponent(sanitizeTitleId(it.titleId || 'title'))}`)
+                  ? `/info/${encodeURIComponent(it.seriesId)}${infoSrc}`
+                  : `/info/${encodeURIComponent(it.seriesId)}/${encodeURIComponent(sanitizeTitleId(it.titleId || 'title'))}${infoSrc}`)
             return (
               <a key={(it.seriesId || i) + 'h'} href={href} className="group relative">
-                <div className="relative aspect-[3/4] rounded-xl overflow-hidden ring-1 ring-stone-200 dark:ring-gray-800 bg-stone-200">
-                  {it.cover && <img src={it.cover} alt="" className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.04]" />}
+                <div className="relative aspect-[3/4] rounded-lg sm:rounded-xl overflow-hidden ring-1 ring-stone-200 dark:ring-gray-800 bg-stone-200">
+                  {it.cover && <img src={it.cover} alt="" className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.04]" loading="lazy" decoding="async" referrerPolicy="no-referrer" />}
                   <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent opacity-90" />
+                  {isMP && (
+                    <span className="absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded-md text-[10px] font-semibold bg-green-500/90 text-white shadow">MP</span>
+                  )}
                 </div>
-                <div className="mt-2 text-sm font-semibold line-clamp-2">{it.title}</div>
-                <div className="text-[10px] text-stone-600 dark:text-gray-400">Last read • {timeAgo(it.updatedAt)}</div>
+                <div className="mt-1.5 sm:mt-2 text-[11px] sm:text-sm font-semibold line-clamp-2">{it.title}</div>
+                <div className="text-[9px] sm:text-[10px] text-stone-600 dark:text-gray-400">Last read • {timeAgo(it.updatedAt)}</div>
               </a>
             )
           })}

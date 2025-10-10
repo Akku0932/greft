@@ -1,6 +1,7 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { ThemeProvider } from './contexts/ThemeContext.jsx'
 import Navbar from './components/Navbar.jsx'
+import BottomNav from './components/BottomNav.jsx'
 import Footer from './components/Footer.jsx'
 import Welcome from './pages/Welcome.jsx'
 import Home from './pages/Home.jsx'
@@ -18,7 +19,7 @@ export default function App() {
     <ThemeProvider>
       <div className="min-h-screen flex flex-col bg-white dark:bg-[#000000] transition-colors duration-300">
         <Navbar />
-        <main className="flex-1">
+        <main className="flex-1 pb-16 md:pb-0">
           <div className="max-w-[95vw] mx-auto">
             <Routes>
               <Route path="/" element={<Home />} />
@@ -37,6 +38,7 @@ export default function App() {
             </Routes>
           </div>
         </main>
+        <BottomNav />
         <Footer />
         {/* Scroll to top button */}
         <ScrollToTopButton />
