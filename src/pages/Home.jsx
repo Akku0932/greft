@@ -626,7 +626,7 @@ function RecItem({ item, index }) {
   function isAdult(it) {
     const tags = it?.genres || it?.tags || (it?.info?.otherInfo?.tags) || []
     const arr = Array.isArray(tags) ? tags : []
-    return arr.some(t => /adult|mature|ecchi|nsfw|sm_bdsm/i.test(String(t)))
+    return arr.some(t => /adult|ecchi/i.test(String(t)))
   }
   const cover = getImage(pickImage(item))
   const title = item.title || item.name || 'Untitled'
@@ -737,7 +737,7 @@ function LatestCard({ item, index }) {
   function isAdult(it) {
     const tags = it?.genres || it?.tags || (it?.info?.otherInfo?.tags) || []
     const arr = Array.isArray(tags) ? tags : []
-    return arr.some(t => /adult|mature|ecchi|nsfw|sm_bdsm/i.test(String(t)))
+    return arr.some(t => /adult|ecchi/i.test(String(t)))
   }
   const cover = getImage(pickImage(item))
   const title = item.title || item.name || 'Untitled'

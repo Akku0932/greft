@@ -248,7 +248,7 @@ export default function PopularSlider({ items }) {
   function isAdult(infoOrItem) {
     const tags = infoOrItem?.otherInfo?.tags || infoOrItem?.tags || []
     const arr = Array.isArray(tags) ? tags : []
-    return arr.some(t => /adult|mature|ecchi|nsfw|sm_bdsm/i.test(String(t)))
+    return arr.some(t => /adult|ecchi/i.test(String(t)))
   }
   function adultAllowed() {
     try { const obj = JSON.parse(localStorage.getItem('site:settings')||'{}'); return !!obj.adultAllowed } catch { return false }

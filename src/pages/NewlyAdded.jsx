@@ -125,7 +125,7 @@ function RecRow({ item, index }) {
   function isAdult(it) {
     const tags = it?.genres || it?.tags || []
     const arr = Array.isArray(tags) ? tags : []
-    return arr.some(t => /adult|mature|ecchi|nsfw|sm_bdsm/i.test(String(t)))
+    return arr.some(t => /adult|ecchi/i.test(String(t)))
   }
   const grads = [
     'linear-gradient(90deg,#60a5fa,#a78bfa)',

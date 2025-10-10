@@ -97,11 +97,7 @@ export default function Saved() {
         <h1 className="text-2xl font-bold text-stone-900 dark:text-white">Sign in to see your List</h1>
         <p className="text-stone-600 dark:text-gray-300 mt-2">Save series, sync progress across devices, and continue where you left off.</p>
         <div className="mt-6 flex items-center justify-center gap-3">
-          <button onClick={() => signInWithGoogle()} className="px-4 py-2 rounded-lg bg-stone-900 text-white dark:bg-gray-700 hover:opacity-90">Continue with Google</button>
-          <button onClick={() => {
-            const email = prompt('Enter your email for magic link login:')
-            if (email) signInWithMagicLink(email)
-          }} className="px-4 py-2 rounded-lg border border-stone-300 dark:border-gray-700 text-stone-900 dark:text-white hover:bg-stone-50 dark:hover:bg-gray-800">Magic link (email)</button>
+          <a href="/login" className="px-4 py-2 rounded-lg bg-stone-900 text-white dark:bg-gray-700 hover:opacity-90">Login</a>
         </div>
       </div>
     </div>

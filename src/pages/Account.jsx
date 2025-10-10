@@ -23,6 +23,7 @@ export default function Account() {
   // Site settings stored locally
   const [commentsEnabled, setCommentsEnabled] = useState(true)
   const [historyEnabled, setHistoryEnabled] = useState(true)
+  const [adultAllowed, setAdultAllowed] = useState(false)
 
   useEffect(() => {
     if (!user) return
@@ -38,11 +39,13 @@ export default function Account() {
       const sp = meta.preferences || {}
       if (typeof sp.commentsEnabled === 'boolean') setCommentsEnabled(sp.commentsEnabled)
       if (typeof sp.historyEnabled === 'boolean') setHistoryEnabled(sp.historyEnabled)
+      if (typeof sp.adultAllowed === 'boolean') setAdultAllowed(sp.adultAllowed)
       if (sp == null || (sp.commentsEnabled == null && sp.historyEnabled == null)) {
         try {
           const s = JSON.parse(localStorage.getItem('site:settings') || '{}')
           if (typeof s.commentsEnabled === 'boolean') setCommentsEnabled(s.commentsEnabled)
           if (typeof s.historyEnabled === 'boolean') setHistoryEnabled(s.historyEnabled)
+          if (typeof s.adultAllowed === 'boolean') setAdultAllowed(!!s.adultAllowed)
         } catch {}
       }
     })()
@@ -163,6 +166,16 @@ export default function Account() {
             <div className="grid grid-cols-1 gap-6">
               <div>
                 <div className="text-lg font-semibold mb-2">Other settings</div>
+                <div className="flex items-center justify-between py-3">
+                  <div>
+                    <div className="font-medium">Show 18+ content</div>
+                    <div className="text-sm text-stone-600 dark:text-gray-400">When off, covers are blurred and adult/ecchi content is gated.</div>
+                  </div>
+                  <label className="inline-flex items-center gap-2">
+                    <input type="checkbox" checked={adultAllowed} onChange={async (e)=>{ const v=e.target.checked; setAdultAllowed(v); localStorage.setItem('site:settings', JSON.stringify({ commentsEnabled, historyEnabled, adultAllowed: v })); try { await supabase.auth.updateUser({ data: { preferences: { commentsEnabled, historyEnabled, adultAllowed: v } } }) } catch {} }} />
+                    <span>Enable</span>
+                  </label>
+                </div>
                 <div className="flex items-center justify-between py-3">
                   <div>
                     <div className="font-medium">Show comments by default</div>

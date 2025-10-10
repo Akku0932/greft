@@ -33,7 +33,7 @@ export default function Info() {
   const allowKey = (sid) => `adult:allow:${sid}`
   const hasAdultTags = (tagsArr) => {
     const tags = (Array.isArray(tagsArr) ? tagsArr : []).map(t => String(t).toLowerCase())
-    return tags.some(t => /(adult|mature|ecchi|nsfw|sm_bdsm)/i.test(t))
+    return tags.some(t => /(adult|ecchi)/i.test(t))
   }
 
   // Determine source based on query or ID format (support mp)
