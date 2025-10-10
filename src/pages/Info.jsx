@@ -193,7 +193,10 @@ export default function Info() {
               </div>
             </div>
             <div className="text-white">
-              <h1 className="text-[20px] sm:text-3xl md:text-5xl font-extrabold leading-tight tracking-tight">{mappedData.title}</h1>
+              <div className="flex items-start gap-2">
+                <h1 className="text-[20px] sm:text-3xl md:text-5xl font-extrabold leading-tight tracking-tight flex-1">{mappedData.title}</h1>
+                <span className="md:hidden mt-0.5 px-2 py-0.5 rounded-md text-[10px] font-semibold bg-white/20 backdrop-blur ring-1 ring-white/30">{source.toUpperCase()}</span>
+              </div>
               {source === 'mf' && mappedData.otherName && (
                 <p className="mt-2 text-white/80 text-sm md:text-base italic">{mappedData.otherName}</p>
               )}
@@ -257,6 +260,37 @@ export default function Info() {
           </div>
         </div>
       </section>
+
+      {/* Mobile sticky action bar above bottom nav */}
+      <div className="md:hidden fixed bottom-16 left-0 right-0 z-30">
+        <div className="max-w-[95vw] mx-auto px-4">
+          <div className="rounded-2xl border border-stone-200 dark:border-gray-700 bg-white/95 dark:bg-gray-900/95 shadow-lg p-2 flex items-center gap-2">
+            <button onClick={onReadFirst} className="flex-1 inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-stone-900 text-white dark:bg-gray-800">
+              <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="M12 5l7 7-7 7"/></svg>
+              <span className="text-sm">Read First</span>
+            </button>
+            <button onClick={onReadLatest} className="flex-1 inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg border border-stone-300 dark:border-gray-700 text-stone-900 dark:text-gray-100 bg-white dark:bg-gray-900">
+              <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="M12 19l7-7-7-7"/></svg>
+              <span className="text-sm">Latest</span>
+            </button>
+            <button
+              onClick={async () => {
+                const parsed = parseIdTitle(id, titleId)
+                const payload = { seriesId: parsed.id, source, title: mappedData.title, cover, status: 'planning' }
+                try {
+                  if (!user) { window.location.href = '/login'; return }
+                  if (isSaved(parsed.id, source)) { window.location.href = '/saved'; return }
+                  await add(payload)
+                } catch {}
+              }}
+              className="flex-1 inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg border border-stone-300 dark:border-gray-700 text-stone-900 dark:text-gray-100 bg-white dark:bg-gray-900"
+            >
+              <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z"/></svg>
+              <span className="text-sm">{isSaved(parseIdTitle(id, titleId).id, source) ? 'In List' : 'Add'}</span>
+            </button>
+          </div>
+        </div>
+      </div>
 
       <section className="max-w-[95vw] mx-auto px-4 sm:px-6 -mt-10 md:-mt-20 lg:-mt-24 relative">
         <div className="grid grid-cols-1 lg:grid-cols-[minmax(360px,520px)_1fr] gap-4 sm:gap-6 lg:gap-8 items-start">
