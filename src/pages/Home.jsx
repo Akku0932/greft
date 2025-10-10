@@ -941,9 +941,9 @@ function DesktopReadingHistory({ items, onRemove }) {
         </button>
       )}
       
-      {/* Responsive cards with swipe support */}
+      {/* Responsive cards with swipe support - contained like Latest Updates */}
       <div 
-        className="flex gap-3 pb-2 select-none"
+        className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8 gap-3 sm:gap-4 select-none"
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
@@ -955,12 +955,7 @@ function DesktopReadingHistory({ items, onRemove }) {
         {currentItems.map((item, index) => (
           <div 
             key={(item.seriesId || index) + 'desktop-history'} 
-            className="flex-shrink-0"
-            style={{ 
-              width: `${100 / itemsPerPage}%`,
-              maxWidth: '200px',
-              minWidth: '160px'
-            }}
+            className="w-full"
           >
             <DesktopHistoryCard item={item} index={startIndex + index} onRemove={onRemove} />
           </div>
