@@ -811,8 +811,31 @@ function LatestCard({ item, index }) {
 
 function DesktopReadingHistory({ items, onRemove }) {
   const [currentPage, setCurrentPage] = useState(0)
-  const [isAnimating, setIsAnimating] = useState(false)
-  const itemsPerPage = 7
+  const [touchStart, setTouchStart] = useState(null)
+  const [touchEnd, setTouchEnd] = useState(null)
+  const [itemsPerPage, setItemsPerPage] = useState(7)
+  
+  // Calculate responsive items per page based on screen size
+  useEffect(() => {
+    const calculateItemsPerPage = () => {
+      const width = window.innerWidth
+      if (width >= 1920) return 8 // Large screens
+      if (width >= 1536) return 7 // XL screens
+      if (width >= 1280) return 6 // Large screens
+      if (width >= 1024) return 5 // Desktop
+      return 4 // Smaller desktop
+    }
+    
+    setItemsPerPage(calculateItemsPerPage())
+    
+    const handleResize = () => {
+      setItemsPerPage(calculateItemsPerPage())
+      setCurrentPage(0) // Reset to first page on resize
+    }
+    
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
   
   // Calculate pagination
   const totalPages = Math.ceil(items.length / itemsPerPage)
@@ -820,25 +843,74 @@ function DesktopReadingHistory({ items, onRemove }) {
   const endIndex = startIndex + itemsPerPage
   const currentItems = items.slice(startIndex, endIndex)
   
-  // Navigation functions with animation
+  // Navigation functions
   const goToPreviousPage = () => {
-    if (currentPage > 0 && !isAnimating) {
-      setIsAnimating(true)
+    if (currentPage > 0) {
       setCurrentPage(prev => Math.max(0, prev - 1))
-      setTimeout(() => setIsAnimating(false), 300)
     }
   }
   
   const goToNextPage = () => {
-    if (currentPage < totalPages - 1 && !isAnimating) {
-      setIsAnimating(true)
+    if (currentPage < totalPages - 1) {
       setCurrentPage(prev => Math.min(totalPages - 1, prev + 1))
-      setTimeout(() => setIsAnimating(false), 300)
     }
   }
   
-  // Show arrows only when there are more than 7 items
-  const needsArrows = items.length > 7
+  // Touch/swipe handlers
+  const handleTouchStart = (e) => {
+    setTouchEnd(null)
+    setTouchStart(e.targetTouches[0].clientX)
+  }
+  
+  const handleTouchMove = (e) => {
+    setTouchEnd(e.targetTouches[0].clientX)
+  }
+  
+  const handleTouchEnd = () => {
+    if (!touchStart || !touchEnd) return
+    
+    const distance = touchStart - touchEnd
+    const isLeftSwipe = distance > 50
+    const isRightSwipe = distance < -50
+    
+    if (isLeftSwipe && currentPage < totalPages - 1) {
+      goToNextPage()
+    }
+    if (isRightSwipe && currentPage > 0) {
+      goToPreviousPage()
+    }
+  }
+  
+  // Mouse drag handlers
+  const [mouseStart, setMouseStart] = useState(null)
+  const [mouseEnd, setMouseEnd] = useState(null)
+  
+  const handleMouseDown = (e) => {
+    setMouseEnd(null)
+    setMouseStart(e.clientX)
+  }
+  
+  const handleMouseMove = (e) => {
+    setMouseEnd(e.clientX)
+  }
+  
+  const handleMouseUp = () => {
+    if (!mouseStart || !mouseEnd) return
+    
+    const distance = mouseStart - mouseEnd
+    const isLeftSwipe = distance > 50
+    const isRightSwipe = distance < -50
+    
+    if (isLeftSwipe && currentPage < totalPages - 1) {
+      goToNextPage()
+    }
+    if (isRightSwipe && currentPage > 0) {
+      goToPreviousPage()
+    }
+  }
+  
+  // Show arrows only when there are more items than can fit on screen
+  const needsArrows = items.length > itemsPerPage
   
   if (!items.length) return null
   
@@ -848,8 +920,7 @@ function DesktopReadingHistory({ items, onRemove }) {
       {needsArrows && currentPage > 0 && (
         <button
           onClick={goToPreviousPage}
-          disabled={isAnimating}
-          className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 z-10 w-10 h-10 rounded-full bg-white dark:bg-gray-800 shadow-lg border border-stone-200 dark:border-gray-700 flex items-center justify-center text-stone-600 dark:text-gray-300 hover:bg-stone-50 dark:hover:bg-gray-700 transition-all duration-200 disabled:opacity-50"
+          className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 z-10 w-10 h-10 rounded-full bg-white dark:bg-gray-800 shadow-lg border border-stone-200 dark:border-gray-700 flex items-center justify-center text-stone-600 dark:text-gray-300 hover:bg-stone-50 dark:hover:bg-gray-700 transition-all duration-200"
           title="Previous"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -861,8 +932,7 @@ function DesktopReadingHistory({ items, onRemove }) {
       {needsArrows && currentPage < totalPages - 1 && (
         <button
           onClick={goToNextPage}
-          disabled={isAnimating}
-          className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 z-10 w-10 h-10 rounded-full bg-white dark:bg-gray-800 shadow-lg border border-stone-200 dark:border-gray-700 flex items-center justify-center text-stone-600 dark:text-gray-300 hover:bg-stone-50 dark:hover:bg-gray-700 transition-all duration-200 disabled:opacity-50"
+          className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 z-10 w-10 h-10 rounded-full bg-white dark:bg-gray-800 shadow-lg border border-stone-200 dark:border-gray-700 flex items-center justify-center text-stone-600 dark:text-gray-300 hover:bg-stone-50 dark:hover:bg-gray-700 transition-all duration-200"
           title="Next"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -871,23 +941,30 @@ function DesktopReadingHistory({ items, onRemove }) {
         </button>
       )}
       
-      {/* Show only 7 cards at a time with sliding animation */}
-      <div className="flex gap-4 pb-2 overflow-hidden">
-        <div 
-          className={`flex gap-4 transition-transform duration-300 ease-in-out ${
-            isAnimating ? 'transform translate-x-0' : ''
-          }`}
-        >
-          {currentItems.map((item, index) => (
-            <div 
-              key={(item.seriesId || index) + 'desktop-history'} 
-              className="flex-shrink-0"
-              style={{ width: '200px' }} // Increased size from 180px to 200px
-            >
-              <DesktopHistoryCard item={item} index={startIndex + index} onRemove={onRemove} />
-            </div>
-          ))}
-        </div>
+      {/* Responsive cards with swipe support */}
+      <div 
+        className="flex gap-3 pb-2 select-none"
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUp}
+        onMouseLeave={handleMouseUp}
+      >
+        {currentItems.map((item, index) => (
+          <div 
+            key={(item.seriesId || index) + 'desktop-history'} 
+            className="flex-shrink-0"
+            style={{ 
+              width: `${100 / itemsPerPage}%`,
+              maxWidth: '200px',
+              minWidth: '160px'
+            }}
+          >
+            <DesktopHistoryCard item={item} index={startIndex + index} onRemove={onRemove} />
+          </div>
+        ))}
       </div>
     </div>
   )
