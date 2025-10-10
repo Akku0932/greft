@@ -70,7 +70,7 @@ export default function Read() {
         const ctx = source === 'mp' ? { seriesId } : undefined
         const res = await api.read(chapterId, source, ctx)
         if (!mounted) return
-        const imgs = Array.isArray(res) ? res : (res.pages || res.images || res.items || [])
+        const imgs = Array.isArray(res) ? res : (res.pages || res.images || res.items || res.data || [])
         setPages(imgs.map(img => {
           // Handle MF format: {img: "url"} or GF format: "url"
           const url = typeof img === 'string' ? img : (img?.img || img?.src || img)
@@ -187,9 +187,10 @@ export default function Read() {
     setTransitioning(true)
     setLoading(true)
     setPages([])
+    const extra = `${seriesId ? `?series=${encodeURIComponent(seriesId)}&title=${encodeURIComponent(titleId)}` : ''}${source==='mp' ? (seriesId ? `&src=mp` : `?src=mp`) : ''}`
     const url = source === 'mf' 
-      ? `/read/chapter/${prevId}${seriesId ? `?series=${encodeURIComponent(seriesId)}&title=${encodeURIComponent(titleId)}` : ''}`
-      : `/read/${encodeURIComponent(prevId)}${seriesId ? `?series=${encodeURIComponent(seriesId)}&title=${encodeURIComponent(titleId)}` : ''}`
+      ? `/read/chapter/${prevId}${extra}`
+      : `/read/${encodeURIComponent(prevId)}${extra}`
     navigate(url)
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }, [prevId, source, seriesId, titleId, navigate])
@@ -198,14 +199,15 @@ export default function Read() {
     setTransitioning(true)
     setLoading(true)
     setPages([])
+    const extra = `${seriesId ? `?series=${encodeURIComponent(seriesId)}&title=${encodeURIComponent(titleId)}` : ''}${source==='mp' ? (seriesId ? `&src=mp` : `?src=mp`) : ''}`
     const url = source === 'mf' 
-      ? `/read/chapter/${nextId}${seriesId ? `?series=${encodeURIComponent(seriesId)}&title=${encodeURIComponent(titleId)}` : ''}`
-      : `/read/${encodeURIComponent(nextId)}${seriesId ? `?series=${encodeURIComponent(seriesId)}&title=${encodeURIComponent(titleId)}` : ''}`
+      ? `/read/chapter/${nextId}${extra}`
+      : `/read/${encodeURIComponent(nextId)}${extra}`
     navigate(url)
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }, [nextId, source, seriesId, titleId, navigate])
 
-  const infoHref = seriesId && titleId ? `/info/${encodeURIComponent(seriesId)}/${encodeURIComponent(titleId)}` : '/home'
+  const infoHref = seriesId && titleId ? `/info/${encodeURIComponent(seriesId)}/${encodeURIComponent(titleId)}${source==='mp' ? '?src=mp' : ''}` : '/home'
 
   function widen() { 
     setButtonClicked(true)
@@ -382,9 +384,10 @@ export default function Read() {
                     const idx = Number(e.target.value)
                     const targetId = orderedChapterIds[idx]
                     if (targetId) {
+                      const extra = `${seriesId ? `?series=${encodeURIComponent(seriesId)}&title=${encodeURIComponent(titleId)}` : ''}${source==='mp' ? (seriesId ? `&src=mp` : `?src=mp`) : ''}`
                       const url = source === 'mf' 
-                        ? `/read/chapter/${targetId}${seriesId ? `?series=${encodeURIComponent(seriesId)}&title=${encodeURIComponent(titleId)}` : ''}`
-                        : `/read/${encodeURIComponent(targetId)}${seriesId ? `?series=${encodeURIComponent(seriesId)}&title=${encodeURIComponent(titleId)}` : ''}`
+                        ? `/read/chapter/${targetId}${extra}`
+                        : `/read/${encodeURIComponent(targetId)}${extra}`
                       navigate(url)
                       window.scrollTo({ top: 0, behavior: 'smooth' })
                     }
