@@ -94,6 +94,20 @@ export default function Home() {
         setLatest(latestItems)
         writeCache('home-latest', latestItems)
         setHasMore(latestItems.length > 12)
+        // Prewarm MP info for Latest items to power censoring
+        ;(async () => {
+          try {
+            const mpItems = (latestItems || []).filter(x => String(x._source||'').toLowerCase()==='mp').slice(0, 30)
+            await Promise.all(mpItems.map(async (x) => {
+              try {
+                const parsed = parseIdTitle(x.seriesId || x.id || x.slug || x.urlId, x.title || x.name || x.slug)
+                if (!parsed.id) return
+                const info = await api.info(parsed.id, parsed.titleId, 'mp')
+                try { localStorage.setItem(`mp:info:${parsed.id}`, JSON.stringify(info)) } catch {}
+              } catch {}
+            }))
+          } catch {}
+        })()
         const newlyItems = extractItems(newlyAdded)
         const flattenedNewly = newlyItems.flatMap((row) => {
           const d = row?.data || row
