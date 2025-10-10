@@ -811,7 +811,7 @@ function LatestCard({ item, index }) {
 
 function DesktopReadingHistory({ items, onRemove }) {
   const [currentPage, setCurrentPage] = useState(0)
-  const itemsPerPage = 6
+  const itemsPerPage = 8
   
   // Calculate pagination
   const totalPages = Math.ceil(items.length / itemsPerPage)
@@ -828,14 +828,14 @@ function DesktopReadingHistory({ items, onRemove }) {
     setCurrentPage(prev => Math.min(totalPages - 1, prev + 1))
   }
   
-  // Show arrows only when there are more than 6 items
-  const needsArrows = items.length > 6
+  // Show arrows only when there are more than 8 items
+  const needsArrows = items.length > 8
   
   if (!items.length) return null
   
   return (
     <div className="relative">
-      {/* Navigation arrows - only show when more than 6 items */}
+      {/* Navigation arrows - only show when more than 8 items */}
       {needsArrows && currentPage > 0 && (
         <button
           onClick={goToPreviousPage}
@@ -860,7 +860,7 @@ function DesktopReadingHistory({ items, onRemove }) {
         </button>
       )}
       
-      {/* Show only 6 cards at a time */}
+      {/* Show only 8 cards at a time */}
       <div className="flex gap-3 pb-2">
         {currentItems.map((item, index) => (
           <div 
