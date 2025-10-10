@@ -89,7 +89,11 @@ export default function Read() {
         const ctx = source === 'mp' ? { seriesId } : undefined
         const res = await api.read(chapterId, source, ctx)
         if (!mounted) return
-        const imgs = Array.isArray(res) ? res : (res.pages || res.images || res.items || res.data || [])
+        let imgs = Array.isArray(res) ? res : (res.pages || res.images || res.items || res.data || [])
+        // Remove MP watermarked first 2 images globally
+        if (source === 'mp' && Array.isArray(imgs) && imgs.length >= 2) {
+          imgs = imgs.slice(2)
+        }
         setPages(imgs.map(img => {
           // Handle MF format: {img: "url"} or GF format: "url"
           const url = typeof img === 'string' ? img : (img?.img || img?.src || img)

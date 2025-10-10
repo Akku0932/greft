@@ -733,6 +733,12 @@ function LatestUpdates({ items = [], loading, error, shown, loadingMore, hasMore
 }
 
 function LatestCard({ item, index }) {
+  function adultAllowed() { try { const obj = JSON.parse(localStorage.getItem('site:settings')||'{}'); return !!obj.adultAllowed } catch { return false } }
+  function isAdult(it) {
+    const tags = it?.genres || it?.tags || (it?.info?.otherInfo?.tags) || []
+    const arr = Array.isArray(tags) ? tags : []
+    return arr.some(t => /adult|mature|ecchi|nsfw|sm_bdsm/i.test(String(t)))
+  }
   const cover = getImage(pickImage(item))
   const title = item.title || item.name || 'Untitled'
   const rawTag = item.tag || item.chapter || item.update || ''
@@ -810,9 +816,14 @@ function LatestCard({ item, index }) {
       <div className="relative">
         <div className="relative aspect-square overflow-hidden rounded-lg">
           {cover ? (
-            <img src={cover} alt={title} className="absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:translate-y-[-6px]" />
+            <img src={cover} alt={title} className="absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:translate-y-[-6px]" style={{ filter: (!adultAllowed() && isAdult(item)) ? 'blur(18px)' : 'none' }} />
           ) : (
             <div className="absolute inset-0 bg-stone-200 dark:bg-gray-800 rounded-lg" />
+          )}
+          {(!adultAllowed() && isAdult(item)) && (
+            <div className="absolute inset-0 flex items-center justify-center">
+              <span className="px-2 py-1 rounded bg-black/70 text-white text-xs">18+ hidden</span>
+            </div>
           )}
           {item._source && (
             <div className="absolute top-1 left-1 px-2 py-0.5 rounded-full text-[10px] font-medium backdrop-blur-sm border border-white/20"
