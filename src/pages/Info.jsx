@@ -412,8 +412,12 @@ function ChaptersInline({ seriesId, titleId, source }) {
       <ol className="space-y-2">
         {items.map((ch, i) => {
           const apiLabel = ch?.chap ?? ch?.chapter ?? (ch?.chapVol && ch?.chapVol?.chap) ?? ch?.no ?? ch?.number
-          const displayNum = apiLabel ? String(apiLabel) : Math.max(1, totalCount - (start + i))
-          const title = `Chapter ${displayNum}`
+          const fallbackNum = Math.max(1, totalCount - (start + i))
+          const numeric = (() => {
+            const m = String(apiLabel ?? '').match(/\d+(?:\.\d+)?/)
+            return m ? m[0] : String(fallbackNum)
+          })()
+          const title = `Chapter ${numeric}`
           const cid = getChapterId(ch)
           return (
             <li key={cid || i}>
@@ -427,7 +431,7 @@ function ChaptersInline({ seriesId, titleId, source }) {
                   <div className="flex items-center justify-between gap-3 sm:gap-4 px-3 sm:px-4 py-3">
                     <div className="flex items-center gap-3 sm:gap-4 min-w-0">
                       <div className="h-7 w-auto sm:h-8 rounded-md bg-stone-100 dark:bg-gray-700 text-stone-700 dark:text-gray-200 text-[10px] sm:text-xs font-semibold flex items-center justify-center border border-stone-200 dark:border-gray-600 px-2 whitespace-nowrap">
-                        Ch {displayNum}
+                        Ch {numeric}
                       </div>
                       <div className="min-w-0">
                         <div className="font-medium text-stone-900 dark:text-white text-sm sm:text-base truncate group-hover:text-brand-600 dark:group-hover:text-brand-400">{title}</div>
