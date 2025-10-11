@@ -60,10 +60,14 @@ export default function Read() {
     const raw = String(id || '')
     const cleaned = raw.replace(/^\/+/, '')
     
-    if (source === 'mf') {
+    // Determine source inline to avoid circular dependency
+    const isMF = !srcParam && seriesId && seriesId.includes('.') && !seriesId.includes('/')
+    const currentSource = srcParam === 'mp' ? 'mp' : (isMF ? 'mf' : 'gf')
+    
+    if (currentSource === 'mf') {
       // For MF, the id is the chapter ID directly
       return raw
-    } else if (source === 'mp') {
+    } else if (currentSource === 'mp') {
       // Handle MP style: /title/:series/:chapter
       if (cleaned.startsWith('title/')) {
         const parts = cleaned.split('/')
@@ -75,7 +79,7 @@ export default function Read() {
       // For GF, decode the chapter ID
       return decodeURIComponent(raw)
     }
-  }, [id, source])
+  }, [id, srcParam, seriesId])
 
   const chapterIndex = useMemo(() => {
     return currentIndex >= 0 ? currentIndex : 0
