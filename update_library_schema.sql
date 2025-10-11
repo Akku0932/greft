@@ -25,3 +25,4 @@ WHERE table_name = 'library'
 AND table_schema = 'public'
 AND column_name IN ('last_known_chapter_count', 'chapters_last_checked_at')
 ORDER BY column_name;
+

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useParams, Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { api, getImage, pickImage, parseIdTitle, sanitizeTitleId } from '../lib/api.js'
 import { useLibrary } from '../hooks/useLibrary'
+import CommentsSection from '../components/CommentsSection'
 
 export default function Info() {
   const { id, titleId } = useParams()
@@ -379,6 +380,15 @@ export default function Info() {
             <ChaptersInline seriesId={parseIdTitle(id, '').id} titleId={parseIdTitle(id, '').titleId} source={source} />
           </div>
         </div>
+      </section>
+
+      {/* Comments Section */}
+      <section className="max-w-[95vw] mx-auto px-4 sm:px-6 py-8">
+        <CommentsSection 
+          seriesId={parseIdTitle(id, '').id} 
+          source={source} 
+          title={`Comments for ${mappedData.title}`}
+        />
       </section>
 
       {!!(data.recommendations && data.recommendations.length) && (
