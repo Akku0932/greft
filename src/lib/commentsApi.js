@@ -5,13 +5,7 @@ export async function fetchComments({ seriesId, source, chapterId = null }) {
   try {
     const { data, error } = await supabase
       .from('comments')
-      .select(`
-        *,
-        profiles:user_id (
-          display_name,
-          avatar_url
-        )
-      `)
+      .select('*')
       .eq('series_id', seriesId)
       .eq('source', source)
       .eq('chapter_id', chapterId || null)
@@ -51,13 +45,7 @@ export async function addComment({ seriesId, source, chapterId, content, parentI
         content: content.trim(),
         user_name: user.user_metadata?.display_name || user.email?.split('@')[0] || 'User'
       })
-      .select(`
-        *,
-        profiles:user_id (
-          display_name,
-          avatar_url
-        )
-      `)
+      .select('*')
       .single()
     
     if (error) {
@@ -86,13 +74,7 @@ export async function updateComment({ commentId, content }) {
       })
       .eq('id', commentId)
       .eq('user_id', user.id)
-      .select(`
-        *,
-        profiles:user_id (
-          display_name,
-          avatar_url
-        )
-      `)
+      .select('*')
       .single()
     
     if (error) {

@@ -121,8 +121,7 @@ export default function CommentsSection({ seriesId, source, chapterId = null, ti
   }
 
   const getAvatarUrl = (comment) => {
-    return comment.profiles?.avatar_url || 
-           `https://ui-avatars.com/api/?name=${encodeURIComponent(comment.user_name)}&background=random&color=fff&size=40`
+    return `https://ui-avatars.com/api/?name=${encodeURIComponent(comment.user_name)}&background=random&color=fff&size=40`
   }
 
   if (loading) {
@@ -166,12 +165,12 @@ export default function CommentsSection({ seriesId, source, chapterId = null, ti
       {/* Add Comment Form */}
       {user ? (
         <form onSubmit={handleSubmitComment} className="mb-6">
-          <div className="flex gap-3">
-            <img 
-              src={user.user_metadata?.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.user_metadata?.display_name || user.email?.split('@')[0] || 'User')}&background=random&color=fff&size=40`}
-              alt="Your avatar"
-              className="h-10 w-10 rounded-full object-cover"
-            />
+        <div className="flex gap-3">
+          <img 
+            src={`https://ui-avatars.com/api/?name=${encodeURIComponent(user.user_metadata?.display_name || user.email?.split('@')[0] || 'User')}&background=random&color=fff&size=40`}
+            alt="Your avatar"
+            className="h-10 w-10 rounded-full object-cover"
+          />
             <div className="flex-1">
               <textarea
                 ref={textareaRef}
