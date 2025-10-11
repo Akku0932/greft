@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useParams, Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { api, getImage, pickImage, parseIdTitle, sanitizeTitleId } from '../lib/api.js'
 import { useLibrary } from '../hooks/useLibrary'
+import CommentSection from '../components/CommentSection'
 
 export default function Info() {
   const { id, titleId } = useParams()
@@ -401,6 +402,18 @@ export default function Info() {
           </div>
         </section>
       )}
+
+      {/* Comments Section */}
+      <section className="mb-10">
+        <div className="rounded-2xl border border-stone-200 dark:border-gray-700 bg-white/60 dark:bg-gray-900/60 p-6">
+          <CommentSection 
+            seriesId={parseIdTitle(id, titleId).id}
+            source={source}
+            chapterId={null}
+            title={`${data?.title || 'Series'} Comments`}
+          />
+        </div>
+      </section>
     </div>
   )
 }

@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { api, getImage, parseIdTitle, sanitizeTitleId, pickImage } from '../lib/api.js'
 import { upsertProgress } from '../lib/progressApi'
 import { upsertRecentRead } from '../lib/recentReadsApi'
+import CommentSection from '../components/CommentSection'
 
 export default function Read() {
   const { id } = useParams()
@@ -538,34 +539,13 @@ export default function Read() {
       </section>
 
       <section className="max-w-3xl mx-auto px-2 sm:px-4 pb-10">
-        <h3 className="text-lg font-semibold text-stone-900 dark:text-white mb-3">Comments</h3>
         <div className="rounded-xl border border-stone-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-4">
-          <div className="flex items-start gap-3">
-            <div className="h-10 w-10 rounded-full bg-stone-200 dark:bg-gray-700" />
-            <div className="flex-1">
-              <textarea placeholder="Share your thoughts…" className="w-full rounded-lg border border-stone-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-stone-800 dark:text-gray-200 p-3 resize-y min-h-[90px]"></textarea>
-              <div className="mt-2 flex justify-end">
-                <button className="px-4 py-2 rounded-lg bg-stone-900 text-white dark:bg-gray-700 hover:bg-stone-800 dark:hover:bg-gray-600">Post</button>
-              </div>
-            </div>
-          </div>
-          <div className="mt-6 space-y-4">
-            {/* Placeholder comments */}
-            <div className="flex gap-3">
-              <div className="h-9 w-9 rounded-full bg-stone-200 dark:bg-gray-700" />
-              <div>
-                <div className="text-sm font-medium text-stone-900 dark:text-white">Guest</div>
-                <div className="text-sm text-stone-700 dark:text-gray-300">Amazing chapter! The pacing and art are on point.</div>
-              </div>
-            </div>
-            <div className="flex gap-3">
-              <div className="h-9 w-9 rounded-full bg-stone-200 dark:bg-gray-700" />
-              <div>
-                <div className="text-sm font-medium text-stone-900 dark:text-white">Reader</div>
-                <div className="text-sm text-stone-700 dark:text-gray-300">Can’t wait for the next one.</div>
-              </div>
-            </div>
-          </div>
+          <CommentSection 
+            seriesId={seriesId}
+            source={source}
+            chapterId={chapterId}
+            title={`Chapter ${chapterIndex + 1} Comments`}
+          />
         </div>
       </section>
     </div>
