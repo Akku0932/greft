@@ -29,11 +29,13 @@ export default function CommentsSection({ seriesId, source, chapterId = null, ti
   const loadComments = async () => {
     try {
       setLoading(true)
+      console.log('Loading comments for:', { seriesId, source, chapterId })
       const data = await fetchComments({ seriesId, source, chapterId })
+      console.log('Fetched comments:', data)
       setComments(data)
     } catch (err) {
       setError('Failed to load comments')
-      console.error(err)
+      console.error('Error loading comments:', err)
     } finally {
       setLoading(false)
     }
@@ -52,9 +54,12 @@ export default function CommentsSection({ seriesId, source, chapterId = null, ti
         parentId: replyingTo
       })
       
-      setComments(prev => [comment, ...prev])
+      console.log('Comment added, reloading comments...')
       setNewComment('')
       setReplyingTo(null)
+      
+      // Reload comments to get the latest data
+      await loadComments()
     } catch (err) {
       setError('Failed to add comment')
       console.error(err)
@@ -150,16 +155,24 @@ export default function CommentsSection({ seriesId, source, chapterId = null, ti
   return (
     <div className="mt-8 p-6 bg-white dark:bg-gray-900 rounded-xl border border-stone-200 dark:border-gray-800">
       {/* Header */}
-      <div className="flex items-center gap-3 mb-6">
-        <div className="h-8 w-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
-          <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-          </svg>
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-3">
+          <div className="h-8 w-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
+            <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+            </svg>
+          </div>
+          <h3 className="text-lg font-semibold text-stone-900 dark:text-white">{title}</h3>
+          <span className="px-2 py-1 bg-stone-100 dark:bg-gray-800 text-stone-600 dark:text-gray-400 text-sm rounded-full">
+            {comments.length}
+          </span>
         </div>
-        <h3 className="text-lg font-semibold text-stone-900 dark:text-white">{title}</h3>
-        <span className="px-2 py-1 bg-stone-100 dark:bg-gray-800 text-stone-600 dark:text-gray-400 text-sm rounded-full">
-          {comments.length}
-        </span>
+        <button
+          onClick={loadComments}
+          className="px-3 py-1 text-sm bg-stone-100 dark:bg-gray-800 text-stone-600 dark:text-gray-400 rounded-lg hover:bg-stone-200 dark:hover:bg-gray-700 transition-colors"
+        >
+          Refresh
+        </button>
       </div>
 
       {/* Add Comment Form */}
