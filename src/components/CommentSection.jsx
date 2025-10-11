@@ -1,9 +1,8 @@
-import { useState, useEffect, lazy, Suspense } from 'react'
+import { useState, useEffect } from 'react'
 import { useAuth } from '../hooks/useAuth'
 import { fetchComments, postComment } from '../lib/commentsApi'
+import CommentCard from './CommentCard'
 import CommentInput from './CommentInput'
-
-const CommentCard = lazy(() => import('./CommentCard'))
 
 export default function CommentSection({ 
   seriesId, 
@@ -178,13 +177,12 @@ export default function CommentSection({
       ) : (
         <div className="space-y-4">
           {comments.map((comment) => (
-            <Suspense key={comment.id} fallback={<div>Loading comment...</div>}>
-              <CommentCard
-                comment={comment}
-                onUpdate={handleCommentUpdate}
-                onDelete={handleCommentDelete}
-              />
-            </Suspense>
+            <CommentCard
+              key={comment.id}
+              comment={comment}
+              onUpdate={handleCommentUpdate}
+              onDelete={handleCommentDelete}
+            />
           ))}
         </div>
       )}

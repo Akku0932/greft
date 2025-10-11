@@ -25,8 +25,27 @@ export async function fetchComments({ seriesId, source, chapterId = null }) {
     return []
   }
 
-  // Get current user info
-  const { data: { user } } = await supabase.auth.getUser()
+  // Get unique user IDs from comments
+  const userIds = [...new Set(comments.map(c => c.user_id))]
+  
+  // Fetch user profiles
+  const { data: profiles } = await supabase
+    .from('profiles')
+    .select('id, display_name, avatar_url')
+    .in('id', userIds)
+  
+  // Create user lookup map
+  const userMap = {}
+  profiles?.forEach(p => {
+    userMap[p.id] = {
+      id: p.id,
+      email: p.display_name || 'User',
+      user_metadata: {
+        display_name: p.display_name,
+        avatar_url: p.avatar_url
+      }
+    }
+  })
   
   // Fetch likes count for each comment
   const commentIds = comments.map(c => c.id)
@@ -58,13 +77,13 @@ export async function fetchComments({ seriesId, source, chapterId = null }) {
     })
   }
 
-  // Format comments with user data and counts
+  // Format comments with correct user data and counts
   const formattedComments = comments.map(comment => ({
     ...comment,
-    user: {
+    user: userMap[comment.user_id] || {
       id: comment.user_id,
-      email: user?.email || 'user@example.com',
-      user_metadata: user?.user_metadata || {}
+      email: 'User',
+      user_metadata: {}
     },
     likes: [{ count: likesCount[comment.id] || 0 }],
     replies: [{ count: repliesCount[comment.id] || 0 }]
@@ -88,8 +107,27 @@ export async function fetchReplies(parentId) {
     return []
   }
 
-  // Get current user info
-  const { data: { user } } = await supabase.auth.getUser()
+  // Get unique user IDs from replies
+  const userIds = [...new Set(replies.map(r => r.user_id))]
+  
+  // Fetch user profiles
+  const { data: profiles } = await supabase
+    .from('profiles')
+    .select('id, display_name, avatar_url')
+    .in('id', userIds)
+  
+  // Create user lookup map
+  const userMap = {}
+  profiles?.forEach(p => {
+    userMap[p.id] = {
+      id: p.id,
+      email: p.display_name || 'User',
+      user_metadata: {
+        display_name: p.display_name,
+        avatar_url: p.avatar_url
+      }
+    }
+  })
   
   // Fetch likes count for each reply
   const replyIds = replies.map(r => r.id)
@@ -106,13 +144,13 @@ export async function fetchReplies(parentId) {
     })
   }
 
-  // Format replies with user data and counts
+  // Format replies with correct user data and counts
   const formattedReplies = replies.map(reply => ({
     ...reply,
-    user: {
+    user: userMap[reply.user_id] || {
       id: reply.user_id,
-      email: user?.email || 'user@example.com',
-      user_metadata: user?.user_metadata || {}
+      email: 'User',
+      user_metadata: {}
     },
     likes: [{ count: likesCount[reply.id] || 0 }]
   }))

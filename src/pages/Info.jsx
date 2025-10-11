@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, lazy, Suspense } from 'react'
 import { useParams, Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { api, getImage, pickImage, parseIdTitle, sanitizeTitleId } from '../lib/api.js'
 import { useLibrary } from '../hooks/useLibrary'
-import CommentSection from '../components/CommentSection'
 import { getReadUrl } from '../lib/urlUtils'
+
+const CommentSection = lazy(() => import('../components/CommentSection'))
 
 export default function Info() {
   const { id, titleId } = useParams()
@@ -409,12 +410,14 @@ export default function Info() {
       {/* Comments Section */}
       <section className="mb-10">
         <div className="rounded-2xl border border-stone-200 dark:border-gray-700 bg-white/60 dark:bg-gray-900/60 p-6">
-          <CommentSection 
-            seriesId={parsed.id}
-            source={source}
-            chapterId={null}
-            title={`${data?.title || 'Series'} Comments`}
-          />
+          <Suspense fallback={<div className="text-center py-8">Loading comments...</div>}>
+            <CommentSection 
+              seriesId={parsed.id}
+              source={source}
+              chapterId={null}
+              title={`${data?.title || 'Series'} Comments`}
+            />
+          </Suspense>
         </div>
       </section>
     </div>
@@ -465,10 +468,15 @@ function ChaptersInline({ seriesId, titleId, source }) {
       <ol className="space-y-2">
         {items.map((ch, i) => {
           const apiLabel = ch?.chap ?? ch?.chapter ?? (ch?.chapVol && ch?.chapVol?.chap) ?? ch?.no ?? ch?.number
-          const fallbackNum = Math.max(1, totalCount - (start + i))
+          const fallbackNum = totalCount > 0 ? Math.max(1, totalCount - (start + i)) : (i + 1)
           const numeric = (() => {
-            const m = String(apiLabel ?? '').match(/\d+(?:\.\d+)?/)
-            return m ? m[0] : String(fallbackNum)
+            // Try to extract number from apiLabel
+            if (apiLabel != null) {
+              const m = String(apiLabel).match(/\d+(?:\.\d+)?/)
+              if (m) return m[0]
+            }
+            // If no apiLabel, use fallback
+            return String(fallbackNum)
           })()
           const title = `Chapter ${numeric}`
           const cid = getChapterId(ch)
