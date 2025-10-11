@@ -5,15 +5,25 @@ export async function fetchComments({ seriesId, source, chapterId = null }) {
   try {
     console.log('Fetching comments with params:', { seriesId, source, chapterId })
     
+    // First, let's try to get ALL comments to see what's in the database
+    const { data: allComments, error: allError } = await supabase
+      .from('comments')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(10)
+    
+    console.log('All comments in database:', allComments)
+    
+    // Now try the specific query
     const { data, error } = await supabase
       .from('comments')
       .select('*')
-      .eq('series_id', seriesId)
+      .eq('series_id', String(seriesId))
       .eq('source', source)
       .eq('chapter_id', chapterId || null)
       .order('created_at', { ascending: false })
     
-    console.log('Supabase response:', { data, error })
+    console.log('Specific query response:', { data, error })
     
     if (error) {
       console.error('Error fetching comments:', error)
