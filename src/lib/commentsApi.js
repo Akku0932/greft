@@ -2,94 +2,131 @@ import { supabase } from './supabaseClient'
 
 // Fetch comments for a series or chapter
 export async function fetchComments({ seriesId, source, chapterId = null }) {
-  const { data, error } = await supabase
-    .from('comments')
-    .select(`
-      *,
-      profiles:user_id (
-        display_name,
-        avatar_url
-      )
-    `)
-    .eq('series_id', seriesId)
-    .eq('source', source)
-    .eq('chapter_id', chapterId || null)
-    .order('created_at', { ascending: false })
-  
-  if (error) throw error
-  return data || []
+  try {
+    const { data, error } = await supabase
+      .from('comments')
+      .select(`
+        *,
+        profiles:user_id (
+          display_name,
+          avatar_url
+        )
+      `)
+      .eq('series_id', seriesId)
+      .eq('source', source)
+      .eq('chapter_id', chapterId || null)
+      .order('created_at', { ascending: false })
+    
+    if (error) {
+      console.error('Error fetching comments:', error)
+      // If table doesn't exist, return empty array instead of throwing
+      if (error.code === 'PGRST116' || error.message?.includes('relation "comments" does not exist')) {
+        console.warn('Comments table does not exist yet. Please run the database migration.')
+        return []
+      }
+      throw error
+    }
+    return data || []
+  } catch (err) {
+    console.error('Failed to fetch comments:', err)
+    return []
+  }
 }
 
 // Add a new comment
 export async function addComment({ seriesId, source, chapterId, content, parentId = null }) {
-  const { data: auth } = await supabase.auth.getUser()
-  const user = auth?.user
-  if (!user) throw new Error('Not authenticated')
-  
-  const { data, error } = await supabase
-    .from('comments')
-    .insert({
-      user_id: user.id,
-      series_id: seriesId,
-      source,
-      chapter_id: chapterId,
-      parent_id: parentId,
-      content: content.trim(),
-      user_name: user.user_metadata?.display_name || user.email?.split('@')[0] || 'User'
-    })
-    .select(`
-      *,
-      profiles:user_id (
-        display_name,
-        avatar_url
-      )
-    `)
-    .single()
-  
-  if (error) throw error
-  return data
+  try {
+    const { data: auth } = await supabase.auth.getUser()
+    const user = auth?.user
+    if (!user) throw new Error('Not authenticated')
+    
+    const { data, error } = await supabase
+      .from('comments')
+      .insert({
+        user_id: user.id,
+        series_id: seriesId,
+        source,
+        chapter_id: chapterId,
+        parent_id: parentId,
+        content: content.trim(),
+        user_name: user.user_metadata?.display_name || user.email?.split('@')[0] || 'User'
+      })
+      .select(`
+        *,
+        profiles:user_id (
+          display_name,
+          avatar_url
+        )
+      `)
+      .single()
+    
+    if (error) {
+      console.error('Error adding comment:', error)
+      throw error
+    }
+    return data
+  } catch (err) {
+    console.error('Failed to add comment:', err)
+    throw err
+  }
 }
 
 // Update a comment
 export async function updateComment({ commentId, content }) {
-  const { data: auth } = await supabase.auth.getUser()
-  const user = auth?.user
-  if (!user) throw new Error('Not authenticated')
-  
-  const { data, error } = await supabase
-    .from('comments')
-    .update({ 
-      content: content.trim(),
-      updated_at: new Date().toISOString()
-    })
-    .eq('id', commentId)
-    .eq('user_id', user.id)
-    .select(`
-      *,
-      profiles:user_id (
-        display_name,
-        avatar_url
-      )
-    `)
-    .single()
-  
-  if (error) throw error
-  return data
+  try {
+    const { data: auth } = await supabase.auth.getUser()
+    const user = auth?.user
+    if (!user) throw new Error('Not authenticated')
+    
+    const { data, error } = await supabase
+      .from('comments')
+      .update({ 
+        content: content.trim(),
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', commentId)
+      .eq('user_id', user.id)
+      .select(`
+        *,
+        profiles:user_id (
+          display_name,
+          avatar_url
+        )
+      `)
+      .single()
+    
+    if (error) {
+      console.error('Error updating comment:', error)
+      throw error
+    }
+    return data
+  } catch (err) {
+    console.error('Failed to update comment:', err)
+    throw err
+  }
 }
 
 // Delete a comment
 export async function deleteComment({ commentId }) {
-  const { data: auth } = await supabase.auth.getUser()
-  const user = auth?.user
-  if (!user) throw new Error('Not authenticated')
-  
-  const { error } = await supabase
-    .from('comments')
-    .delete()
-    .eq('id', commentId)
-    .eq('user_id', user.id)
-  
-  if (error) throw error
+  try {
+    const { data: auth } = await supabase.auth.getUser()
+    const user = auth?.user
+    if (!user) throw new Error('Not authenticated')
+    
+    const { error } = await supabase
+      .from('comments')
+      .delete()
+      .eq('id', commentId)
+      .eq('user_id', user.id)
+    
+    if (error) {
+      console.error('Error deleting comment:', error)
+      throw error
+    }
+  } catch (err) {
+    console.error('Failed to delete comment:', err)
+    throw err
+  }
 }
 
 // Like/unlike a comment
