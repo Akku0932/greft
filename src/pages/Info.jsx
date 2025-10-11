@@ -1,10 +1,7 @@
-import { useEffect, useState, lazy, Suspense } from 'react'
+import { useEffect, useState } from 'react'
 import { useParams, Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { api, getImage, pickImage, parseIdTitle, sanitizeTitleId } from '../lib/api.js'
 import { useLibrary } from '../hooks/useLibrary'
-import { getReadUrl } from '../lib/urlUtils'
-
-const CommentSection = lazy(() => import('../components/CommentSection'))
 
 export default function Info() {
   const { id, titleId } = useParams()
@@ -46,9 +43,6 @@ export default function Info() {
   const source = isMP ? 'mp' : (isMF ? 'mf' : 'gf')
   const { user, add, remove, isSaved, items, setStatus } = useLibrary()
   const [statusValue, setStatusValue] = useState('planning')
-  
-  // Parse ID once for consistent usage
-  const parsed = parseIdTitle(id, titleId)
 
   useEffect(() => {
     let mounted = true
@@ -253,6 +247,7 @@ export default function Info() {
                   {/* Save button - only enabled when logged in */}
                   <button
                   onClick={async () => {
+                    const parsed = parseIdTitle(id, titleId)
                     const payload = { seriesId: parsed.id, source, title: mappedData.title, cover, status: 'planning' }
                     try {
                       if (!user) { window.location.href = '/login'; return }
@@ -262,9 +257,9 @@ export default function Info() {
                   }}
                   className="px-3 md:px-5 py-2.5 md:py-3 rounded-lg border border-white/20 text-white hover:bg-white/20 transition-colors"
                 >
-                  {isSaved(parsed.id, source) ? 'In My List' : 'Add to List'}
+                  {isSaved(parseIdTitle(id, titleId).id, source) ? 'In My List' : 'Add to List'}
                 </button>
-                {user && isSaved(parsed.id, source) && (
+                {user && isSaved(parseIdTitle(id, titleId).id, source) && (
                   <div className="flex items-center gap-2">
                     <label className="text-xs text-white/80">Status</label>
                     <select
@@ -406,20 +401,6 @@ export default function Info() {
           </div>
         </section>
       )}
-
-      {/* Comments Section */}
-      <section className="mb-10">
-        <div className="rounded-2xl border border-stone-200 dark:border-gray-700 bg-white/60 dark:bg-gray-900/60 p-6">
-          <Suspense fallback={<div className="text-center py-8">Loading comments...</div>}>
-            <CommentSection 
-              seriesId={parsed.id}
-              source={source}
-              chapterId={null}
-              title={`${data?.title || 'Series'} Comments`}
-            />
-          </Suspense>
-        </div>
-      </section>
     </div>
   )
 }
@@ -468,20 +449,10 @@ function ChaptersInline({ seriesId, titleId, source }) {
       <ol className="space-y-2">
         {items.map((ch, i) => {
           const apiLabel = ch?.chap ?? ch?.chapter ?? (ch?.chapVol && ch?.chapVol?.chap) ?? ch?.no ?? ch?.number
-          const fallbackNum = totalCount > 0 ? Math.max(1, totalCount - (start + i)) : (i + 1)
+          const fallbackNum = Math.max(1, totalCount - (start + i))
           const numeric = (() => {
-            if (apiLabel != null) {
-              const str = String(apiLabel)
-              // Try to find "Ch" or "Chapter" followed by number
-              let m = str.match(/(?:ch|chapter)[:\s]*(\d+(?:\.\d+)?)/i)
-              if (m) return m[1]
-              
-              // Fallback: extract first number
-              m = str.match(/(\d+(?:\.\d+)?)/)
-              if (m) return m[1]
-            }
-            // If no apiLabel, use fallback
-            return String(fallbackNum)
+            const m = String(apiLabel ?? '').match(/\d+(?:\.\d+)?/)
+            return m ? m[0] : String(fallbackNum)
           })()
           const title = `Chapter ${numeric}`
           const cid = getChapterId(ch)
@@ -489,7 +460,9 @@ function ChaptersInline({ seriesId, titleId, source }) {
             <li key={cid || i}>
               {cid ? (
                 <Link
-                  to={getReadUrl(cid, seriesId, titleId || '', source)}
+                  to={source === 'mf' 
+                    ? `/read/chapter/${cid}?series=${encodeURIComponent(seriesId)}&title=${encodeURIComponent(titleId || '')}`
+                    : `/read/${encodeURIComponent(cid)}?series=${encodeURIComponent(seriesId)}&title=${encodeURIComponent(titleId || '')}${source==='mp' ? '&src=mp' : ''}`}
                   className="group block rounded-lg bg-white dark:bg-gray-800 hover:bg-stone-50 dark:hover:bg-gray-700 transition-colors"
                 >
                   <div className="flex items-center justify-between gap-3 sm:gap-4 px-3 sm:px-4 py-3">

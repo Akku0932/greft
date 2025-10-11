@@ -3,7 +3,6 @@ import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { api, getImage, parseIdTitle, sanitizeTitleId, pickImage } from '../lib/api.js'
 import { upsertProgress } from '../lib/progressApi'
 import { upsertRecentRead } from '../lib/recentReadsApi'
-import { getReadUrl, getInfoUrl } from '../lib/urlUtils'
 
 export default function Read() {
   const { id } = useParams()
@@ -56,42 +55,11 @@ export default function Read() {
     return cleaned.includes('/') ? cleaned.split('/')[0] : ''
   }, [id, seriesParam])
 
-  const chapterId = useMemo(() => {
-    const raw = String(id || '')
-    const cleaned = raw.replace(/^\/+/, '')
-    
-    // Determine source inline to avoid circular dependency
-    const isMF = !srcParam && seriesId && seriesId.includes('.') && !seriesId.includes('/')
-    const currentSource = srcParam === 'mp' ? 'mp' : (isMF ? 'mf' : 'gf')
-    
-    if (currentSource === 'mf') {
-      // For MF, the id is the chapter ID directly
-      return raw
-    } else if (currentSource === 'mp') {
-      // Handle MP style: /title/:series/:chapter
-      if (cleaned.startsWith('title/')) {
-        const parts = cleaned.split('/')
-        return parts[2] || cleaned
-      } else {
-        return decodeURIComponent(cleaned.split('/').pop() || cleaned)
-      }
-    } else {
-      // For GF, decode the chapter ID
-      return decodeURIComponent(raw)
-    }
-  }, [id, srcParam, seriesId])
-
-  const chapterIndex = useMemo(() => {
-    return currentIndex >= 0 ? currentIndex : 0
-  }, [currentIndex])
-
   const titleId = useMemo(() => sanitizeTitleId(titleParam || ''), [titleParam])
 
   // Determine source based on series ID format
-  const source = useMemo(() => {
-    const isMF = !srcParam && seriesId && seriesId.includes('.') && !seriesId.includes('/')
-    return srcParam === 'mp' ? 'mp' : (isMF ? 'mf' : 'gf')
-  }, [srcParam, seriesId])
+  const isMF = !srcParam && seriesId && seriesId.includes('.') && !seriesId.includes('/')
+  const source = srcParam === 'mp' ? 'mp' : (isMF ? 'mf' : 'gf')
   
   // For MF, the id is the chapter ID directly (e.g., "5284492")
   // For GF, the id might be a path or just the chapter ID
@@ -247,7 +215,10 @@ export default function Read() {
     setTransitioning(true)
     setLoading(true)
     setPages([])
-    const url = getReadUrl(prevId, seriesId, titleId, source)
+    const extra = `${seriesId ? `?series=${encodeURIComponent(seriesId)}&title=${encodeURIComponent(titleId)}` : ''}${source==='mp' ? (seriesId ? `&src=mp` : `?src=mp`) : ''}`
+    const url = source === 'mf' 
+      ? `/read/chapter/${prevId}${extra}`
+      : `/read/${encodeURIComponent(prevId)}${extra}`
     navigate(url)
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }, [prevId, source, seriesId, titleId, navigate])
@@ -256,12 +227,15 @@ export default function Read() {
     setTransitioning(true)
     setLoading(true)
     setPages([])
-    const url = getReadUrl(nextId, seriesId, titleId, source)
+    const extra = `${seriesId ? `?series=${encodeURIComponent(seriesId)}&title=${encodeURIComponent(titleId)}` : ''}${source==='mp' ? (seriesId ? `&src=mp` : `?src=mp`) : ''}`
+    const url = source === 'mf' 
+      ? `/read/chapter/${nextId}${extra}`
+      : `/read/${encodeURIComponent(nextId)}${extra}`
     navigate(url)
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }, [nextId, source, seriesId, titleId, navigate])
 
-  const infoHref = seriesId ? getInfoUrl(seriesId, titleId, source) : '/home'
+  const infoHref = seriesId && titleId ? `/info/${encodeURIComponent(seriesId)}/${encodeURIComponent(titleId)}${source==='mp' ? '?src=mp' : ''}` : '/home'
 
   function widen() { 
     setButtonClicked(true)
@@ -328,7 +302,6 @@ export default function Read() {
     document.addEventListener('fullscreenchange', onFsChange)
     return () => document.removeEventListener('fullscreenchange', onFsChange)
   }, [])
-
 
   // Close three-dot menu when clicking outside
   useEffect(() => {
@@ -440,7 +413,10 @@ export default function Read() {
                     const idx = Number(e.target.value)
                     const targetId = orderedChapterIds[idx]
                     if (targetId) {
-                      const url = getReadUrl(targetId, seriesId, titleId, source)
+                      const extra = `${seriesId ? `?series=${encodeURIComponent(seriesId)}&title=${encodeURIComponent(titleId)}` : ''}${source==='mp' ? (seriesId ? `&src=mp` : `?src=mp`) : ''}`
+                      const url = source === 'mf' 
+                        ? `/read/chapter/${targetId}${extra}`
+                        : `/read/${encodeURIComponent(targetId)}${extra}`
                       navigate(url)
                       window.scrollTo({ top: 0, behavior: 'smooth' })
                     }
@@ -561,13 +537,37 @@ export default function Read() {
         </div>
       </section>
 
-        <section className="max-w-3xl mx-auto px-2 sm:px-4 pb-10">
-          <div className="rounded-xl border border-stone-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-4">
-            <div className="text-center py-8 text-gray-500">
-              Comments disabled - Read page working
+      <section className="max-w-3xl mx-auto px-2 sm:px-4 pb-10">
+        <h3 className="text-lg font-semibold text-stone-900 dark:text-white mb-3">Comments</h3>
+        <div className="rounded-xl border border-stone-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-4">
+          <div className="flex items-start gap-3">
+            <div className="h-10 w-10 rounded-full bg-stone-200 dark:bg-gray-700" />
+            <div className="flex-1">
+              <textarea placeholder="Share your thoughts…" className="w-full rounded-lg border border-stone-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-stone-800 dark:text-gray-200 p-3 resize-y min-h-[90px]"></textarea>
+              <div className="mt-2 flex justify-end">
+                <button className="px-4 py-2 rounded-lg bg-stone-900 text-white dark:bg-gray-700 hover:bg-stone-800 dark:hover:bg-gray-600">Post</button>
+              </div>
             </div>
           </div>
-        </section>
+          <div className="mt-6 space-y-4">
+            {/* Placeholder comments */}
+            <div className="flex gap-3">
+              <div className="h-9 w-9 rounded-full bg-stone-200 dark:bg-gray-700" />
+              <div>
+                <div className="text-sm font-medium text-stone-900 dark:text-white">Guest</div>
+                <div className="text-sm text-stone-700 dark:text-gray-300">Amazing chapter! The pacing and art are on point.</div>
+              </div>
+            </div>
+            <div className="flex gap-3">
+              <div className="h-9 w-9 rounded-full bg-stone-200 dark:bg-gray-700" />
+              <div>
+                <div className="text-sm font-medium text-stone-900 dark:text-white">Reader</div>
+                <div className="text-sm text-stone-700 dark:text-gray-300">Can’t wait for the next one.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
     </div>
   )
 }

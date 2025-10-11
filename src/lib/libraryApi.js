@@ -60,20 +60,4 @@ export async function updateSeriesHasUpdates({ seriesId, source, hasUpdates }) {
   if (error) throw error
 }
 
-export async function updateSeriesChapterCount({ seriesId, source, chapterCount }) {
-  const { data: auth } = await supabase.auth.getUser()
-  const user = auth?.user
-  if (!user) throw new Error('Not authenticated')
-  const { error } = await supabase
-    .from('library')
-    .update({ 
-      last_known_chapter_count: chapterCount,
-      chapters_last_checked_at: new Date().toISOString()
-    })
-    .eq('user_id', user.id)
-    .eq('series_id', seriesId)
-    .eq('source', source)
-  if (error) throw error
-}
-
 
