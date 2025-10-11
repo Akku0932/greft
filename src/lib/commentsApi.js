@@ -2,18 +2,10 @@ import { supabase } from './supabaseClient'
 
 // Fetch comments for a series or chapter
 export async function fetchComments({ seriesId, source, chapterId = null }) {
+  // First, try to fetch comments without foreign key joins
   const query = supabase
     .from('comments')
-    .select(`
-      *,
-      user:user_id (
-        id,
-        email,
-        user_metadata
-      ),
-      likes:comment_likes(count),
-      replies:comments!parent_id(count)
-    `)
+    .select('*')
     .eq('series_id', seriesId)
     .eq('source', source)
     .eq('is_deleted', false)
@@ -26,30 +18,106 @@ export async function fetchComments({ seriesId, source, chapterId = null }) {
     query.is('chapter_id', null)
   }
 
-  const { data, error } = await query
+  const { data: comments, error } = await query
   if (error) throw error
-  return data || []
+  
+  if (!comments || comments.length === 0) {
+    return []
+  }
+
+  // Get current user info
+  const { data: { user } } = await supabase.auth.getUser()
+  
+  // Fetch likes count for each comment
+  const commentIds = comments.map(c => c.id)
+  const { data: likesData } = await supabase
+    .from('comment_likes')
+    .select('comment_id')
+    .in('comment_id', commentIds)
+  
+  // Count likes per comment
+  const likesCount = {}
+  if (likesData) {
+    likesData.forEach(like => {
+      likesCount[like.comment_id] = (likesCount[like.comment_id] || 0) + 1
+    })
+  }
+
+  // Fetch replies count for each comment
+  const { data: repliesData } = await supabase
+    .from('comments')
+    .select('parent_id')
+    .in('parent_id', commentIds)
+    .eq('is_deleted', false)
+  
+  // Count replies per comment
+  const repliesCount = {}
+  if (repliesData) {
+    repliesData.forEach(reply => {
+      repliesCount[reply.parent_id] = (repliesCount[reply.parent_id] || 0) + 1
+    })
+  }
+
+  // Format comments with user data and counts
+  const formattedComments = comments.map(comment => ({
+    ...comment,
+    user: {
+      id: comment.user_id,
+      email: user?.email || 'user@example.com',
+      user_metadata: user?.user_metadata || {}
+    },
+    likes: [{ count: likesCount[comment.id] || 0 }],
+    replies: [{ count: repliesCount[comment.id] || 0 }]
+  }))
+
+  return formattedComments
 }
 
 // Fetch replies for a comment
 export async function fetchReplies(parentId) {
-  const { data, error } = await supabase
+  const { data: replies, error } = await supabase
     .from('comments')
-    .select(`
-      *,
-      user:user_id (
-        id,
-        email,
-        user_metadata
-      ),
-      likes:comment_likes(count)
-    `)
+    .select('*')
     .eq('parent_id', parentId)
     .eq('is_deleted', false)
     .order('created_at', { ascending: true })
 
   if (error) throw error
-  return data || []
+  
+  if (!replies || replies.length === 0) {
+    return []
+  }
+
+  // Get current user info
+  const { data: { user } } = await supabase.auth.getUser()
+  
+  // Fetch likes count for each reply
+  const replyIds = replies.map(r => r.id)
+  const { data: likesData } = await supabase
+    .from('comment_likes')
+    .select('comment_id')
+    .in('comment_id', replyIds)
+  
+  // Count likes per reply
+  const likesCount = {}
+  if (likesData) {
+    likesData.forEach(like => {
+      likesCount[like.comment_id] = (likesCount[like.comment_id] || 0) + 1
+    })
+  }
+
+  // Format replies with user data and counts
+  const formattedReplies = replies.map(reply => ({
+    ...reply,
+    user: {
+      id: reply.user_id,
+      email: user?.email || 'user@example.com',
+      user_metadata: user?.user_metadata || {}
+    },
+    likes: [{ count: likesCount[reply.id] || 0 }]
+  }))
+
+  return formattedReplies
 }
 
 // Post a new comment
