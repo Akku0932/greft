@@ -19,6 +19,7 @@ export default function CommentsSection({ seriesId, source, chapterId = null, ti
   const [replyingTo, setReplyingTo] = useState(null)
   const [editingComment, setEditingComment] = useState(null)
   const [editContent, setEditContent] = useState('')
+  const [submitting, setSubmitting] = useState(false)
   const textareaRef = useRef(null)
 
   // Load comments
@@ -43,8 +44,9 @@ export default function CommentsSection({ seriesId, source, chapterId = null, ti
 
   const handleSubmitComment = async (e) => {
     e.preventDefault()
-    if (!newComment.trim() || !user) return
+    if (!newComment.trim() || !user || submitting) return
 
+    setSubmitting(true)
     try {
       const comment = await addComment({
         seriesId,
@@ -54,15 +56,20 @@ export default function CommentsSection({ seriesId, source, chapterId = null, ti
         parentId: replyingTo
       })
       
-      console.log('Comment added, reloading comments...')
+      console.log('Comment added successfully:', comment)
+      
+      // Add the comment to the state immediately (optimistic update)
+      setComments(prev => [comment, ...prev])
+      
+      // Clear the form
       setNewComment('')
       setReplyingTo(null)
       
-      // Reload comments to get the latest data
-      await loadComments()
     } catch (err) {
       setError('Failed to add comment')
       console.error(err)
+    } finally {
+      setSubmitting(false)
     }
   }
 
@@ -75,6 +82,7 @@ export default function CommentsSection({ seriesId, source, chapterId = null, ti
         content: editContent
       })
       
+      // Update the comment in the state immediately
       setComments(prev => prev.map(c => 
         c.id === commentId ? updatedComment : c
       ))
@@ -91,6 +99,8 @@ export default function CommentsSection({ seriesId, source, chapterId = null, ti
 
     try {
       await deleteComment({ commentId })
+      
+      // Remove the comment from the state immediately
       setComments(prev => prev.filter(c => c.id !== commentId))
     } catch (err) {
       setError('Failed to delete comment')
@@ -212,13 +222,20 @@ export default function CommentsSection({ seriesId, source, chapterId = null, ti
                       Cancel
                     </button>
                   )}
-                  <button
-                    type="submit"
-                    disabled={!newComment.trim()}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                  >
-                    {replyingTo ? 'Reply' : 'Comment'}
-                  </button>
+              <button
+                type="submit"
+                disabled={!newComment.trim() || submitting}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+              >
+                {submitting ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    {replyingTo ? 'Replying...' : 'Posting...'}
+                  </>
+                ) : (
+                  replyingTo ? 'Reply' : 'Comment'
+                )}
+              </button>
                 </div>
               </div>
             </div>
