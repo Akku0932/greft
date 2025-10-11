@@ -5,16 +5,6 @@ import { upsertProgress } from '../lib/progressApi'
 import { upsertRecentRead } from '../lib/recentReadsApi'
 import { getReadUrl, getInfoUrl } from '../lib/urlUtils'
 
-// Conditional import to avoid circular dependency
-let CommentSection = null
-const loadCommentSection = async () => {
-  if (!CommentSection) {
-    const module = await import('../components/CommentSection')
-    CommentSection = module.default
-  }
-  return CommentSection
-}
-
 export default function Read() {
   const { id } = useParams()
   const navigate = useNavigate()
@@ -52,7 +42,6 @@ export default function Read() {
   const menuRef = useRef(null)
   const navLockRef = useRef(false)
   const [transitioning, setTransitioning] = useState(false)
-  const [CommentComponent, setCommentComponent] = useState(null)
 
   const seriesId = useMemo(() => {
     if (seriesParam) return seriesParam
@@ -334,12 +323,6 @@ export default function Read() {
     return () => document.removeEventListener('fullscreenchange', onFsChange)
   }, [])
 
-  // Load CommentSection component after initial render
-  useEffect(() => {
-    loadCommentSection().then(Component => {
-      setCommentComponent(() => Component)
-    })
-  }, [])
 
   // Close three-dot menu when clicking outside
   useEffect(() => {
@@ -574,18 +557,9 @@ export default function Read() {
 
         <section className="max-w-3xl mx-auto px-2 sm:px-4 pb-10">
           <div className="rounded-xl border border-stone-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-4">
-            {CommentComponent ? (
-              <CommentComponent 
-                seriesId={seriesId}
-                source={source}
-                chapterId={chapterId}
-                title={`Chapter ${chapterIndex + 1} Comments`}
-              />
-            ) : (
-              <div className="text-center py-8 text-gray-500">
-                Loading comments...
-              </div>
-            )}
+            <div className="text-center py-8 text-gray-500">
+              Comments disabled - Read page working
+            </div>
           </div>
         </section>
     </div>
