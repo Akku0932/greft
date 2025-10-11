@@ -3,6 +3,7 @@ import { useAuth } from '../hooks/useAuth'
 import { signOut } from '../lib/authApi'
 import { supabase } from '../lib/supabaseClient'
 import { fetchUserComments } from '../lib/commentsApi'
+import { getReadUrl, getInfoUrl } from '../lib/urlUtils'
 
 export default function Account() {
   const { user } = useAuth()
@@ -282,9 +283,9 @@ export default function Account() {
 
                     const getSeriesLink = () => {
                       if (comment.chapter_id) {
-                        return `/read/${encodeURIComponent(comment.chapter_id)}?series=${encodeURIComponent(comment.series_id)}${comment.source === 'mp' ? '&src=mp' : ''}`
+                        return getReadUrl(comment.chapter_id, comment.series_id, '', comment.source)
                       }
-                      return `/info/${encodeURIComponent(comment.series_id)}${comment.source === 'mp' ? '?src=mp' : ''}`
+                      return getInfoUrl(comment.series_id, '', comment.source)
                     }
 
                     return (

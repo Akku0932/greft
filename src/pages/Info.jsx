@@ -3,6 +3,7 @@ import { useParams, Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { api, getImage, pickImage, parseIdTitle, sanitizeTitleId } from '../lib/api.js'
 import { useLibrary } from '../hooks/useLibrary'
 import CommentSection from '../components/CommentSection'
+import { getReadUrl } from '../lib/urlUtils'
 
 export default function Info() {
   const { id, titleId } = useParams()
@@ -473,9 +474,7 @@ function ChaptersInline({ seriesId, titleId, source }) {
             <li key={cid || i}>
               {cid ? (
                 <Link
-                  to={source === 'mf' 
-                    ? `/read/chapter/${cid}?series=${encodeURIComponent(seriesId)}&title=${encodeURIComponent(titleId || '')}`
-                    : `/read/${encodeURIComponent(cid)}?series=${encodeURIComponent(seriesId)}&title=${encodeURIComponent(titleId || '')}${source==='mp' ? '&src=mp' : ''}`}
+                  to={getReadUrl(cid, seriesId, titleId || '', source)}
                   className="group block rounded-lg bg-white dark:bg-gray-800 hover:bg-stone-50 dark:hover:bg-gray-700 transition-colors"
                 >
                   <div className="flex items-center justify-between gap-3 sm:gap-4 px-3 sm:px-4 py-3">

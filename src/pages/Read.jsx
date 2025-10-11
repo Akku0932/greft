@@ -4,6 +4,7 @@ import { api, getImage, parseIdTitle, sanitizeTitleId, pickImage } from '../lib/
 import { upsertProgress } from '../lib/progressApi'
 import { upsertRecentRead } from '../lib/recentReadsApi'
 import CommentSection from '../components/CommentSection'
+import { getReadUrl, getInfoUrl } from '../lib/urlUtils'
 
 export default function Read() {
   const { id } = useParams()
@@ -55,6 +56,31 @@ export default function Read() {
     // Handle seriesId/chapterId
     return cleaned.includes('/') ? cleaned.split('/')[0] : ''
   }, [id, seriesParam])
+
+  const chapterId = useMemo(() => {
+    const raw = String(id || '')
+    const cleaned = raw.replace(/^\/+/, '')
+    
+    if (source === 'mf') {
+      // For MF, the id is the chapter ID directly
+      return raw
+    } else if (source === 'mp') {
+      // Handle MP style: /title/:series/:chapter
+      if (cleaned.startsWith('title/')) {
+        const parts = cleaned.split('/')
+        return parts[2] || cleaned
+      } else {
+        return decodeURIComponent(cleaned.split('/').pop() || cleaned)
+      }
+    } else {
+      // For GF, decode the chapter ID
+      return decodeURIComponent(raw)
+    }
+  }, [id, source])
+
+  const chapterIndex = useMemo(() => {
+    return currentIndex >= 0 ? currentIndex : 0
+  }, [currentIndex])
 
   const titleId = useMemo(() => sanitizeTitleId(titleParam || ''), [titleParam])
 
@@ -216,10 +242,7 @@ export default function Read() {
     setTransitioning(true)
     setLoading(true)
     setPages([])
-    const extra = `${seriesId ? `?series=${encodeURIComponent(seriesId)}&title=${encodeURIComponent(titleId)}` : ''}${source==='mp' ? (seriesId ? `&src=mp` : `?src=mp`) : ''}`
-    const url = source === 'mf' 
-      ? `/read/chapter/${prevId}${extra}`
-      : `/read/${encodeURIComponent(prevId)}${extra}`
+    const url = getReadUrl(prevId, seriesId, titleId, source)
     navigate(url)
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }, [prevId, source, seriesId, titleId, navigate])
@@ -228,15 +251,12 @@ export default function Read() {
     setTransitioning(true)
     setLoading(true)
     setPages([])
-    const extra = `${seriesId ? `?series=${encodeURIComponent(seriesId)}&title=${encodeURIComponent(titleId)}` : ''}${source==='mp' ? (seriesId ? `&src=mp` : `?src=mp`) : ''}`
-    const url = source === 'mf' 
-      ? `/read/chapter/${nextId}${extra}`
-      : `/read/${encodeURIComponent(nextId)}${extra}`
+    const url = getReadUrl(nextId, seriesId, titleId, source)
     navigate(url)
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }, [nextId, source, seriesId, titleId, navigate])
 
-  const infoHref = seriesId && titleId ? `/info/${encodeURIComponent(seriesId)}/${encodeURIComponent(titleId)}${source==='mp' ? '?src=mp' : ''}` : '/home'
+  const infoHref = seriesId ? getInfoUrl(seriesId, titleId, source) : '/home'
 
   function widen() { 
     setButtonClicked(true)
@@ -414,10 +434,7 @@ export default function Read() {
                     const idx = Number(e.target.value)
                     const targetId = orderedChapterIds[idx]
                     if (targetId) {
-                      const extra = `${seriesId ? `?series=${encodeURIComponent(seriesId)}&title=${encodeURIComponent(titleId)}` : ''}${source==='mp' ? (seriesId ? `&src=mp` : `?src=mp`) : ''}`
-                      const url = source === 'mf' 
-                        ? `/read/chapter/${targetId}${extra}`
-                        : `/read/${encodeURIComponent(targetId)}${extra}`
+                      const url = getReadUrl(targetId, seriesId, titleId, source)
                       navigate(url)
                       window.scrollTo({ top: 0, behavior: 'smooth' })
                     }
