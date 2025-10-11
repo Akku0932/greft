@@ -216,7 +216,8 @@ export default function Home() {
           continue
         }
         const idx = typeof rr.lastChapterIndex === 'number' ? rr.lastChapterIndex : -1
-        const hasNew = total > (idx + 1)
+        const lastKnownCount = it.last_known_chapter_count || 0
+        const hasNew = idx >= 0 && total > (idx + 1) && total > lastKnownCount
         if (!hasNew) continue
         const continueHref = rr.lastChapterId
           ? (it.source === 'mf'
@@ -250,7 +251,8 @@ export default function Home() {
             const total = arr.length || 0
             const p = progressRows.find(x => x.source === it.source && x.series_id === it.series_id)
             const idx = typeof p?.last_chapter_index === 'number' ? Math.max(0, Number(p.last_chapter_index)) : -1
-            const hasNew = (p && total > (idx + 1))
+            const lastKnownCount = it.last_known_chapter_count || 0
+            const hasNew = (p && idx >= 0 && total > (idx + 1) && total > lastKnownCount)
             const nextChapterNumber = idx + 1
             const continueHref = p?.last_chapter_id
               ? (it.source === 'mf' 
