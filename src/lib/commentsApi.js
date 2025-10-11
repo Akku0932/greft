@@ -25,24 +25,17 @@ export async function fetchComments({ seriesId, source, chapterId = null }) {
     return []
   }
 
-  // Get unique user IDs from comments
-  const userIds = [...new Set(comments.map(c => c.user_id))]
-  
-  // Fetch user profiles
-  const { data: profiles } = await supabase
-    .from('profiles')
-    .select('id, display_name, avatar_url')
-    .in('id', userIds)
-  
-  // Create user lookup map with proper structure
+  // Create user lookup map using stored user_name
   const userMap = {}
-  profiles?.forEach(p => {
-    userMap[p.id] = {
-      id: p.id,
-      email: 'user@example.com',  // Placeholder, not used for display
-      user_metadata: {
-        display_name: p.display_name || 'User',
-        avatar_url: p.avatar_url
+  comments.forEach(comment => {
+    if (!userMap[comment.user_id]) {
+      userMap[comment.user_id] = {
+        id: comment.user_id,
+        email: 'user@example.com',  // Placeholder, not used for display
+        user_metadata: {
+          display_name: comment.user_name || 'User',
+          avatar_url: null
+        }
       }
     }
   })
@@ -107,24 +100,17 @@ export async function fetchReplies(parentId) {
     return []
   }
 
-  // Get unique user IDs from replies
-  const userIds = [...new Set(replies.map(r => r.user_id))]
-  
-  // Fetch user profiles
-  const { data: profiles } = await supabase
-    .from('profiles')
-    .select('id, display_name, avatar_url')
-    .in('id', userIds)
-  
-  // Create user lookup map with proper structure
+  // Create user lookup map using stored user_name
   const userMap = {}
-  profiles?.forEach(p => {
-    userMap[p.id] = {
-      id: p.id,
-      email: 'user@example.com',  // Placeholder, not used for display
-      user_metadata: {
-        display_name: p.display_name || 'User',
-        avatar_url: p.avatar_url
+  replies.forEach(reply => {
+    if (!userMap[reply.user_id]) {
+      userMap[reply.user_id] = {
+        id: reply.user_id,
+        email: 'user@example.com',  // Placeholder, not used for display
+        user_metadata: {
+          display_name: reply.user_name || 'User',
+          avatar_url: null
+        }
       }
     }
   })
@@ -163,10 +149,20 @@ export async function postComment({ seriesId, source, chapterId, content, parent
   const { data: auth } = await supabase.auth.getUser()
   if (!auth?.user) throw new Error('Not authenticated')
 
+  // Get user's display name from profile
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('display_name')
+    .eq('id', auth.user.id)
+    .single()
+
+  const displayName = profile?.display_name || auth.user.email?.split('@')[0] || 'User'
+
   const { data, error } = await supabase
     .from('comments')
     .insert({
       user_id: auth.user.id,
+      user_name: displayName,
       series_id: seriesId,
       source,
       chapter_id: chapterId,

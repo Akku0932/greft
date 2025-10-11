@@ -4,7 +4,7 @@ import { api, getImage, pickImage, parseIdTitle, sanitizeTitleId } from '../lib/
 import { useLibrary } from '../hooks/useLibrary'
 import { getReadUrl } from '../lib/urlUtils'
 
-const CommentSection = lazy(() => import('../components/CommentSection').then(module => ({ default: module.default })))
+const CommentSection = lazy(() => import('../components/CommentSection'))
 
 export default function Info() {
   const { id, titleId } = useParams()
