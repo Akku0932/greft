@@ -1,11 +1,10 @@
-import { useCallback, useEffect, useMemo, useRef, useState, lazy, Suspense } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { api, getImage, parseIdTitle, sanitizeTitleId, pickImage } from '../lib/api.js'
 import { upsertProgress } from '../lib/progressApi'
 import { upsertRecentRead } from '../lib/recentReadsApi'
 import { getReadUrl, getInfoUrl } from '../lib/urlUtils'
-
-const CommentSection = lazy(() => import('../components/CommentSection'))
+import CommentSection from '../components/CommentSection'
 
 export default function Read() {
   const { id } = useParams()
@@ -556,18 +555,16 @@ export default function Read() {
         </div>
       </section>
 
-      <section className="max-w-3xl mx-auto px-2 sm:px-4 pb-10">
-        <div className="rounded-xl border border-stone-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-4">
-          <Suspense fallback={<div className="text-center py-8">Loading comments...</div>}>
+        <section className="max-w-3xl mx-auto px-2 sm:px-4 pb-10">
+          <div className="rounded-xl border border-stone-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-4">
             <CommentSection 
               seriesId={seriesId}
               source={source}
               chapterId={chapterId}
               title={`Chapter ${chapterIndex + 1} Comments`}
             />
-          </Suspense>
-        </div>
-      </section>
+          </div>
+        </section>
     </div>
   )
 }
