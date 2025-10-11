@@ -6,7 +6,13 @@ export async function fetchComments({ seriesId, source, chapterId = null }) {
     .from('comments')
     .select(`
       *,
-      comment_likes(count)
+      user:user_id (
+        id,
+        email,
+        user_metadata
+      ),
+      likes:comment_likes(count),
+      replies:comments!parent_id(count)
     `)
     .eq('series_id', seriesId)
     .eq('source', source)
@@ -22,20 +28,7 @@ export async function fetchComments({ seriesId, source, chapterId = null }) {
 
   const { data, error } = await query
   if (error) throw error
-  
-  // Add placeholder user data until tables are created
-  const commentsWithUsers = (data || []).map(comment => ({
-    ...comment,
-    user: {
-      id: comment.user_id,
-      email: 'user@example.com',
-      user_metadata: {}
-    },
-    likes: comment.comment_likes || [{ count: 0 }],
-    replies: [{ count: 0 }]
-  }))
-  
-  return commentsWithUsers
+  return data || []
 }
 
 // Fetch replies for a comment
@@ -44,26 +37,19 @@ export async function fetchReplies(parentId) {
     .from('comments')
     .select(`
       *,
-      comment_likes(count)
+      user:user_id (
+        id,
+        email,
+        user_metadata
+      ),
+      likes:comment_likes(count)
     `)
     .eq('parent_id', parentId)
     .eq('is_deleted', false)
     .order('created_at', { ascending: true })
 
   if (error) throw error
-  
-  // Add placeholder user data until tables are created
-  const repliesWithUsers = (data || []).map(reply => ({
-    ...reply,
-    user: {
-      id: reply.user_id,
-      email: 'user@example.com',
-      user_metadata: {}
-    },
-    likes: reply.comment_likes || [{ count: 0 }]
-  }))
-  
-  return repliesWithUsers
+  return data || []
 }
 
 // Post a new comment
