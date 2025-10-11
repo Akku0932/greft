@@ -49,7 +49,8 @@ export default function Saved() {
     const key = `${it.source}:${it.series_id}`
     const p = prog.find(x => x.source === it.source && x.series_id === it.series_id)
     const total = chaptersBySeries[key] || 0
-    const idx = Math.max(0, Number(p?.last_chapter_index ?? -1))
+    // Fix: Use the actual last chapter index from progress, not -1
+    const idx = Math.max(-1, Number(p?.last_chapter_index ?? -1))
     const percent = total > 0 ? Math.min(100, Math.round(((idx + 1) / total) * 100)) : 0
     return { ...it, _p: p, _total: total, _idx: idx, _percent: percent }
   }
@@ -181,13 +182,13 @@ export default function Saved() {
                           </span>
                         )}
                       </div>
-                      <div className="text-xs text-stone-500 dark:text-gray-400">Ch {Math.max(1, idx + 1)} / {total}</div>
+                      <div className="text-xs text-stone-500 dark:text-gray-400">Ch {idx >= 0 ? idx + 1 : 1} / {total}</div>
                     </div>
                   </a>
                   <div className="text-right pr-2">
                     <a href={continueHref} className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-stone-900 text-white dark:bg-gray-700 text-sm">
                       Continue
-                      <span className="px-1 py-0.5 rounded bg-white/20">{Math.max(1, idx + 1)}</span>
+                      <span className="px-1 py-0.5 rounded bg-white/20">{idx >= 0 ? idx + 1 : 1}</span>
                     </a>
                   </div>
                   <div className="text-center">
@@ -234,7 +235,7 @@ export default function Saved() {
                   {total > 0 && (
                     <div className="absolute bottom-2 left-2 right-2">
                       <div className="flex items-center justify-between text-[10px] text-white/90 mb-1">
-                        <span>{`Ch ${idx + 1}/${total}`}</span>
+                        <span>{`Ch ${idx >= 0 ? idx + 1 : 1}/${total}`}</span>
                         <span>{percent}%</span>
                       </div>
                       <div className="h-1.5 bg-white/25 rounded-full overflow-hidden">

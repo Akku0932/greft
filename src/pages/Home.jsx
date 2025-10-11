@@ -203,16 +203,16 @@ export default function Home() {
         let baseline = -1
         try { const v = localStorage.getItem(baselineKey); baseline = v == null ? -1 : Number(v) } catch {}
         if (!rr) {
-          // If no reading progress yet, compare total with baseline count
+          // If no reading progress yet, only show as "new" if there are actually new chapters
+          // (i.e., total chapters increased since last check)
           if (baseline >= 0 && total > baseline) {
             const href = (it.source === 'mf'
               ? `/info/${encodeURIComponent(it.series_id)}`
               : `/info/${encodeURIComponent(it.series_id)}/${encodeURIComponent(sanitizeTitleId(it.title || 'title'))}`)
             quick.push({ ...it, _total: total, _idx: -1, _hasNew: true, _next: 0, _continue: href, _updated: undefined })
-          } else if (baseline === -1) {
-            // Initialize baseline on first sight
-            try { localStorage.setItem(baselineKey, String(total)) } catch {}
           }
+          // Always update baseline to current total (whether showing as new or not)
+          try { localStorage.setItem(baselineKey, String(total)) } catch {}
           continue
         }
         const idx = typeof rr.lastChapterIndex === 'number' ? rr.lastChapterIndex : -1
@@ -1244,8 +1244,11 @@ function RecentReadCard({ item, index, onRemove }) {
 function FollowedNewCard({ item }) {
   const cover = item.cover || ''
   const title = item.title || 'Untitled'
-  const subtitle = `${Math.max(1, (item._idx || 0) + 1)} / ${item._total}`
+  const chapterNum = Math.max(1, (item._idx || 0) + 1)
+  const totalChapters = item._total || 0
   const href = item._continue || '#'
+  
+  // Format time ago like in the image
   const updatedStr = (() => {
     const value = item._updated
     if (!value) return null
@@ -1263,33 +1266,61 @@ function FollowedNewCard({ item }) {
     const y = Math.floor(mo / 12)
     return `${y}y ago`
   })()
+  
+  // Get scanlation group from source
+  const scanlationGroup = item.source === 'mp' ? 'MangaPark' : 'Greft'
+  
   return (
-    <a href={href} className="group block">
-      <div className="relative aspect-square overflow-hidden rounded-lg ring-1 ring-stone-200 dark:ring-gray-800 bg-stone-200">
-        {cover ? (
-          <img src={cover} alt={title} className="absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.02]" />
-        ) : (
-          <div className="absolute inset-0 bg-gradient-to-br from-stone-200 to-stone-300 dark:from-gray-700 dark:to-gray-800" />
-        )}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-        <div className="absolute bottom-2 left-2 right-2">
-          <div className="text-white font-semibold line-clamp-2 text-sm">{title}</div>
-          <div className="mt-1 flex items-center justify-between text-[10px] text-white/80">
-            <span>Updated {updatedStr || '—'}</span>
-            <span>{subtitle}</span>
+    <div className="group relative">
+      <a href={href} className="block">
+        <div className="relative aspect-[3/4] overflow-hidden rounded-lg shadow-sm hover:shadow-md transition-all duration-300">
+          {cover ? (
+            <img 
+              src={cover} 
+              alt={title} 
+              className="absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" 
+            />
+          ) : (
+            <div className="absolute inset-0 bg-gradient-to-br from-stone-200 to-stone-300 dark:from-gray-700 dark:to-gray-800" />
+          )}
+          
+          {/* Chapter badge like in image */}
+          <div className="absolute top-2 left-2">
+            <span className="px-2 py-1 bg-white/90 dark:bg-gray-900/90 text-black dark:text-white text-xs font-bold rounded-full shadow-sm">
+              Chap {chapterNum}
+            </span>
           </div>
-          <div className="mt-1 h-1.5 bg-white/30 rounded-full overflow-hidden">
-            <div className="h-full bg-gradient-to-r from-blue-500 to-purple-600" style={{ width: `${item._total ? Math.min(100, Math.round(((item._idx + 1) / item._total) * 100)) : 0}%` }} />
+          
+          {/* Time badge like in image */}
+          <div className="absolute top-2 right-2">
+            <span className="px-2 py-1 bg-black/70 text-white text-xs font-bold rounded-full shadow-sm">
+              {updatedStr || '—'}
+            </span>
+          </div>
+          
+          {/* Gradient overlay for better text readability */}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+        </div>
+        
+        {/* Title and info like in image */}
+        <div className="mt-2">
+          <h3 className="text-sm font-semibold text-stone-900 dark:text-white line-clamp-2 leading-tight">
+            {title}
+          </h3>
+          <div className="mt-1 flex items-center justify-between text-xs text-stone-500 dark:text-gray-400">
+            <span>{scanlationGroup}</span>
+            <span>{chapterNum}/{totalChapters}</span>
           </div>
         </div>
-      </div>
-      <div className="mt-2 w-full">
-        <a href={href} className="w-full inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-stone-900 text-white dark:bg-gray-700 text-sm">
-          <span>Continue</span>
-          <span className="px-1 py-0.5 rounded bg-white/20">{Math.max(1, (item._idx || 0) + 1)}</span>
-        </a>
-      </div>
-    </a>
+        
+        {/* Continue button like in image */}
+        <div className="mt-3">
+          <div className="w-full inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-stone-900 text-white dark:bg-gray-700 text-sm font-medium hover:bg-stone-800 dark:hover:bg-gray-600 transition-colors">
+            <span>Continue {chapterNum}</span>
+          </div>
+        </div>
+      </a>
+    </div>
   )
 }
 
