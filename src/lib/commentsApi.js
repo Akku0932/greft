@@ -182,29 +182,46 @@ export async function toggleCommentLike(commentId) {
   const { data: auth } = await supabase.auth.getUser()
   if (!auth?.user) throw new Error('Not authenticated')
 
-  // Check if already liked
-  const { data: existing } = await supabase
-    .from('comment_likes')
-    .select('id')
-    .eq('comment_id', commentId)
-    .eq('user_id', auth.user.id)
-    .single()
+  try {
+    // Check if already liked
+    const { data: existing, error: checkError } = await supabase
+      .from('comment_likes')
+      .select('id')
+      .eq('comment_id', commentId)
+      .eq('user_id', auth.user.id)
+      .maybeSingle()
 
-  if (existing) {
-    // Unlike
-    const { error } = await supabase
-      .from('comment_likes')
-      .delete()
-      .eq('id', existing.id)
-    if (error) throw error
+    if (checkError) {
+      console.error('Error checking like status:', checkError)
+      // If table doesn't exist, just return false (no likes functionality)
+      return false
+    }
+
+    if (existing) {
+      // Unlike
+      const { error } = await supabase
+        .from('comment_likes')
+        .delete()
+        .eq('id', existing.id)
+      if (error) {
+        console.error('Error unliking comment:', error)
+        return false
+      }
+      return false
+    } else {
+      // Like
+      const { error } = await supabase
+        .from('comment_likes')
+        .insert({ comment_id: commentId, user_id: auth.user.id })
+      if (error) {
+        console.error('Error liking comment:', error)
+        return false
+      }
+      return true
+    }
+  } catch (error) {
+    console.error('Error in toggleCommentLike:', error)
     return false
-  } else {
-    // Like
-    const { error } = await supabase
-      .from('comment_likes')
-      .insert({ comment_id: commentId, user_id: auth.user.id })
-    if (error) throw error
-    return true
   }
 }
 
@@ -221,4 +238,42 @@ export async function checkUserLiked(commentIds) {
 
   if (error) return {}
   return Object.fromEntries((data || []).map(d => [d.comment_id, true]))
+}
+
+// Fetch user's comments for account page
+export async function fetchUserComments(userId, limit = 20) {
+  const { data, error } = await supabase
+    .from('comments')
+    .select('*')
+    .eq('user_id', userId)
+    .eq('is_deleted', false)
+    .order('created_at', { ascending: false })
+    .limit(limit)
+
+  if (error) throw error
+  
+  // Get likes count for each comment
+  const commentIds = data?.map(c => c.id) || []
+  if (commentIds.length === 0) return []
+
+  const { data: likesData } = await supabase
+    .from('comment_likes')
+    .select('comment_id')
+    .in('comment_id', commentIds)
+  
+  // Count likes per comment
+  const likesCount = {}
+  if (likesData) {
+    likesData.forEach(like => {
+      likesCount[like.comment_id] = (likesCount[like.comment_id] || 0) + 1
+    })
+  }
+
+  // Format comments with likes count
+  const formattedComments = (data || []).map(comment => ({
+    ...comment,
+    likes: [{ count: likesCount[comment.id] || 0 }]
+  }))
+
+  return formattedComments
 }
