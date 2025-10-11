@@ -7,7 +7,6 @@ import Section from '../components/Section.jsx'
 import { useLibrary } from '../hooks/useLibrary.js'
 import { fetchProgress } from '../lib/progressApi.js'
 import { fetchRecentReads, deleteRecentRead } from '../lib/recentReadsApi.js'
-import { getInfoUrl, getReadUrl } from '../lib/urlUtils'
 
 export default function Home() {
   const { theme } = useTheme()
@@ -207,7 +206,9 @@ export default function Home() {
           // If no reading progress yet, only show as "new" if there are actually new chapters
           // (i.e., total chapters increased since last check)
           if (baseline >= 0 && total > baseline) {
-            const href = getInfoUrl(it.series_id, sanitizeTitleId(it.title || 'title'), it.source)
+            const href = (it.source === 'mf'
+              ? `/info/${encodeURIComponent(it.series_id)}`
+              : `/info/${encodeURIComponent(it.series_id)}/${encodeURIComponent(sanitizeTitleId(it.title || 'title'))}`)
             quick.push({ ...it, _total: total, _idx: -1, _hasNew: true, _next: 0, _continue: href, _updated: undefined })
           }
           // Always update baseline to current total (whether showing as new or not)
@@ -219,8 +220,12 @@ export default function Home() {
         const hasNew = idx >= 0 && total > (idx + 1) && total > lastKnownCount
         if (!hasNew) continue
         const continueHref = rr.lastChapterId
-          ? getReadUrl(rr.lastChapterId, it.series_id, sanitizeTitleId(it.title || 'title'), it.source)
-          : getInfoUrl(it.series_id, sanitizeTitleId(it.title || 'title'), it.source)
+          ? (it.source === 'mf'
+              ? `/read/chapter/${rr.lastChapterId}?series=${encodeURIComponent(it.series_id)}&title=${encodeURIComponent(sanitizeTitleId(it.title || 'title'))}`
+              : `/read/${encodeURIComponent(rr.lastChapterId)}?series=${encodeURIComponent(it.series_id)}&title=${encodeURIComponent(sanitizeTitleId(it.title || 'title'))}`)
+          : (it.source === 'mf'
+              ? `/info/${encodeURIComponent(it.series_id)}`
+              : `/info/${encodeURIComponent(it.series_id)}/${encodeURIComponent(sanitizeTitleId(it.title || 'title'))}`)
         quick.push({ ...it, _total: total, _idx: idx, _hasNew: true, _next: idx + 1, _continue: continueHref, _updated: rr.updatedAt })
       }
       // sort by biggest delta first based on cached total
@@ -250,14 +255,18 @@ export default function Home() {
             const hasNew = (p && idx >= 0 && total > (idx + 1) && total > lastKnownCount)
             const nextChapterNumber = idx + 1
             const continueHref = p?.last_chapter_id
-              ? getReadUrl(p.last_chapter_id, it.series_id, sanitizeTitleId(it.title || 'title'), it.source)
-              : getInfoUrl(it.series_id, sanitizeTitleId(it.title || 'title'), it.source)
+              ? (it.source === 'mf' 
+                  ? `/read/chapter/${p.last_chapter_id}?series=${encodeURIComponent(it.series_id)}&title=${encodeURIComponent(sanitizeTitleId(it.title || 'title'))}`
+                  : `/read/${encodeURIComponent(p.last_chapter_id)}?series=${encodeURIComponent(it.series_id)}&title=${encodeURIComponent(sanitizeTitleId(it.title || 'title'))}`)
+              : (it.source === 'mf' 
+                  ? `/info/${encodeURIComponent(it.series_id)}`
+                  : `/info/${encodeURIComponent(it.series_id)}/${encodeURIComponent(sanitizeTitleId(it.title || 'title'))}`)
             // derive latest chapter timing from API payload when available
             const latestCh = Array.isArray(arr) && arr.length ? (arr[0] || arr[arr.length - 1]) : null
             const chTime = latestCh && (latestCh.updatedAt || latestCh.time || latestCh.date || latestCh.updated || latestCh.lastUpdate)
             return { ...it, _total: total, _idx: idx, _hasNew: hasNew, _next: nextChapterNumber, _continue: continueHref, _updated: chTime }
           } catch {
-            return { ...it, _total: 0, _idx: 0, _hasNew: false, _next: 0, _continue: getInfoUrl(it.series_id, sanitizeTitleId(it.title || 'title'), it.source), _updated: undefined }
+            return { ...it, _total: 0, _idx: 0, _hasNew: false, _next: 0, _continue: (it.source === 'mf' ? `/info/${encodeURIComponent(it.series_id)}` : `/info/${encodeURIComponent(it.series_id)}/${encodeURIComponent(sanitizeTitleId(it.title || 'title'))}`), _updated: undefined }
           }
         }))
         const onlyNew = decorated.filter(x => x._hasNew)
@@ -578,7 +587,7 @@ function RecItem({ item, index }) {
   const title = item.title || item.name || 'Untitled'
   const parsed = parseIdTitle(item.seriesId || item.id || item.slug || item.urlId, item.title || item.slug)
   // For MF items, only use ID; for GF items, use ID/title format
-  const href = getInfoUrl(parsed.id, '', item._source || 'gf')
+  const href = `/info/${encodeURIComponent(parsed.id)}${item._source === 'mp' ? '?src=mp' : ''}`
   const showBg = index < 3
   // gradient palette for hover title
   const grads = [
@@ -701,7 +710,7 @@ function LatestCard({ item, index }) {
   const tag = typeof rawTag === 'string' ? rawTag.replace(/episode/gi, 'Chapter') : rawTag
   const parsed = parseIdTitle(item.seriesId || item.id || item.slug || item.urlId, item.title || item.slug)
   // Link with ID-only; MP will use mp info, GF supports ID-only too
-  const href = getInfoUrl(parsed.id, '', item._source || 'gf')
+  const href = `/info/${encodeURIComponent(parsed.id)}${item._source === 'mp' ? '?src=mp' : ''}`
   const hoverGrads = [
     'linear-gradient(90deg,#60a5fa,#a78bfa)',
     'linear-gradient(90deg,#34d399,#10b981)',
@@ -1321,7 +1330,7 @@ function SmallCard({ item }) {
   const cover = getImage(pickImage(item) || item?.info?.img)
   const title = item.title || item?.info?.title || 'Untitled'
   const parsed = parseIdTitle(item.seriesId || item.id || item.slug || item.urlId || item, title)
-  const href = getInfoUrl(parsed.id, '', item._source || 'gf')
+  const href = `/info/${encodeURIComponent(parsed.id)}`
   return (
     <a href={href} className="group block">
       <div className="relative aspect-[3/4] rounded-lg overflow-hidden bg-stone-200">

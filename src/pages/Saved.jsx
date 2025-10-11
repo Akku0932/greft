@@ -1,9 +1,10 @@
 import { useLibrary } from '../hooks/useLibrary'
 import { sanitizeTitleId } from '../lib/api'
 import { signInWithMagicLink, signInWithGoogle } from '../lib/authApi'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, useCallback } from 'react'
 import { fetchProgress } from '../lib/progressApi'
 import { api } from '../lib/api'
+import { updateSeriesChapterCount } from '../lib/libraryApi'
 
 export default function Saved() {
   const { user, items, loading, remove, setStatus, markHasUpdates } = useLibrary()
@@ -14,14 +15,21 @@ export default function Saved() {
 
   useEffect(() => {
     if (!user) return
+    let cancelled = false
+    const abortController = new AbortController()
+    
     ;(async () => {
       try {
         const p = await fetchProgress()
+        if (cancelled) return
         setProg(p)
-        // fetch total chapters per saved series (lightweight)
+        
+        // Only fetch chapters for unique series once
         const uniqueSeries = Array.from(new Set(items.map(it => `${it.source}:${it.series_id}`)))
         const map = {}
+        
         await Promise.all(uniqueSeries.map(async key => {
+          if (cancelled) return
           const [source, sid] = key.split(':')
           try {
             const res = await api.chapters(sid, source)
@@ -29,30 +37,53 @@ export default function Saved() {
             map[key] = arr.length || 0
           } catch { map[key] = 0 }
         }))
+        
+        if (cancelled) return
         setChaptersBySeries(map)
+        
         // mark has_updates when new chapters are detected (server flag)
         const byKey = Object.fromEntries(items.map(it => [[`${it.source}:${it.series_id}`], it]))
         await Promise.all(uniqueSeries.map(async key => {
+          if (cancelled) return
           const item = byKey[key]
           if (!item) return
           const pItem = p.find(x => x.source === item.source && x.series_id === item.series_id)
-          const total = map[key] || 0
-          const lastIdx = Math.max(-1, Number(pItem?.last_chapter_index ?? -1))
-          const hasNew = total > 0 && lastIdx + 1 < total
-          try { await markHasUpdates({ seriesId: item.series_id, source: item.source, hasUpdates: hasNew }) } catch {}
+          const currentTotal = map[key] || 0
+          const lastKnownCount = item.last_known_chapter_count || 0
+          const lastReadIndex = pItem?.last_chapter_index ?? -1
+          
+          // Show "new" only if:
+          // 1. User has read some chapters (lastReadIndex >= 0)
+          // 2. Current total > last read chapter + 1
+          // 3. Current total > last known count (new chapters published)
+          const hasNew = lastReadIndex >= 0 && 
+                         currentTotal > (lastReadIndex + 1) &&
+                         currentTotal > lastKnownCount
+          
+          try { 
+            await markHasUpdates({ seriesId: item.series_id, source: item.source, hasUpdates: hasNew })
+            // Update the chapter count in database
+            await updateSeriesChapterCount({ seriesId: item.series_id, source: item.source, chapterCount: currentTotal })
+          } catch {}
         }))
       } catch {}
     })()
-  }, [user, items])
+    
+    return () => {
+      cancelled = true
+      abortController.abort()
+    }
+  }, [user]) // Remove 'items' dependency to prevent infinite loop
 
-  const decorate = (it) => {
+  const decorate = useCallback((it) => {
     const key = `${it.source}:${it.series_id}`
     const p = prog.find(x => x.source === it.source && x.series_id === it.series_id)
     const total = chaptersBySeries[key] || 0
-    const idx = Math.max(0, Number(p?.last_chapter_index ?? -1))
+    // Fix: Use the actual last chapter index from progress, not -1
+    const idx = Math.max(-1, Number(p?.last_chapter_index ?? -1))
     const percent = total > 0 ? Math.min(100, Math.round(((idx + 1) / total) * 100)) : 0
     return { ...it, _p: p, _total: total, _idx: idx, _percent: percent }
-  }
+  }, [prog, chaptersBySeries])
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -181,13 +212,13 @@ export default function Saved() {
                           </span>
                         )}
                       </div>
-                      <div className="text-xs text-stone-500 dark:text-gray-400">Ch {Math.max(1, idx + 1)} / {total}</div>
+                      <div className="text-xs text-stone-500 dark:text-gray-400">Ch {idx >= 0 ? idx + 1 : 1} / {total}</div>
                     </div>
                   </a>
                   <div className="text-right pr-2">
                     <a href={continueHref} className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-stone-900 text-white dark:bg-gray-700 text-sm">
                       Continue
-                      <span className="px-1 py-0.5 rounded bg-white/20">{Math.max(1, idx + 1)}</span>
+                      <span className="px-1 py-0.5 rounded bg-white/20">{idx >= 0 ? idx + 2 : 1}</span>
                     </a>
                   </div>
                   <div className="text-center">
@@ -234,7 +265,7 @@ export default function Saved() {
                   {total > 0 && (
                     <div className="absolute bottom-2 left-2 right-2">
                       <div className="flex items-center justify-between text-[10px] text-white/90 mb-1">
-                        <span>{`Ch ${idx + 1}/${total}`}</span>
+                        <span>{`Ch ${idx >= 0 ? idx + 1 : 1}/${total}`}</span>
                         <span>{percent}%</span>
                       </div>
                       <div className="h-1.5 bg-white/25 rounded-full overflow-hidden">
