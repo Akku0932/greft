@@ -45,6 +45,9 @@ export default function Info() {
   const source = isMP ? 'mp' : (isMF ? 'mf' : 'gf')
   const { user, add, remove, isSaved, items, setStatus } = useLibrary()
   const [statusValue, setStatusValue] = useState('planning')
+  
+  // Parse ID once for consistent usage
+  const parsed = parseIdTitle(id, titleId)
 
   useEffect(() => {
     let mounted = true
@@ -249,7 +252,6 @@ export default function Info() {
                   {/* Save button - only enabled when logged in */}
                   <button
                   onClick={async () => {
-                    const parsed = parseIdTitle(id, titleId)
                     const payload = { seriesId: parsed.id, source, title: mappedData.title, cover, status: 'planning' }
                     try {
                       if (!user) { window.location.href = '/login'; return }
@@ -259,9 +261,9 @@ export default function Info() {
                   }}
                   className="px-3 md:px-5 py-2.5 md:py-3 rounded-lg border border-white/20 text-white hover:bg-white/20 transition-colors"
                 >
-                  {isSaved(parseIdTitle(id, titleId).id, source) ? 'In My List' : 'Add to List'}
+                  {isSaved(parsed.id, source) ? 'In My List' : 'Add to List'}
                 </button>
-                {user && isSaved(parseIdTitle(id, titleId).id, source) && (
+                {user && isSaved(parsed.id, source) && (
                   <div className="flex items-center gap-2">
                     <label className="text-xs text-white/80">Status</label>
                     <select
@@ -408,7 +410,7 @@ export default function Info() {
       <section className="mb-10">
         <div className="rounded-2xl border border-stone-200 dark:border-gray-700 bg-white/60 dark:bg-gray-900/60 p-6">
           <CommentSection 
-            seriesId={parseIdTitle(id, titleId).id}
+            seriesId={parsed.id}
             source={source}
             chapterId={null}
             title={`${data?.title || 'Series'} Comments`}

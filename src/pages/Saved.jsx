@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState, useCallback } from 'react'
 import { fetchProgress } from '../lib/progressApi'
 import { api } from '../lib/api'
 import { updateSeriesChapterCount } from '../lib/libraryApi'
+import { getInfoUrl, getReadUrl } from '../lib/urlUtils'
 
 export default function Saved() {
   const { user, items, loading, remove, setStatus, markHasUpdates } = useLibrary()
@@ -185,17 +186,13 @@ export default function Saved() {
           </div>
           <div>
             {sorted.map(it => {
-          const href = it.source === 'mf'
-            ? `/info/${encodeURIComponent(it.series_id)}`
-            : `/info/${encodeURIComponent(it.series_id)}/${encodeURIComponent(sanitizeTitleId(it.title || 'title'))}`
+          const href = getInfoUrl(it.series_id, sanitizeTitleId(it.title || 'title'), it.source)
             const p = it._p
             const total = it._total
             const idx = it._idx
             const percent = it._percent
             const continueHref = p?.last_chapter_id
-              ? (it.source === 'mf'
-                ? `/read/chapter/${p.last_chapter_id}?series=${encodeURIComponent(it.series_id)}&title=${encodeURIComponent(sanitizeTitleId(it.title || 'title'))}`
-                : `/read/${encodeURIComponent(p.last_chapter_id)}?series=${encodeURIComponent(it.series_id)}&title=${encodeURIComponent(sanitizeTitleId(it.title || 'title'))}`)
+              ? getReadUrl(p.last_chapter_id, it.series_id, sanitizeTitleId(it.title || 'title'), it.source)
               : href
               return (
                 <div key={`${it.source}:${it.series_id}`} className="grid grid-cols-[1fr_auto_160px_120px_110px_110px] items-center gap-0 px-5 py-4 border-b border-stone-200 dark:border-gray-800 hover:bg-stone-50/70 dark:hover:bg-gray-800/50 transition-colors">
@@ -245,17 +242,13 @@ export default function Saved() {
         {/* Mobile/Tablet card grid */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:hidden gap-5 mt-6">
           {sorted.map(it => {
-            const href = it.source === 'mf'
-              ? `/info/${encodeURIComponent(it.series_id)}`
-              : `/info/${encodeURIComponent(it.series_id)}/${encodeURIComponent(sanitizeTitleId(it.title || 'title'))}`
+            const href = getInfoUrl(it.series_id, sanitizeTitleId(it.title || 'title'), it.source)
             const p = it._p
             const total = it._total
             const idx = it._idx
             const percent = it._percent
             const continueHref = p?.last_chapter_id
-              ? (it.source === 'mf'
-                ? `/read/chapter/${p.last_chapter_id}?series=${encodeURIComponent(it.series_id)}&title=${encodeURIComponent(sanitizeTitleId(it.title || 'title'))}`
-                : `/read/${encodeURIComponent(p.last_chapter_id)}?series=${encodeURIComponent(it.series_id)}&title=${encodeURIComponent(sanitizeTitleId(it.title || 'title'))}`)
+              ? getReadUrl(p.last_chapter_id, it.series_id, sanitizeTitleId(it.title || 'title'), it.source)
               : href
             return (
               <a key={`${it.source}:${it.series_id}`} href={href} className="group relative">
