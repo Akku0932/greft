@@ -5,7 +5,7 @@ import { upsertProgress } from '../lib/progressApi'
 import { upsertRecentRead } from '../lib/recentReadsApi'
 import { getReadUrl, getInfoUrl } from '../lib/urlUtils'
 
-const CommentSection = lazy(() => import('../components/CommentSection'))
+const CommentSection = lazy(() => import('../components/CommentSection').then(module => ({ default: module.default })))
 
 export default function Read() {
   const { id } = useParams()

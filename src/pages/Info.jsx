@@ -4,7 +4,7 @@ import { api, getImage, pickImage, parseIdTitle, sanitizeTitleId } from '../lib/
 import { useLibrary } from '../hooks/useLibrary'
 import { getReadUrl } from '../lib/urlUtils'
 
-const CommentSection = lazy(() => import('../components/CommentSection'))
+const CommentSection = lazy(() => import('../components/CommentSection').then(module => ({ default: module.default })))
 
 export default function Info() {
   const { id, titleId } = useParams()
@@ -470,10 +470,15 @@ function ChaptersInline({ seriesId, titleId, source }) {
           const apiLabel = ch?.chap ?? ch?.chapter ?? (ch?.chapVol && ch?.chapVol?.chap) ?? ch?.no ?? ch?.number
           const fallbackNum = totalCount > 0 ? Math.max(1, totalCount - (start + i)) : (i + 1)
           const numeric = (() => {
-            // Try to extract number from apiLabel
             if (apiLabel != null) {
-              const m = String(apiLabel).match(/\d+(?:\.\d+)?/)
-              if (m) return m[0]
+              const str = String(apiLabel)
+              // Try to find "Ch" or "Chapter" followed by number
+              let m = str.match(/(?:ch|chapter)[:\s]*(\d+(?:\.\d+)?)/i)
+              if (m) return m[1]
+              
+              // Fallback: extract first number
+              m = str.match(/(\d+(?:\.\d+)?)/)
+              if (m) return m[1]
             }
             // If no apiLabel, use fallback
             return String(fallbackNum)

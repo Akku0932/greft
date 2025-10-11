@@ -34,14 +34,14 @@ export async function fetchComments({ seriesId, source, chapterId = null }) {
     .select('id, display_name, avatar_url')
     .in('id', userIds)
   
-  // Create user lookup map
+  // Create user lookup map with proper structure
   const userMap = {}
   profiles?.forEach(p => {
     userMap[p.id] = {
       id: p.id,
-      email: p.display_name || 'User',
+      email: 'user@example.com',  // Placeholder, not used for display
       user_metadata: {
-        display_name: p.display_name,
+        display_name: p.display_name || 'User',
         avatar_url: p.avatar_url
       }
     }
@@ -116,14 +116,14 @@ export async function fetchReplies(parentId) {
     .select('id, display_name, avatar_url')
     .in('id', userIds)
   
-  // Create user lookup map
+  // Create user lookup map with proper structure
   const userMap = {}
   profiles?.forEach(p => {
     userMap[p.id] = {
       id: p.id,
-      email: p.display_name || 'User',
+      email: 'user@example.com',  // Placeholder, not used for display
       user_metadata: {
-        display_name: p.display_name,
+        display_name: p.display_name || 'User',
         avatar_url: p.avatar_url
       }
     }
