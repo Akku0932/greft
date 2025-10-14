@@ -216,7 +216,7 @@ export default function Read() {
     setTransitioning(true)
     setLoading(true)
     setPages([])
-    const extra = `${seriesId ? `?series=${encodeURIComponent(seriesId)}&title=${encodeURIComponent(titleId)}` : ''}${source==='mp' ? (seriesId ? `&src=mp` : `?src=mp`) : ''}`
+    const extra = `${seriesId ? `?series=${encodeURIComponent(seriesId)}&title=${encodeURIComponent(titleId)}` : ''}` // Universal URL
     const url = source === 'mf' 
       ? `/read/chapter/${prevId}${extra}`
       : `/read/${encodeURIComponent(prevId)}${extra}`
@@ -228,7 +228,7 @@ export default function Read() {
     setTransitioning(true)
     setLoading(true)
     setPages([])
-    const extra = `${seriesId ? `?series=${encodeURIComponent(seriesId)}&title=${encodeURIComponent(titleId)}` : ''}${source==='mp' ? (seriesId ? `&src=mp` : `?src=mp`) : ''}`
+    const extra = `${seriesId ? `?series=${encodeURIComponent(seriesId)}&title=${encodeURIComponent(titleId)}` : ''}` // Universal URL
     const url = source === 'mf' 
       ? `/read/chapter/${nextId}${extra}`
       : `/read/${encodeURIComponent(nextId)}${extra}`
@@ -236,7 +236,7 @@ export default function Read() {
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }, [nextId, source, seriesId, titleId, navigate])
 
-  const infoHref = seriesId && titleId ? `/info/${encodeURIComponent(seriesId)}/${encodeURIComponent(titleId)}${source==='mp' ? '?src=mp' : ''}` : '/home'
+  const infoHref = seriesId && titleId ? `/info/${encodeURIComponent(seriesId)}/${encodeURIComponent(titleId)}` : '/home' // Universal URL
 
   function widen() { 
     setButtonClicked(true)
@@ -414,7 +414,7 @@ export default function Read() {
                     const idx = Number(e.target.value)
                     const targetId = orderedChapterIds[idx]
                     if (targetId) {
-                      const extra = `${seriesId ? `?series=${encodeURIComponent(seriesId)}&title=${encodeURIComponent(titleId)}` : ''}${source==='mp' ? (seriesId ? `&src=mp` : `?src=mp`) : ''}`
+                      const extra = `${seriesId ? `?series=${encodeURIComponent(seriesId)}&title=${encodeURIComponent(titleId)}` : ''}` // Universal URL
                       const url = source === 'mf' 
                         ? `/read/chapter/${targetId}${extra}`
                         : `/read/${encodeURIComponent(targetId)}${extra}`

@@ -587,7 +587,7 @@ function RecItem({ item, index }) {
   const title = item.title || item.name || 'Untitled'
   const parsed = parseIdTitle(item.seriesId || item.id || item.slug || item.urlId, item.title || item.slug)
   // For MF items, only use ID; for GF items, use ID/title format
-  const href = `/info/${encodeURIComponent(parsed.id)}${item._source === 'mp' ? '?src=mp' : ''}`
+  const href = `/info/${encodeURIComponent(parsed.id)}` // Universal URL
   const showBg = index < 3
   // gradient palette for hover title
   const grads = [
@@ -710,7 +710,7 @@ function LatestCard({ item, index }) {
   const tag = typeof rawTag === 'string' ? rawTag.replace(/episode/gi, 'Chapter') : rawTag
   const parsed = parseIdTitle(item.seriesId || item.id || item.slug || item.urlId, item.title || item.slug)
   // Link with ID-only; MP will use mp info, GF supports ID-only too
-  const href = `/info/${encodeURIComponent(parsed.id)}${item._source === 'mp' ? '?src=mp' : ''}`
+  const href = `/info/${encodeURIComponent(parsed.id)}` // Universal URL
   const hoverGrads = [
     'linear-gradient(90deg,#60a5fa,#a78bfa)',
     'linear-gradient(90deg,#34d399,#10b981)',
@@ -989,8 +989,8 @@ function DesktopHistoryCard({ item, index, onRemove }) {
   // Determine source based on series ID format
   const isMF = item.seriesId && item.seriesId.includes('.') && !item.seriesId.includes('/')
   const isMP = String(item.source || '').toLowerCase() === 'mp'
-  const src = isMP ? (isMF ? '&src=mp' : '&src=mp') : ''
-  const infoSrc = isMP ? '?src=mp' : ''
+  const src = '' // Universal URLs - no source parameters needed
+  const infoSrc = ''
   const href = item.lastChapterId
     ? (isMF 
         ? `/read/chapter/${item.lastChapterId}?series=${encodeURIComponent(item.seriesId)}&title=${encodeURIComponent(sanitizeTitleId(item.titleId || 'title'))}${src}`
@@ -1166,8 +1166,8 @@ function RecentReadCard({ item, index, onRemove }) {
   // Determine source based on series ID format
   const isMF = item.seriesId && item.seriesId.includes('.') && !item.seriesId.includes('/')
   const isMP = String(item.source || '').toLowerCase() === 'mp'
-  const src = isMP ? (isMF ? '&src=mp' : '&src=mp') : ''
-  const infoSrc = isMP ? '?src=mp' : ''
+  const src = '' // Universal URLs - no source parameters needed
+  const infoSrc = ''
   const href = item.lastChapterId
     ? (isMF 
         ? `/read/chapter/${item.lastChapterId}?series=${encodeURIComponent(item.seriesId)}&title=${encodeURIComponent(sanitizeTitleId(item.titleId || 'title'))}${src}`

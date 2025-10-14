@@ -37,11 +37,16 @@ export default function Info() {
     return tags.some(t => /(adult|ecchi)/i.test(t))
   }
 
-  // Determine source based on query or ID format (support mp)
+  // Universal source detection - auto-detect based on ID format
   const srcParam = (searchParams.get('src') || '').toLowerCase()
-  const isMP = srcParam === 'mp'
-  const isMF = !isMP && id && id.includes('.') && !id.includes('/')
-  const source = isMP ? 'mp' : (isMF ? 'mf' : 'gf')
+  
+  // Auto-detect source based on ID patterns
+  const isMP = srcParam === 'mp' || (id && /^\d+$/.test(id)) // MP uses numeric IDs
+  const isMF = srcParam === 'mf' || (id && id.includes('.') && !id.includes('/'))
+  const isGF = srcParam === 'gf' || (!isMP && !isMF)
+  
+  // Default to 'mp' for universal compatibility
+  const source = isMP ? 'mp' : (isMF ? 'mf' : (isGF ? 'gf' : 'mp'))
   const { user, add, remove, isSaved, items, setStatus } = useLibrary()
   const [statusValue, setStatusValue] = useState('planning')
 
@@ -171,7 +176,7 @@ export default function Info() {
         const base = source === 'mf' 
           ? `/read/chapter/${chapterId}`
           : `/read/${encodeURIComponent(chapterId)}`
-        const extra = source === 'mp' ? `&src=mp` : (source === 'mf' ? `&src=mf` : '')
+        const extra = '' // Universal URLs - no source parameter needed
         const url = `${base}?series=${encodeURIComponent(series)}&title=${encodeURIComponent(parsedSeries.titleId)}${extra}`
         navigate(url)
       }
@@ -190,7 +195,7 @@ export default function Info() {
         const base = source === 'mf' 
           ? `/read/chapter/${chapterId}`
           : `/read/${encodeURIComponent(chapterId)}`
-        const extra = source === 'mp' ? `&src=mp` : (source === 'mf' ? `&src=mf` : '')
+        const extra = '' // Universal URLs - no source parameter needed
         const url = `${base}?series=${encodeURIComponent(parsedSeries.id)}&title=${encodeURIComponent(parsedSeries.titleId)}${extra}`
         navigate(url)
       }
@@ -398,7 +403,7 @@ export default function Info() {
             {data.recommendations.map((rec) => {
               const parsedRec = parseIdTitle(rec.id, rec.title)
               // Use same URL format logic as Home page
-              const href = `/info/${encodeURIComponent(parsedRec.id)}${source==='mp' ? '?src=mp' : ''}`
+              const href = `/info/${encodeURIComponent(parsedRec.id)}` // Universal URL
               return (
                 <Link key={rec.id} to={href} className="group block">
                   <div className="relative aspect-[3/4] overflow-hidden rounded-lg bg-stone-200 dark:bg-gray-700 shadow-soft dark:shadow-soft-dark">
@@ -472,7 +477,7 @@ function ChaptersInline({ seriesId, titleId, source }) {
                 <Link
                   to={source === 'mf' 
                     ? `/read/chapter/${cid}?series=${encodeURIComponent(seriesId)}&title=${encodeURIComponent(titleId || '')}`
-                    : `/read/${encodeURIComponent(cid)}?series=${encodeURIComponent(seriesId)}&title=${encodeURIComponent(titleId || '')}${source==='mp' ? '&src=mp' : ''}`}
+                    : `/read/${encodeURIComponent(cid)}?series=${encodeURIComponent(seriesId)}&title=${encodeURIComponent(titleId || '')}`} // Universal URL
                   className="group block rounded-lg bg-white dark:bg-gray-800 hover:bg-stone-50 dark:hover:bg-gray-700 transition-colors"
                 >
                   <div className="flex items-center justify-between gap-3 sm:gap-4 px-3 sm:px-4 py-3">

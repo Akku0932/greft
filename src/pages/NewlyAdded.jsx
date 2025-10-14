@@ -120,7 +120,7 @@ function RecRow({ item, index }) {
   const cover = getImage(pickImage({ ...item, img: primary || fallback }))
   const title = item.name || item.title || 'Untitled'
   const parsed = parseIdTitle(item.id || item.seriesId || item.slug || item.urlId, title)
-  const href = `/info/${encodeURIComponent(parsed.id)}?src=mp`
+  const href = `/info/${encodeURIComponent(parsed.id)}` // Universal URL
   function adultAllowed() { try { const obj = JSON.parse(localStorage.getItem('site:settings')||'{}'); return !!obj.adultAllowed } catch { return false } }
   function isAdult(it) {
     let tags = it?.genres || it?.tags || []

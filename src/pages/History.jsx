@@ -74,8 +74,8 @@ export default function History() {
           {pageItems.map((it, i) => {
             const isMF = it.seriesId && it.seriesId.includes('.') && !it.seriesId.includes('/')
             const isMP = String(it.source || '').toLowerCase() === 'mp'
-            const srcParam = isMP ? (isMF ? '&src=mp' : '&src=mp') : ''
-            const infoSrc = isMP ? '?src=mp' : ''
+            const srcParam = '' // Universal URLs - no source parameters needed
+            const infoSrc = ''
             const href = it.lastChapterId
               ? (isMF
                   ? `/read/chapter/${it.lastChapterId}?series=${encodeURIComponent(it.seriesId)}&title=${encodeURIComponent(sanitizeTitleId(it.titleId || 'title'))}${srcParam}`
