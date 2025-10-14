@@ -3,48 +3,31 @@ import { supabase } from './supabaseClient'
 // Fetch comments for a series or chapter
 export async function fetchComments({ seriesId, source, chapterId = null }) {
   try {
-    console.log('Fetching comments with params:', { seriesId, source, chapterId })
-    console.log('Querying for series_id:', String(seriesId), 'source:', source)
+    console.log('NEW FETCH - seriesId:', seriesId, 'source:', source, 'chapterId:', chapterId)
     
-    // Debug: Check all comments for this series_id
-    const { data: debugData } = await supabase
-      .from('comments')
-      .select('*')
-      .eq('series_id', String(seriesId))
-    console.log('All comments for series_id', seriesId, ':', debugData)
-    
-    // Try querying without source filter first
-    console.log('About to query with series_id:', String(seriesId), 'source:', source)
+    // Simple, clean query
     const { data, error } = await supabase
       .from('comments')
       .select('*')
       .eq('series_id', String(seriesId))
+      .eq('source', source)
       .order('created_at', { ascending: false })
     
-    console.log('MAIN QUERY RESULT - data:', data, 'error:', error)
-    console.log('Data length:', data?.length)
+    console.log('NEW QUERY RESULT:', { data, error, count: data?.length })
     
     if (error) {
       console.error('Error fetching comments:', error)
-      // If table doesn't exist, return empty array instead of throwing
-      if (error.code === 'PGRST116' || error.message?.includes('relation "comments" does not exist')) {
-        console.warn('Comments table does not exist yet. Please run the database migration.')
-        return []
-      }
-      throw error
+      return []
     }
     
-    // For now, just return the basic comment data
-    const transformedData = (data || []).map(comment => {
-      console.log('Processing comment:', comment)
-      return {
-        ...comment,
-        user_name: comment.user_name || 'User'
-      }
-    })
+    // Return the comments with proper user_name
+    const result = (data || []).map(comment => ({
+      ...comment,
+      user_name: comment.user_name || 'User'
+    }))
     
-    console.log('Returning transformed comments:', transformedData)
-    return transformedData
+    console.log('NEW RESULT:', result)
+    return result
   } catch (err) {
     console.error('Failed to fetch comments:', err)
     return []
