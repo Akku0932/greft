@@ -280,26 +280,29 @@ export default function CommentsSection({ seriesId, source, chapterId = null, ti
             <p>No comments yet. Be the first to share your thoughts!</p>
           </div>
         ) : (
-          comments.map(comment => (
-            <CommentItem
-              key={comment.id}
-              comment={comment}
-              user={user}
-              onEdit={handleEditComment}
-              onDelete={handleDeleteComment}
-              onLike={handleLikeComment}
-              onReply={setReplyingTo}
-              formatTimeAgo={formatTimeAgo}
-              getAvatarUrl={getAvatarUrl}
-            />
-          ))
+          comments
+            .filter(comment => !comment.parent_id) // Only show top-level comments
+            .map(comment => (
+              <CommentItem
+                key={comment.id}
+                comment={comment}
+                user={user}
+                onEdit={handleEditComment}
+                onDelete={handleDeleteComment}
+                onLike={handleLikeComment}
+                onReply={setReplyingTo}
+                formatTimeAgo={formatTimeAgo}
+                getAvatarUrl={getAvatarUrl}
+                replies={comments.filter(reply => reply.parent_id === comment.id)}
+              />
+            ))
         )}
       </div>
     </div>
   )
 }
 
-function CommentItem({ comment, user, onEdit, onDelete, onLike, onReply, formatTimeAgo, getAvatarUrl }) {
+function CommentItem({ comment, user, onEdit, onDelete, onLike, onReply, formatTimeAgo, getAvatarUrl, replies = [] }) {
   const [isEditing, setIsEditing] = useState(false)
   const [editContent, setEditContent] = useState(comment.content)
   const [likesCount, setLikesCount] = useState(comment.likes_count || 0)
@@ -406,6 +409,34 @@ function CommentItem({ comment, user, onEdit, onDelete, onLike, onReply, formatT
                 </>
               )}
             </div>
+          </div>
+        )}
+        
+        {/* Replies */}
+        {replies.length > 0 && (
+          <div className="ml-8 mt-3 space-y-3">
+            {replies.map(reply => (
+              <div key={reply.id} className="flex gap-3">
+                <img 
+                  src={getAvatarUrl(reply)}
+                  alt={reply.user_name || 'User'}
+                  className="h-8 w-8 rounded-full object-cover flex-shrink-0"
+                />
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="font-medium text-sm text-stone-900 dark:text-white">
+                      {reply.user_name || 'User'}
+                    </span>
+                    <span className="text-xs text-stone-500 dark:text-gray-400">
+                      {formatTimeAgo(reply.created_at)}
+                    </span>
+                  </div>
+                  <p className="text-sm text-stone-700 dark:text-gray-300 whitespace-pre-wrap">
+                    {reply.content}
+                  </p>
+                </div>
+              </div>
+            ))}
           </div>
         )}
       </div>

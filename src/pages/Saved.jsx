@@ -247,7 +247,9 @@ export default function Saved() {
           {sorted.map(it => {
             const href = it.source === 'mf'
               ? `/info/${encodeURIComponent(it.series_id)}`
-              : `/info/${encodeURIComponent(it.series_id)}/${encodeURIComponent(sanitizeTitleId(it.title || 'title'))}`
+              : it.source === 'mp'
+                ? `/info/${encodeURIComponent(it.series_id)}/${encodeURIComponent(sanitizeTitleId(it.title || 'title'))}?src=mp`
+                : `/info/${encodeURIComponent(it.series_id)}/${encodeURIComponent(sanitizeTitleId(it.title || 'title'))}`
             const p = it._p
             const total = it._total
             const idx = it._idx

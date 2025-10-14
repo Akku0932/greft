@@ -424,7 +424,22 @@ function ChaptersInline({ seriesId, titleId, source }) {
       try {
         const res = await api.chapters(seriesId, source)
         const arr = Array.isArray(res) ? res : (res.items || [])
-        if (mounted) setList(arr)
+        
+        // Sort chapters by number (ascending order)
+        const sorted = arr.slice().sort((a, b) => {
+          const getNum = (ch) => {
+            const candidates = [ch?.chap, ch?.chapter, ch?.title, ch?.name, ch?.no, ch?.number, ch?.dataNumber]
+            for (const c of candidates) {
+              if (c == null) continue
+              const m = String(c).match(/(\d+(?:\.\d+)?)/)
+              if (m) return parseFloat(m[1])
+            }
+            return 0
+          }
+          return getNum(a) - getNum(b)
+        })
+        
+        if (mounted) setList(sorted)
       } catch {}
     }
     run()
@@ -472,7 +487,7 @@ function ChaptersInline({ seriesId, titleId, source }) {
                 <Link
                   to={source === 'mf' 
                     ? `/read/chapter/${cid}?series=${encodeURIComponent(seriesId)}&title=${encodeURIComponent(titleId || '')}`
-                    : `/read/${encodeURIComponent(cid)}?series=${encodeURIComponent(seriesId)}&title=${encodeURIComponent(titleId || '')}`} // Universal URL
+                    : `/read/${encodeURIComponent(cid)}?series=${encodeURIComponent(seriesId)}&title=${encodeURIComponent(titleId || '')}${source==='mp' ? '&src=mp' : ''}`}
                   className="group block rounded-lg bg-white dark:bg-gray-800 hover:bg-stone-50 dark:hover:bg-gray-700 transition-colors"
                 >
                   <div className="flex items-center justify-between gap-3 sm:gap-4 px-3 sm:px-4 py-3">
