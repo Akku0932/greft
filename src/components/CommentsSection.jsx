@@ -30,9 +30,7 @@ export default function CommentsSection({ seriesId, source, chapterId = null, ti
   const loadComments = async () => {
     try {
       setLoading(true)
-      console.log('Loading comments for:', { seriesId, source, chapterId })
       const data = await fetchComments({ seriesId, source, chapterId })
-      console.log('Fetched comments:', data)
       setComments(data)
     } catch (err) {
       setError('Failed to load comments')
@@ -55,8 +53,6 @@ export default function CommentsSection({ seriesId, source, chapterId = null, ti
         content: newComment,
         parentId: replyingTo
       })
-      
-      console.log('Comment added successfully:', comment)
       
       // Add the comment to the state immediately (optimistic update)
       setComments(prev => [comment, ...prev])

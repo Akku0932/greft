@@ -1,9 +1,7 @@
 import { supabase } from './supabaseClient'
 
-// Fetch comments for a series or chapter - FRESH VERSION
+// Fetch comments for a series or chapter - OPTIMIZED VERSION
 export async function fetchComments({ seriesId, source, chapterId = null }) {
-  console.log('🔥 FRESH FETCH - seriesId:', seriesId, 'source:', source)
-  
   try {
     const { data, error } = await supabase
       .from('comments')
@@ -12,28 +10,17 @@ export async function fetchComments({ seriesId, source, chapterId = null }) {
       .eq('source', source)
       .order('created_at', { ascending: false })
     
-    console.log('🔥 FRESH QUERY RESULT:', { 
-      data: data, 
-      error: error, 
-      count: data?.length,
-      seriesId: seriesId,
-      source: source
-    })
-    
     if (error) {
-      console.error('🔥 FRESH ERROR:', error)
+      console.error('Error fetching comments:', error)
       return []
     }
     
-    const result = (data || []).map(comment => ({
+    return (data || []).map(comment => ({
       ...comment,
       user_name: comment.user_name || 'User'
     }))
-    
-    console.log('🔥 FRESH FINAL RESULT:', result)
-    return result
   } catch (err) {
-    console.error('🔥 FRESH CATCH ERROR:', err)
+    console.error('Failed to fetch comments:', err)
     return []
   }
 }
@@ -54,15 +41,6 @@ export async function addComment({ seriesId, source, chapterId, content, parentI
     
     const displayName = profile?.display_name || user.user_metadata?.display_name || user.email?.split('@')[0] || 'User'
     
-    console.log('🔥 FRESH ADD COMMENT:', {
-      user_id: user.id,
-      series_id: seriesId,
-      source,
-      chapter_id: chapterId,
-      content: content.trim(),
-      user_name: displayName
-    })
-    
     const { data, error } = await supabase
       .from('comments')
       .insert({
@@ -78,19 +56,16 @@ export async function addComment({ seriesId, source, chapterId, content, parentI
       .single()
     
     if (error) {
-      console.error('🔥 FRESH ADD ERROR:', error)
+      console.error('Error adding comment:', error)
       throw error
     }
     
-    const transformedData = {
+    return {
       ...data,
       user_name: data.user_name || 'User'
     }
-    
-    console.log('🔥 FRESH ADD SUCCESS:', transformedData)
-    return transformedData
   } catch (err) {
-    console.error('🔥 FRESH ADD FAILED:', err)
+    console.error('Failed to add comment:', err)
     throw err
   }
 }
@@ -114,18 +89,16 @@ export async function updateComment({ commentId, content }) {
       .single()
     
     if (error) {
-      console.error('🔥 FRESH UPDATE ERROR:', error)
+      console.error('Error updating comment:', error)
       throw error
     }
     
-    const transformedData = {
+    return {
       ...data,
       user_name: data.user_name || 'User'
     }
-    
-    return transformedData
   } catch (err) {
-    console.error('🔥 FRESH UPDATE FAILED:', err)
+    console.error('Failed to update comment:', err)
     throw err
   }
 }
@@ -144,11 +117,11 @@ export async function deleteComment({ commentId }) {
       .eq('user_id', user.id)
     
     if (error) {
-      console.error('🔥 FRESH DELETE ERROR:', error)
+      console.error('Error deleting comment:', error)
       throw error
     }
   } catch (err) {
-    console.error('🔥 FRESH DELETE FAILED:', err)
+    console.error('Failed to delete comment:', err)
     throw err
   }
 }
