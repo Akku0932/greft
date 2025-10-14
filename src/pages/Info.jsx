@@ -515,11 +515,33 @@ function ChaptersInline({ seriesId, titleId, source }) {
       {totalPages > 1 && (
         <div className="mt-6 flex items-center justify-center gap-2 flex-wrap">
           <button disabled={page===0} onClick={()=>setPage(0)} className={`px-3 py-1 rounded-full border text-sm ${page===0? 'opacity-50 cursor-not-allowed border-stone-200 dark:border-gray-700 text-stone-500 dark:text-gray-400' : 'border-stone-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-stone-700 dark:text-gray-300 hover:bg-stone-50 dark:hover:bg-gray-700'}`}>First</button>
-          {Array.from({ length: Math.min(totalPages, 7) }).map((_, idx) => {
+          {Array.from({ length: totalPages }).map((_, idx) => {
             const pageIndex = idx
-            if (pageIndex >= totalPages) return null
+            // Show first 3, last 3, and pages around current
+            const showPage = 
+              pageIndex < 3 || // First 3 pages
+              pageIndex >= totalPages - 3 || // Last 3 pages
+              Math.abs(pageIndex - page) <= 1 // Pages near current
+            
+            // Show ellipsis
+            if (!showPage && (pageIndex === 3 || pageIndex === totalPages - 4)) {
+              return <span key={`ellipsis-${idx}`} className="px-2 text-stone-500 dark:text-gray-400">...</span>
+            }
+            
+            if (!showPage) return null
+            
             return (
-              <button key={idx} onClick={()=>setPage(pageIndex)} className={`px-3 py-1 rounded-full border text-sm ${page===pageIndex? 'bg-brand-500 text-white border-brand-500' : 'border-stone-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-stone-700 dark:text-gray-300 hover:bg-stone-50 dark:hover:bg-gray-700'}`}>{pageIndex+1}</button>
+              <button 
+                key={idx} 
+                onClick={() => setPage(pageIndex)} 
+                className={`px-3 py-1 rounded-full border text-sm ${
+                  page === pageIndex 
+                    ? 'bg-brand-500 text-white border-brand-500' 
+                    : 'border-stone-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-stone-700 dark:text-gray-300 hover:bg-stone-50 dark:hover:bg-gray-700'
+                }`}
+              >
+                {pageIndex + 1}
+              </button>
             )
           })}
           <button disabled={(page+1)>=totalPages} onClick={()=>setPage(totalPages-1)} className={`px-3 py-1 rounded-full border text-sm ${((page+1)>=totalPages)? 'opacity-50 cursor-not-allowed border-stone-200 dark:border-gray-700 text-stone-500 dark:text-gray-400' : 'border-stone-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-stone-700 dark:text-gray-300 hover:bg-stone-50 dark:hover:bg-gray-700'}`}>Last</button>
