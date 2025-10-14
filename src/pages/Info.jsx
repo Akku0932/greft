@@ -243,8 +243,10 @@ export default function Info() {
                   ))}
                 </div>
                 <p className="mt-2 md:mt-4 max-w-2xl md:max-w-3xl text-white/90 md:text-base text-[13px] sm:text-sm leading-relaxed break-words">{mappedData.description || data.summary}</p>
-                <div className="mt-4 md:mt-6 flex flex-wrap gap-2 md:gap-3 items-center">
-                  <button onClick={onReadFirst} className="px-3 md:px-5 py-2.5 md:py-3 rounded-lg bg-white/15 hover:bg-white/25 text-white border border-white/20 transition-colors">Read First</button>
+                {/* Buttons row mirroring Home hero */}
+                <div className="mt-3 md:mt-5 flex flex-wrap items-center gap-2 md:gap-3">
+                  <button onClick={onReadFirst} className="px-4 md:px-5 py-2.5 md:py-3 rounded-full bg-white/15 hover:bg-white/25 text-white border border-white/20 transition-colors">Read First</button>
+                  <button onClick={onReadLatest} className="px-4 md:px-5 py-2.5 md:py-3 rounded-full bg-blue-600 hover:bg-blue-700 text-white transition-colors">Read Now</button>
                   {/* Save button - only enabled when logged in */}
                   <button
                   onClick={async () => {
@@ -256,7 +258,7 @@ export default function Info() {
                       await add(payload)
                     } catch {}
                   }}
-                  className="px-3 md:px-5 py-2.5 md:py-3 rounded-lg border border-white/20 text-white hover:bg-white/20 transition-colors"
+                  className="px-4 md:px-5 py-2.5 md:py-3 rounded-full border border-white/20 text-white hover:bg-white/20 transition-colors"
                 >
                   {isSaved(parseIdTitle(id, titleId).id, source) ? 'In My List' : 'Add to List'}
                 </button>

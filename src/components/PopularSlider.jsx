@@ -331,15 +331,7 @@ export default function PopularSlider({ items }) {
                       className="w-full h-full object-cover"
                     />
                   </div>
-                  {/* Details button under thumbnail */}
-                  <div className="mt-2">
-                    <Link
-                      to={`/info/${encodeURIComponent(parsed.id)}?src=mp`}
-                      className="w-full inline-flex items-center justify-center px-3 py-1.5 rounded-full bg-white/20 text-white text-xs font-medium hover:bg-white/30"
-                    >
-                      Details
-                    </Link>
-                  </div>
+                  {/* keep left column only thumbnail for stable height */}
                 </div>
                 
                 {/* Info - Right */}
@@ -366,13 +358,21 @@ export default function PopularSlider({ items }) {
                     {info?.description || info?.summary || parsed.summary || parsed.description || 'No description available'}
                   </p>
                   
-                  {/* Read Now under description */}
-                  <button
-                    onClick={() => onReadNow(activeItem)}
-                    className="px-4 py-1.5 rounded-full bg-blue-600 text-white text-sm font-medium hover:bg-blue-700"
-                  >
-                    Read Now
-                  </button>
+                  {/* Buttons row — same line, stable position */}
+                  <div className="mt-2 flex items-center gap-2">
+                    <Link
+                      to={`/info/${encodeURIComponent(parsed.id)}?src=mp`}
+                      className="px-4 py-1.5 rounded-full bg-white/20 text-white text-sm font-medium hover:bg-white/30"
+                    >
+                      Details
+                    </Link>
+                    <button
+                      onClick={() => onReadNow(activeItem)}
+                      className="px-4 py-1.5 rounded-full bg-blue-600 text-white text-sm font-medium hover:bg-blue-700"
+                    >
+                      Read Now
+                    </button>
+                  </div>
                 </div>
               </div>
               
