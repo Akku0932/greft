@@ -321,15 +321,24 @@ export default function PopularSlider({ items }) {
           {activeItem && (
             <div className="relative z-10 p-4 sm:p-6 md:p-10">
               {/* Mobile Layout */}
-              <div className="lg:hidden flex gap-4 mt-[75%] sm:mt-56">
+              <div className="lg:hidden grid grid-cols-[96px_1fr] sm:grid-cols-[128px_1fr] gap-3 sm:gap-4 mt-[70%] sm:mt-56 items-start">
                 {/* Cover Image - Left */}
-                <div className="flex-shrink-0 w-28 sm:w-32">
+                <div className="w-24 sm:w-32">
                   <div className="aspect-[3/4] rounded-lg overflow-hidden shadow-2xl">
                     <img 
                       src={getImage(pickImage(activeItem) || pickImage(info))} 
                       alt={activeItem?.title || info?.title || 'thumbnail'}
                       className="w-full h-full object-cover"
                     />
+                  </div>
+                  {/* Details button under thumbnail */}
+                  <div className="mt-2">
+                    <Link
+                      to={`/info/${encodeURIComponent(parsed.id)}?src=mp`}
+                      className="w-full inline-flex items-center justify-center px-3 py-1.5 rounded-full bg-white/20 text-white text-xs font-medium hover:bg-white/30"
+                    >
+                      Details
+                    </Link>
                   </div>
                 </div>
                 
@@ -353,25 +362,17 @@ export default function PopularSlider({ items }) {
                   </div>
                   
                   {/* Description */}
-                  <p className="text-sm text-white/90 line-clamp-3 mb-3">
+                  <p className="text-sm text-white/90 line-clamp-3 mb-2">
                     {info?.description || info?.summary || parsed.summary || parsed.description || 'No description available'}
                   </p>
                   
-                  {/* Buttons */}
-                  <div className="flex gap-2">
-                    <Link
-                      to={`/info/${encodeURIComponent(parsed.id)}?src=mp`}
-                      className="px-4 py-1.5 rounded-full bg-white/20 text-white text-sm font-medium hover:bg-white/30"
-                    >
-                      Details
-                    </Link>
-                    <button
-                      onClick={() => onReadNow(activeItem)}
-                      className="px-4 py-1.5 rounded-full bg-blue-600 text-white text-sm font-medium hover:bg-blue-700"
-                    >
-                      Read Now
-                    </button>
-                  </div>
+                  {/* Read Now under description */}
+                  <button
+                    onClick={() => onReadNow(activeItem)}
+                    className="px-4 py-1.5 rounded-full bg-blue-600 text-white text-sm font-medium hover:bg-blue-700"
+                  >
+                    Read Now
+                  </button>
                 </div>
               </div>
               

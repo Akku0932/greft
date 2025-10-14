@@ -1166,7 +1166,7 @@ function RecentReadCard({ item, index, onRemove }) {
   // Determine source based on series ID format
   const isMF = item.seriesId && item.seriesId.includes('.') && !item.seriesId.includes('/')
   const isMP = String(item.source || '').toLowerCase() === 'mp'
-  const src = '' // Universal URLs - no source parameters needed
+  const src = ''
   const infoSrc = ''
   const href = item.lastChapterId
     ? (isMF 
@@ -1210,16 +1210,7 @@ function RecentReadCard({ item, index, onRemove }) {
               </span>
             </div>
             
-            {/* Source badge - smaller */}
-            <div className="absolute top-1 right-1">
-              <span className={`px-1.5 py-0.5 text-[10px] font-bold rounded-full shadow-sm ${
-                isMF 
-                  ? 'bg-blue-500/90 text-white' 
-                  : 'bg-green-500/90 text-white'
-              }`}>
-                {isMF ? 'MF' : 'GF'}
-              </span>
-            </div>
+            {/* Source badge removed per request */}
             
             {/* Remove button - smaller */}
             <button
@@ -1270,7 +1261,7 @@ function FollowedNewCard({ item }) {
   })()
   
   // Get scanlation group from source
-  const scanlationGroup = item.source === 'mp' ? 'MangaPark' : 'Greft'
+  const scanlationGroup = 'Greft'
   
   return (
     <div className="group relative">

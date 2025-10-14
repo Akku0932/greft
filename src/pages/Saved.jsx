@@ -27,6 +27,7 @@ export default function Saved() {
         // Only fetch chapters for unique series once
         const uniqueSeries = Array.from(new Set(items.map(it => `${it.source}:${it.series_id}`)))
         const map = {}
+        const byKey = Object.fromEntries(items.map(it => [[`${it.source}:${it.series_id}`], it]))
         
         await Promise.all(uniqueSeries.map(async key => {
           if (cancelled) return
@@ -34,15 +35,18 @@ export default function Saved() {
           try {
             const res = await api.chapters(sid, source)
             const arr = Array.isArray(res) ? res : (res.items || [])
-            map[key] = arr.length || 0
-          } catch { map[key] = 0 }
+            const fallback = byKey[key]?.last_known_chapter_count || 0
+            map[key] = (arr.length || fallback || 0)
+          } catch {
+            const fallback = byKey[key]?.last_known_chapter_count || 0
+            map[key] = fallback
+          }
         }))
         
         if (cancelled) return
         setChaptersBySeries(map)
         
         // mark has_updates when new chapters are detected (server flag)
-        const byKey = Object.fromEntries(items.map(it => [[`${it.source}:${it.series_id}`], it]))
         await Promise.all(uniqueSeries.map(async key => {
           if (cancelled) return
           const item = byKey[key]
