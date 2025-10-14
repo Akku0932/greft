@@ -5,20 +5,22 @@ export async function fetchComments({ seriesId, source, chapterId = null }) {
   try {
     console.log('Fetching comments with params:', { seriesId, source, chapterId })
     
-    // Query comments with profile information for current display names
-    const { data, error } = await supabase
+    // First try a simple query to get comments working
+    let query = supabase
       .from('comments')
-      .select(`
-        *,
-        profiles!user_id (
-          display_name,
-          avatar_url
-        )
-      `)
+      .select('*')
       .eq('series_id', String(seriesId))
       .eq('source', source)
-      .eq('chapter_id', chapterId || null)
       .order('created_at', { ascending: false })
+    
+    // Only filter by chapter_id if it's provided
+    if (chapterId !== null) {
+      query = query.eq('chapter_id', chapterId)
+    } else {
+      query = query.is('chapter_id', null)
+    }
+    
+    const { data, error } = await query
     
     console.log('Comments query response:', { data, error })
     
@@ -32,12 +34,14 @@ export async function fetchComments({ seriesId, source, chapterId = null }) {
       throw error
     }
     
-    // Transform the data to use current display names from profiles
-    const transformedData = (data || []).map(comment => ({
-      ...comment,
-      user_name: comment.profiles?.display_name || comment.user_name || 'User',
-      avatar_url: comment.profiles?.avatar_url || null
-    }))
+    // For now, just return the basic comment data
+    const transformedData = (data || []).map(comment => {
+      console.log('Processing comment:', comment)
+      return {
+        ...comment,
+        user_name: comment.user_name || 'User'
+      }
+    })
     
     console.log('Returning transformed comments:', transformedData)
     return transformedData
@@ -83,13 +87,7 @@ export async function addComment({ seriesId, source, chapterId, content, parentI
         content: content.trim(),
         user_name: displayName
       })
-      .select(`
-        *,
-        profiles!user_id (
-          display_name,
-          avatar_url
-        )
-      `)
+      .select('*')
       .single()
     
     if (error) {
@@ -97,11 +95,10 @@ export async function addComment({ seriesId, source, chapterId, content, parentI
       throw error
     }
     
-    // Transform the response to use current display name
+    // Return the basic comment data
     const transformedData = {
       ...data,
-      user_name: data.profiles?.display_name || data.user_name || 'User',
-      avatar_url: data.profiles?.avatar_url || null
+      user_name: data.user_name || 'User'
     }
     
     console.log('Comment added successfully:', transformedData)
@@ -127,13 +124,7 @@ export async function updateComment({ commentId, content }) {
       })
       .eq('id', commentId)
       .eq('user_id', user.id)
-      .select(`
-        *,
-        profiles!user_id (
-          display_name,
-          avatar_url
-        )
-      `)
+      .select('*')
       .single()
     
     if (error) {
@@ -141,11 +132,10 @@ export async function updateComment({ commentId, content }) {
       throw error
     }
     
-    // Transform the response to use current display name
+    // Return the basic comment data
     const transformedData = {
       ...data,
-      user_name: data.profiles?.display_name || data.user_name || 'User',
-      avatar_url: data.profiles?.avatar_url || null
+      user_name: data.user_name || 'User'
     }
     
     return transformedData
