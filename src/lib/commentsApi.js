@@ -1,11 +1,10 @@
 import { supabase } from './supabaseClient'
 
-// Fetch comments for a series or chapter - VERSION 2.0
+// Fetch comments for a series or chapter - VERSION 3.0 - COMPLETELY REWRITTEN
 export async function fetchComments({ seriesId, source, chapterId = null }) {
+  console.log('🚀 V3.0 FETCH STARTING - seriesId:', seriesId, 'source:', source)
+  
   try {
-    console.log('V2.0 FETCH - seriesId:', seriesId, 'source:', source, 'chapterId:', chapterId)
-    
-    // Simple, clean query
     const { data, error } = await supabase
       .from('comments')
       .select('*')
@@ -13,23 +12,28 @@ export async function fetchComments({ seriesId, source, chapterId = null }) {
       .eq('source', source)
       .order('created_at', { ascending: false })
     
-    console.log('V2.0 QUERY RESULT:', { data, error, count: data?.length })
+    console.log('🚀 V3.0 QUERY RESULT:', { 
+      data: data, 
+      error: error, 
+      count: data?.length,
+      seriesId: seriesId,
+      source: source
+    })
     
     if (error) {
-      console.error('Error fetching comments:', error)
+      console.error('🚀 V3.0 ERROR:', error)
       return []
     }
     
-    // Return the comments with proper user_name
     const result = (data || []).map(comment => ({
       ...comment,
       user_name: comment.user_name || 'User'
     }))
     
-    console.log('V2.0 RESULT:', result)
+    console.log('🚀 V3.0 FINAL RESULT:', result)
     return result
   } catch (err) {
-    console.error('Failed to fetch comments:', err)
+    console.error('🚀 V3.0 CATCH ERROR:', err)
     return []
   }
 }
