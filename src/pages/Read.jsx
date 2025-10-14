@@ -103,6 +103,10 @@ export default function Read() {
         setPages(filtered.map(img => {
           // Handle MF format: {img: "url"} or GF format: "url"
           const url = typeof img === 'string' ? img : (img?.img || img?.src || img)
+          // If URL is already an images API path, proxy it directly
+          if (String(url).startsWith('/images/')) {
+            return `/api/mp?p=${url.replace(/^\/+/, '')}`
+          }
           return getImage(url, source)
         }))
       } catch (e) {

@@ -469,20 +469,22 @@ export function getImage(input, source = 'mp') {
   }
   if (url.startsWith('//')) return `https:${url}`
   if (url.startsWith('/')) {
+    // Clean multiple consecutive slashes
+    const cleanPath = url.replace(/\/+/g, '/').replace(/^\/+/, '')
+    
     // Route MP asset paths via MP proxy; others via GF base
     const lower = url.toLowerCase()
     const isMpAsset = /\/(mpim|mpav|ampi|amim)\//.test(lower) || lower.startsWith('/thumb/') || lower.startsWith('/media/')
     if (isMpAsset) {
-      const path = url.replace(/^\/+/, '')
-      return `/api/mp?p=${encodeURIComponent(path)}`
+      return `/api/mp?p=${encodeURIComponent(cleanPath)}`
     }
     // Route images based on source parameter
     if (source === 'mp') {
-      return `/api/mp?p=${encodeURIComponent(url.replace(/^\/+/, ''))}`
+      return `/api/mp?p=${encodeURIComponent(cleanPath)}`
     } else if (source === 'mf') {
-      return `/api/mf?p=${encodeURIComponent(url.replace(/^\/+/, ''))}`
+      return `/api/mf?p=${encodeURIComponent(cleanPath)}`
     } else if (source === 'gf') {
-      return `/api/gf?p=${encodeURIComponent(url.replace(/^\/+/, ''))}`
+      return `/api/gf?p=${encodeURIComponent(cleanPath)}`
     }
     // Only use BASE_URL for non-MP assets
     return `${BASE_URL}${url}`
