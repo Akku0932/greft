@@ -222,10 +222,10 @@ export default function Home() {
         const continueHref = rr.lastChapterId
           ? (it.source === 'mf'
               ? `/read/chapter/${rr.lastChapterId}?series=${encodeURIComponent(it.series_id)}&title=${encodeURIComponent(sanitizeTitleId(it.title || 'title'))}`
-              : `/read/${encodeURIComponent(rr.lastChapterId)}?series=${encodeURIComponent(it.series_id)}&title=${encodeURIComponent(sanitizeTitleId(it.title || 'title'))}`)
+              : `/read/${encodeURIComponent(rr.lastChapterId)}?series=${encodeURIComponent(it.series_id)}&title=${encodeURIComponent(sanitizeTitleId(it.title || 'title'))}&src=mp`)
           : (it.source === 'mf'
               ? `/info/${encodeURIComponent(it.series_id)}`
-              : `/info/${encodeURIComponent(it.series_id)}/${encodeURIComponent(sanitizeTitleId(it.title || 'title'))}`)
+              : `/info/${encodeURIComponent(it.series_id)}/${encodeURIComponent(sanitizeTitleId(it.title || 'title'))}?src=mp`)
         quick.push({ ...it, _total: total, _idx: idx, _hasNew: true, _next: idx + 1, _continue: continueHref, _updated: rr.updatedAt })
       }
       // sort by biggest delta first based on cached total
@@ -257,10 +257,10 @@ export default function Home() {
             const continueHref = p?.last_chapter_id
               ? (it.source === 'mf' 
                   ? `/read/chapter/${p.last_chapter_id}?series=${encodeURIComponent(it.series_id)}&title=${encodeURIComponent(sanitizeTitleId(it.title || 'title'))}`
-                  : `/read/${encodeURIComponent(p.last_chapter_id)}?series=${encodeURIComponent(it.series_id)}&title=${encodeURIComponent(sanitizeTitleId(it.title || 'title'))}`)
+                  : `/read/${encodeURIComponent(p.last_chapter_id)}?series=${encodeURIComponent(it.series_id)}&title=${encodeURIComponent(sanitizeTitleId(it.title || 'title'))}&src=mp`)
               : (it.source === 'mf' 
                   ? `/info/${encodeURIComponent(it.series_id)}`
-                  : `/info/${encodeURIComponent(it.series_id)}/${encodeURIComponent(sanitizeTitleId(it.title || 'title'))}`)
+                  : `/info/${encodeURIComponent(it.series_id)}/${encodeURIComponent(sanitizeTitleId(it.title || 'title'))}?src=mp`)
             // derive latest chapter timing from API payload when available
             const latestCh = Array.isArray(arr) && arr.length ? (arr[0] || arr[arr.length - 1]) : null
             const chTime = latestCh && (latestCh.updatedAt || latestCh.time || latestCh.date || latestCh.updated || latestCh.lastUpdate)
@@ -994,10 +994,10 @@ function DesktopHistoryCard({ item, index, onRemove }) {
   const href = item.lastChapterId
     ? (isMF 
         ? `/read/chapter/${item.lastChapterId}?series=${encodeURIComponent(item.seriesId)}&title=${encodeURIComponent(sanitizeTitleId(item.titleId || 'title'))}${src}`
-        : `/read/${encodeURIComponent(item.lastChapterId)}?series=${encodeURIComponent(item.seriesId)}&title=${encodeURIComponent(sanitizeTitleId(item.titleId || 'title'))}${src}`)
+        : `/read/${encodeURIComponent(item.lastChapterId)}?series=${encodeURIComponent(item.seriesId)}&title=${encodeURIComponent(sanitizeTitleId(item.titleId || 'title'))}&src=mp`)
     : (isMF 
         ? `/info/${encodeURIComponent(item.seriesId)}${infoSrc}`
-        : `/info/${encodeURIComponent(item.seriesId)}/${encodeURIComponent(sanitizeTitleId(item.titleId || 'title'))}${infoSrc}`)
+        : `/info/${encodeURIComponent(item.seriesId)}/${encodeURIComponent(sanitizeTitleId(item.titleId || 'title'))}?src=mp`)
   
   const handleRemove = (e) => {
     e.preventDefault()

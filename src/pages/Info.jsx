@@ -427,7 +427,7 @@ function ChaptersInline({ seriesId, titleId, source }) {
         const res = await api.chapters(seriesId, source)
         const arr = Array.isArray(res) ? res : (res.items || [])
         
-        // Sort chapters by number (ascending order)
+        // Sort by numeric chapter (latest first)
         const sorted = arr.slice().sort((a, b) => {
           const getNum = (ch) => {
             const candidates = [ch?.chap, ch?.chapter, ch?.title, ch?.name, ch?.no, ch?.number, ch?.dataNumber]
@@ -438,7 +438,7 @@ function ChaptersInline({ seriesId, titleId, source }) {
             }
             return 0
           }
-          return getNum(a) - getNum(b)
+          return getNum(b) - getNum(a)
         })
         
         if (mounted) setList(sorted)
@@ -447,7 +447,7 @@ function ChaptersInline({ seriesId, titleId, source }) {
     run()
     return () => { mounted = false }
   }, [seriesId, source])
-  const pageSize = 25
+  const pageSize = 30
   const totalCount = list?.length || 0
   const totalPages = Math.max(1, Math.ceil(totalCount / pageSize))
   const start = page * pageSize
@@ -489,7 +489,7 @@ function ChaptersInline({ seriesId, titleId, source }) {
                 <Link
                   to={source === 'mf' 
                     ? `/read/chapter/${cid}?series=${encodeURIComponent(seriesId)}&title=${encodeURIComponent(titleId || '')}`
-                    : `/read/${encodeURIComponent(cid)}?series=${encodeURIComponent(seriesId)}&title=${encodeURIComponent(titleId || '')}${source==='mp' ? '&src=mp' : ''}`}
+                    : `/read/${encodeURIComponent(cid)}?series=${encodeURIComponent(seriesId)}&title=${encodeURIComponent(titleId || '')}&src=mp`}
                   className="group block rounded-lg bg-white dark:bg-gray-800 hover:bg-stone-50 dark:hover:bg-gray-700 transition-colors"
                 >
                   <div className="flex items-center justify-between gap-3 sm:gap-4 px-3 sm:px-4 py-3">
