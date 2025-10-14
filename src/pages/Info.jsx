@@ -433,7 +433,12 @@ function ChaptersInline({ seriesId, titleId, source }) {
             const candidates = [ch?.chap, ch?.chapter, ch?.title, ch?.name, ch?.no, ch?.number, ch?.dataNumber]
             for (const c of candidates) {
               if (c == null) continue
-              const m = String(c).match(/(\d+(?:\.\d+)?)/)
+              const str = String(c)
+              // Handle "Vol 0 Ch 15" format - extract chapter number after "Ch"
+              const volChMatch = str.match(/vol\s*\d+\s*ch\s*(\d+(?:\.\d+)?)/i)
+              if (volChMatch) return parseFloat(volChMatch[1])
+              // Handle regular chapter patterns
+              const m = str.match(/(\d+(?:\.\d+)?)/)
               if (m) return parseFloat(m[1])
             }
             return 0
@@ -456,7 +461,12 @@ function ChaptersInline({ seriesId, titleId, source }) {
     const candidates = [ch?.chap, ch?.chapter, ch?.title, ch?.name, ch?.no, ch?.number, ch?.index, ch?.chapVol, ch?.chapVol?.chap, ch?.dataNumber]
     for (const c of candidates) {
       if (c == null) continue
-      const m = String(c).match(/(\d+(?:\.\d+)?)/)
+      const str = String(c)
+      // Handle "Vol 0 Ch 15" format - extract chapter number after "Ch"
+      const volChMatch = str.match(/vol\s*\d+\s*ch\s*(\d+(?:\.\d+)?)/i)
+      if (volChMatch) return volChMatch[1]
+      // Handle regular chapter patterns
+      const m = str.match(/(\d+(?:\.\d+)?)/)
       if (m) return m[1]
     }
     return null

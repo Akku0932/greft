@@ -1024,12 +1024,7 @@ function DesktopHistoryCard({ item, index, onRemove }) {
             )}
             
             
-            {/* Green GF badge - exactly like the image */}
-            <div className="absolute top-2 right-2">
-              <span className="px-2 py-1 bg-green-500 text-white text-xs font-bold rounded-full shadow-sm">
-                GF
-              </span>
-            </div>
+            {/* Source badge removed per request */}
             
             {/* Remove button - hidden by default */}
             <button

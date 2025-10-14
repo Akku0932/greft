@@ -77,7 +77,7 @@ export default function Saved() {
       cancelled = true
       abortController.abort()
     }
-  }, [user]) // Remove 'items' dependency to prevent infinite loop
+  }, [user, items]) // Include items to refetch when library changes
 
   const decorate = useCallback((it) => {
     const key = `${it.source}:${it.series_id}`
