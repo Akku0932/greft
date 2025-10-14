@@ -13,15 +13,16 @@ export async function fetchComments({ seriesId, source, chapterId = null }) {
       .eq('series_id', String(seriesId))
     console.log('All comments for series_id', seriesId, ':', debugData)
     
-    // Simple query without chapter_id filtering to debug
+    // Try querying without source filter first
+    console.log('About to query with series_id:', String(seriesId), 'source:', source)
     const { data, error } = await supabase
       .from('comments')
       .select('*')
       .eq('series_id', String(seriesId))
-      .eq('source', source)
       .order('created_at', { ascending: false })
     
-    console.log('Comments query response:', { data, error })
+    console.log('MAIN QUERY RESULT - data:', data, 'error:', error)
+    console.log('Data length:', data?.length)
     
     if (error) {
       console.error('Error fetching comments:', error)
