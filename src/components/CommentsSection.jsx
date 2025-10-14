@@ -8,7 +8,7 @@ import {
   toggleCommentLike,
   getCommentLikes,
   isCommentLiked 
-} from '../lib/commentsApi'
+} from '../lib/commentsApiNew'
 
 export default function CommentsSection({ seriesId, source, chapterId = null, title = "Comments" }) {
   const { user } = useAuth()
