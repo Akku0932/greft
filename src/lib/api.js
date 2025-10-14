@@ -449,7 +449,7 @@ export const mp = {
   images: (infoId, id) => requestMapped(`/images/${encodeURIComponent(infoId)}/${encodeURIComponent(id)}`, {}, 'mp'),
 }
 
-export function getImage(input) {
+export function getImage(input, source = 'mp') {
   const url = String(input || '')
   if (!url || url === 'undefined' || url === 'null') return ''
   
@@ -475,6 +475,14 @@ export function getImage(input) {
     if (isMpAsset) {
       const path = url.replace(/^\/+/, '')
       return `/api/mp?p=${encodeURIComponent(path)}`
+    }
+    // Route images based on source parameter
+    if (source === 'mp') {
+      return `/api/mp?p=${encodeURIComponent(url.replace(/^\/+/, ''))}`
+    } else if (source === 'mf') {
+      return `/api/mf?p=${encodeURIComponent(url.replace(/^\/+/, ''))}`
+    } else if (source === 'gf') {
+      return `/api/gf?p=${encodeURIComponent(url.replace(/^\/+/, ''))}`
     }
     // Only use BASE_URL for non-MP assets
     return `${BASE_URL}${url}`

@@ -103,7 +103,7 @@ export default function Read() {
         setPages(filtered.map(img => {
           // Handle MF format: {img: "url"} or GF format: "url"
           const url = typeof img === 'string' ? img : (img?.img || img?.src || img)
-          return getImage(url)
+          return getImage(url, source)
         }))
       } catch (e) {
         if (mounted) setError(e)
@@ -236,7 +236,7 @@ export default function Read() {
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }, [nextId, source, seriesId, titleId, navigate])
 
-  const infoHref = seriesId && titleId ? `/info/${encodeURIComponent(seriesId)}/${encodeURIComponent(titleId)}` : '/home' // Universal URL
+  const infoHref = seriesId && titleId ? `/info/${encodeURIComponent(seriesId)}/${encodeURIComponent(titleId)}${source==='mp' ? '?src=mp' : ''}` : '/home'
 
   function widen() { 
     setButtonClicked(true)
@@ -344,7 +344,7 @@ export default function Read() {
       const key = 'recent-reads'
       const raw = localStorage.getItem(key)
       const list = Array.isArray(JSON.parse(raw)) ? JSON.parse(raw) : []
-      const cover = getImage(pickImage(seriesInfo || {}) || seriesInfo?.img)
+      const cover = getImage(pickImage(seriesInfo || {}) || seriesInfo?.img, source)
       const title = source === 'mf' ? (seriesInfo?.name || 'Series') : (seriesInfo?.title || 'Series')
       const entry = {
         seriesId,
@@ -370,7 +370,7 @@ export default function Read() {
           lastChapterIndex: currentIndex
         })
         // Save recent read entry to Supabase for logged-in users
-        const cover = getImage(pickImage(seriesInfo || {}) || seriesInfo?.img)
+        const cover = getImage(pickImage(seriesInfo || {}) || seriesInfo?.img, source)
         const title = source === 'mf' ? (seriesInfo?.name || 'Series') : (seriesInfo?.title || 'Series')
         await upsertRecentRead({
           seriesId,
@@ -399,7 +399,7 @@ export default function Read() {
               <Link to={infoHref} className="flex items-center gap-3 group">
                 <div className="h-12 w-12 md:h-14 md:w-14 rounded-full overflow-hidden ring-1 ring-stone-300 dark:ring-gray-700 bg-stone-100 dark:bg-gray-800">
                   {seriesInfo && (
-                    <img src={getImage(pickImage(seriesInfo) || seriesInfo?.img)} alt="series" className="h-full w-full object-cover" />
+                    <img src={getImage(pickImage(seriesInfo) || seriesInfo?.img, source)} alt="series" className="h-full w-full object-cover" />
                   )}
                 </div>
                 <div className="hidden sm:block text-base md:text-lg font-semibold text-stone-900 dark:text-white truncate max-w-[50vw] md:max-w-[56vw] group-hover:opacity-90">
@@ -445,7 +445,7 @@ export default function Read() {
             {pages?.map((src, i) => (
               <div key={i} className="w-full overflow-hidden rounded-none sm:rounded-lg bg-transparent sm:bg-stone-100 dark:sm:bg-gray-800">
                 <img
-                  src={getImage(src)}
+                  src={getImage(src, source)}
                   alt={`page-${i + 1}`}
                   className="w-full block"
                   loading={i < 2 ? 'eager' : 'lazy'}
