@@ -82,7 +82,7 @@ export default function Saved() {
   const decorate = useCallback((it) => {
     const key = `${it.source}:${it.series_id}`
     const p = prog.find(x => x.source === it.source && x.series_id === it.series_id)
-    const total = chaptersBySeries[key] || 0
+    const total = chaptersBySeries[key] || it.last_known_chapter_count || 0
     // Fix: Use the actual last chapter index from progress, not -1
     const idx = Math.max(-1, Number(p?.last_chapter_index ?? -1))
     const percent = total > 0 ? Math.min(100, Math.round(((idx + 1) / total) * 100)) : 0

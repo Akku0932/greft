@@ -336,7 +336,7 @@ export default function PopularSlider({ items }) {
                 
                 {/* Info - Right */}
                 <div className="flex-1 min-w-0">
-                  <h2 className="text-xl sm:text-2xl font-bold text-white line-clamp-2 mb-2">
+                  <h2 className="text-xl sm:text-2xl font-extrabold line-clamp-2 mb-2 text-transparent" style={{ WebkitBackgroundClip: 'text', backgroundImage: titleGradient }}>
                     {activeItem?.title || info?.title || 'Untitled'}
                   </h2>
                   
