@@ -4,23 +4,22 @@ import { supabase } from './supabaseClient'
 export async function fetchComments({ seriesId, source, chapterId = null }) {
   try {
     console.log('Fetching comments with params:', { seriesId, source, chapterId })
+    console.log('Querying for series_id:', String(seriesId), 'source:', source)
     
-    // First try a simple query to get comments working
-    let query = supabase
+    // Debug: Check all comments for this series_id
+    const { data: debugData } = await supabase
+      .from('comments')
+      .select('*')
+      .eq('series_id', String(seriesId))
+    console.log('All comments for series_id', seriesId, ':', debugData)
+    
+    // Simple query without chapter_id filtering to debug
+    const { data, error } = await supabase
       .from('comments')
       .select('*')
       .eq('series_id', String(seriesId))
       .eq('source', source)
       .order('created_at', { ascending: false })
-    
-    // Only filter by chapter_id if it's provided
-    if (chapterId !== null) {
-      query = query.eq('chapter_id', chapterId)
-    } else {
-      query = query.is('chapter_id', null)
-    }
-    
-    const { data, error } = await query
     
     console.log('Comments query response:', { data, error })
     
