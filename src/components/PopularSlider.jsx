@@ -295,7 +295,7 @@ export default function PopularSlider({ items }) {
         const isMF = id && id.includes('.') && !id.includes('/')
         const url = isMF 
           ? `/read/chapter/${chapterId}?series=${encodeURIComponent(id)}&title=${encodeURIComponent(titleId)}`
-          : `/read/${encodeURIComponent(chapterId)}?series=${encodeURIComponent(id)}&title=${encodeURIComponent(titleId)}` // Universal URL
+          : `/read/${encodeURIComponent(chapterId)}?series=${encodeURIComponent(id)}&title=${encodeURIComponent(titleId)}&src=mp`
         navigate(url)
       }
     } catch (_) {

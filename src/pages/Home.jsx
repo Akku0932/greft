@@ -587,7 +587,7 @@ function RecItem({ item, index }) {
   const title = item.title || item.name || 'Untitled'
   const parsed = parseIdTitle(item.seriesId || item.id || item.slug || item.urlId, item.title || item.slug)
   // For MF items, only use ID; for GF items, use ID/title format
-  const href = `/info/${encodeURIComponent(parsed.id)}` // Universal URL
+  const href = `/info/${encodeURIComponent(parsed.id)}${item._source === 'mp' ? '?src=mp' : ''}`
   const showBg = index < 3
   // gradient palette for hover title
   const grads = [
@@ -710,7 +710,7 @@ function LatestCard({ item, index }) {
   const tag = typeof rawTag === 'string' ? rawTag.replace(/episode/gi, 'Chapter') : rawTag
   const parsed = parseIdTitle(item.seriesId || item.id || item.slug || item.urlId, item.title || item.slug)
   // Link with ID-only; MP will use mp info, GF supports ID-only too
-  const href = `/info/${encodeURIComponent(parsed.id)}` // Universal URL
+  const href = `/info/${encodeURIComponent(parsed.id)}${item._source === 'mp' ? '?src=mp' : ''}`
   const hoverGrads = [
     'linear-gradient(90deg,#60a5fa,#a78bfa)',
     'linear-gradient(90deg,#34d399,#10b981)',
